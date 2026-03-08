@@ -1,0 +1,151 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+
+:root {
+    --accent: #2ecc71;       /* Verde neón*/
+    --accent-glow: rgba(46, 204, 113, 0.3);
+    --bg-dark: #0f172a;      /* Fondo azul noche oscuro */
+    --card-bg: rgba(30, 41, 59, 0.7); /* Gris azulado*/
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --radius: 24px;
+    --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    background-color: var(--bg-dark);
+    /*degradado */
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(46, 204, 113, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(56, 189, 248, 0.1) 0px, transparent 50%);
+    color: var(--text-main);
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 480px;
+    margin-top: 40px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(to right, #ffffff, #94a3b8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1.5px;
+    margin-bottom: 5px;
+}
+
+header p { color: var(--text-muted); }
+
+/* Efecto Cristal Oscuro */
+.card {
+    background: var(--card-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    padding: 28px;
+    border-radius: var(--radius);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    margin-bottom: 24px;
+}
+
+.icon-box {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--glass-border);
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Inputs en modo oscuro */
+input[type="text"] {
+    width: 90%;
+    background: rgba(15, 23, 42, 0.6);
+    border: 1px solid var(--glass-border);
+    padding: 18px;
+    border-radius: 16px;
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+input[type="text"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    background: rgba(15, 23, 42, 0.8);
+}
+
+/* Sugerencias Flotantes */
+.sugerencias-box {
+    background: #1e293b;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    margin-top: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.sugerencia-item {
+    padding: 14px 18px;
+    color: var(--text-muted);
+    transition: all 0.2s;
+}
+
+.sugerencia-item:hover {
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+    padding-left: 25px; /* Efecto de desplazamiento */
+}
+
+/* Botón Neon */
+.btn-primary {
+    width: 100%;
+    background: var(--accent);
+    color: #064e3b; /* Texto oscuro para contraste sobre el neón */
+    border: none;
+    padding: 18px;
+    border-radius: 16px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 10px;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 0 30px var(--accent-glow);
+    transform: scale(1.02);
+}
+
+/* Items de la lista */
+ul#mi-nevera li {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    padding: 18px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    transition: background 0.3s;
+}
+
+ul#mi-nevera li:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.empty-state {
+    opacity: 0.4;
+    filter: grayscale(1);
+}
