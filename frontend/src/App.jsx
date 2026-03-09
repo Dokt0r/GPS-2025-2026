@@ -11,16 +11,50 @@ function App() {
     fetch('http://localhost:3000/api/ingredientes')
       .then(res => res.json())
       .then(data => {
-        setIngredientesBase(data.length > 0 ? data : [
-          { nombre: 'Pollo', categoria: 'Carnes' },
-          { nombre: 'Tomate', categoria: 'Verduras' },
-          { nombre: 'Queso', categoria: 'Lácteos' }
-        ]);
+        if (data.length > 0) {
+          setIngredientesBase(data);
+        } else {
+          setIngredientesBase([
+            { nombre: 'Pollo', categoria: 'Proteína' },
+            { nombre: 'Tomate', categoria: 'Vegetal' },
+            { nombre: 'Arroz', categoria: 'Cereales' },
+            { nombre: 'Huevo', categoria: 'Proteína' },
+            { nombre: 'Leche', categoria: 'Lácteo' }
+          ]);
+        }
       })
       .catch(() => {
-        setIngredientesBase([{ nombre: 'Pollo' }, { nombre: 'Tomate' }]);
+        setIngredientesBase([
+          { nombre: 'Pollo', categoria: 'Proteína' },
+          { nombre: 'Arroz', categoria: 'Cereales' }
+        ]);
       });
   }, []);
+
+  
+  const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
+    const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
+    
+    const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
+
+    if (index !== -1) {
+      const nuevaLista = [...ingredientesNevera];
+      const cantidadActual = nuevaLista[index].cantidad || 1;
+      nuevaLista[index].cantidad = cantidadActual + cantidadNumerica;
+      nuevaLista[index].unidad = unidadElegida;
+      
+      setIngredientesNevera(nuevaLista);
+    } else {
+      setIngredientesNevera([
+        ...ingredientesNevera, 
+        { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }
+      ]);
+    }
+  };
+
+  const eliminarDeInventario = (nombre) => {
+    setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre));
+  };
 
   return (
     <>
@@ -34,12 +68,12 @@ function App() {
         
         <Buscador 
           ingredientesBase={ingredientesBase} 
-          onAñadir={(ing) => setIngredientesNevera([...ingredientesNevera, ing])} 
+          onAñadir={añadirAInventario} 
         />
         
         <ListaNevera 
           ingredientes={ingredientesNevera} 
-          onEliminar={(nombre) => setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre))}
+          onEliminar={eliminarDeInventario} 
         />
       </main>
     </>

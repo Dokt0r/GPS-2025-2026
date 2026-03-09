@@ -9,15 +9,23 @@ const ListaNevera = ({ ingredientes, onEliminar }) => {
 
       <div className="lista-container-scroll">
         {ingredientes.length === 0 ? (
-          <div id="empty-state" className="empty-state">
+          <div className="empty-state">
             <div className="image-placeholder"></div>
-            <p>Tu nevera está vacía.</p>
+            <p>Tu nevera está vacía. Añade algo arriba.</p>
           </div>
         ) : (
           <ul id="mi-nevera">
             {ingredientes.map((ing, index) => (
-              <li key={index} className="ingrediente-item-anim">
-                <span>{ing.nombre}</span>
+              <li key={index} className="ingrediente-item">
+                
+                {/* Contenedor para el nombre y el recuadro verde */}
+                <div className="item-info">
+                  <span className="item-nombre">{ing.nombre}</span>
+                  <span className="badge-cantidad">
+                    {ing.cantidad} {ing.unidad}
+                  </span>
+                </div>
+
                 <button onClick={() => onEliminar(ing.nombre)} className="btn-delete">✕</button>
               </li>
             ))}

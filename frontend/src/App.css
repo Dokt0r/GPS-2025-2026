@@ -55,20 +55,63 @@ body {
     width: 100%;
 }
 
-/* Inputs en modo oscuro */
-input[type="text"] {
-    width: 90%;
+/* --- FILA DE INPUTS (Flexbox) --- */
+.inputs-row {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.buscador-wrapper {
+    position: relative;
+    flex: 1; 
+}
+
+/* Estilo unificado (Texto, Cantidad, Selector) */
+.input-neon {
+    width: 100%; 
     background: rgba(15, 23, 42, 0.6);
     border: 1px solid var(--glass-border);
     padding: 18px;
     border-radius: 16px;
     color: white;
     font-size: 1rem;
+    box-sizing: border-box;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none; 
 }
 
-input[type="text"]:focus {
-    outline: none;
+/* Ocultar las molestas flechas nativas del input numérico */
+.input-cantidad::-webkit-inner-spin-button,
+.input-cantidad::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.input-cantidad {
+    -moz-appearance: textfield; /* Para Firefox */
+    width: 90px;
+    text-align: center;
+}
+
+/* Estilos específicos para el desplegable (Select) */
+.input-unidad {
+    width: 130px;
+    appearance: none; /* Quita la flecha por defecto del sistema */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 1em;
+    cursor: pointer;
+}
+
+.input-unidad option {
+    background: var(--bg-dark);
+    color: white;
+}
+
+/* El efecto Neón al hacer clic (Focus) */
+.input-neon:focus {
     border-color: var(--accent);
     box-shadow: 0 0 20px var(--accent-glow);
     background: rgba(15, 23, 42, 0.8);
@@ -135,7 +178,7 @@ input[type="text"]:focus {
     box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
 }
 
-/* Lista de Inventario */
+/* --- LISTA DE INVENTARIO --- */
 ul#mi-nevera {
     list-style: none;
     padding: 0;
@@ -151,6 +194,37 @@ ul#mi-nevera li {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: background 0.3s;
+}
+
+ul#mi-nevera li:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+/* Agrupación del texto y el badge */
+.item-info {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Separación entre el nombre y el recuadro verde */
+}
+
+.item-nombre {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* El Recuadro Verde Moderno (Badge) */
+.badge-cantidad {
+    background: rgba(46, 204, 113, 0.1); /* Fondo verde translúcido */
+    color: var(--accent); /* Texto verde brillante */
+    padding: 6px 12px;
+    border-radius: 8px; /* Recuadro ligeramente redondeado */
+    font-size: 0.85rem;
+    font-weight: 800;
+    border: 1px solid rgba(46, 204, 113, 0.4); /* Borde verde más marcado */
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.1); /* Brillo sutil */
+    letter-spacing: 0.5px;
+    text-transform: lowercase; /* Queda más estético para las medidas (ej: 2 kg) */
 }
 
 .btn-delete {
@@ -159,4 +233,11 @@ ul#mi-nevera li {
     color: #ef4444;
     cursor: pointer;
     font-size: 1.2rem;
+    transition: transform 0.2s, color 0.2s;
 }
+
+.btn-delete:hover {
+    color: #f87171;
+    transform: scale(1.2);
+}
+
