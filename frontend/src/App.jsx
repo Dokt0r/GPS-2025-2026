@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Buscador from './components/Buscador.jsx';
+import Buscador from './components/Buscador';
 import ListaNevera from './components/ListaNevera';
 import './App.css';
 
@@ -7,45 +7,42 @@ function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
 
-  // Simulamos la carga desde MongoDB Atlas al iniciar
   useEffect(() => {
-    // Aquí harías el fetch('/api/ingredientes')
-    const mockDB = [
-      { id: 1, nombre: 'Pollo', categoria: 'Proteína' },
-      { id: 2, nombre: 'Brócoli', categoria: 'Vegetal' },
-      { id: 3, nombre: 'Huevo', categoria: 'Proteína' },
-      { id: 4, nombre: 'Queso', categoria: 'Lácteo' }
-    ];
-    setIngredientesBase(mockDB);
+    fetch('http://localhost:3000/api/ingredientes')
+      .then(res => res.json())
+      .then(data => {
+        setIngredientesBase(data.length > 0 ? data : [
+          { nombre: 'Pollo', categoria: 'Carnes' },
+          { nombre: 'Tomate', categoria: 'Verduras' },
+          { nombre: 'Queso', categoria: 'Lácteos' }
+        ]);
+      })
+      .catch(() => {
+        setIngredientesBase([{ nombre: 'Pollo' }, { nombre: 'Tomate' }]);
+      });
   }, []);
 
-  const añadirIngrediente = (ingrediente) => {
-    if (!ingredientesNevera.find(i => i.id === ingrediente.id)) {
-      setIngredientesNevera([...ingredientesNevera, ingrediente]);
-    }
-  };
-
-  const eliminarIngrediente = (id) => {
-    setIngredientesNevera(ingredientesNevera.filter(i => i.id !== id));
-  };
-
   return (
-    <div className="app-container">
-      <header>
-        <h1>SmartFridge</h1>
-        <p>Tu inventario inteligente con estilo</p>
-      </header>
-      
-      <Buscador 
-        ingredientesBase={ingredientesBase} 
-        onAñadir={añadirIngrediente} 
-      />
-      
-      <ListaNevera 
-        ingredientes={ingredientesNevera} 
-        onEliminar={eliminarIngrediente} 
-      />
-    </div>
+    <>
+      <div className="bg-gradient"></div>
+      <main className="app-container">
+        <header>
+          <div className="logo-placeholder"></div>
+          <h1>LazyChef</h1>
+          <p>Gestiona tus alimentos con inteligencia</p>
+        </header>
+        
+        <Buscador 
+          ingredientesBase={ingredientesBase} 
+          onAñadir={(ing) => setIngredientesNevera([...ingredientesNevera, ing])} 
+        />
+        
+        <ListaNevera 
+          ingredientes={ingredientesNevera} 
+          onEliminar={(nombre) => setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre))}
+        />
+      </main>
+    </>
   );
 }
 
