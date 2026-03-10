@@ -3,9 +3,55 @@ import Buscador from './components/Buscador';
 import ListaNevera from './components/ListaNevera';
 import './App.css';
 
+// 1. DICCIONARIO DE TIPOS DE UNIDADES
+const tiposUnidades = {
+  'kg': 'masa',
+  'g': 'masa',
+  'L': 'volumen',
+  'ml': 'volumen',
+  'u.': 'unidad'
+};
+
+// 2. FUNCIÓN DE CONVERSIÓN
+const convertirCantidad = (cantidad, unidadOrigen, unidadDestino) => {
+  // Si son la misma unidad, no hay que convertir nada
+  if (unidadOrigen === unidadDestino) return parseFloat(cantidad);
+
+  // Si intentan mezclar masa con volumen o unidades (ej: kg con Litros)
+  if (tiposUnidades[unidadOrigen] !== tiposUnidades[unidadDestino]) {
+    return null; // Devuelve null para indicar error de compatibilidad
+  }
+
+  const cant = parseFloat(cantidad);
+
+  // Conversiones de Masa
+  if (unidadOrigen === 'kg' && unidadDestino === 'g') return cant * 1000;
+  if (unidadOrigen === 'g' && unidadDestino === 'kg') return cant / 1000;
+
+  // Conversiones de Volumen
+  if (unidadOrigen === 'L' && unidadDestino === 'ml') return cant * 1000;
+  if (unidadOrigen === 'ml' && unidadDestino === 'L') return cant / 1000;
+
+  return null;
+};
+
 function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
+
+//Estado para nuestro mensaje Toast
+  const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
+
+  //Función para mostrar el mensaje y ocultarlo a los 3 segundos
+  const mostrarMensaje = (mensaje, tipo = 'error') => {
+    setToast({ visible: true, mensaje, tipo });
+    
+    // El temporizador que lo hace desaparecer
+    setTimeout(() => {
+      setToast({ visible: false, mensaje: '', tipo: '' });
+    }, 3500); // 3.5 segundos
+  };
+
 
   useEffect(() => {
     fetch('http://localhost:3000/api/ingredientes')
@@ -18,8 +64,8 @@ function App() {
             { nombre: 'Pollo', categoria: 'Proteína' },
             { nombre: 'Tomate', categoria: 'Vegetal' },
             { nombre: 'Arroz', categoria: 'Cereales' },
-            { nombre: 'Huevo', categoria: 'Proteína' },
-            { nombre: 'Leche', categoria: 'Lácteo' }
+            { nombre: 'Leche', categoria: 'Lácteo' },
+            { nombre: 'Huevo', categoria: 'Proteína' }
           ]);
         }
       })
@@ -31,32 +77,52 @@ function App() {
       });
   }, []);
 
-  
+  // 3. LOGICA DE ANADIDO
   const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
     
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
     if (index !== -1) {
+      // El ingrediente YA EXISTE en la nevera
+      const itemActual = ingredientesNevera[index];
+      const unidadActual = itemActual.unidad;
+      const cantidadActual = parseFloat(itemActual.cantidad);
+
+      // Intentamos convertir la nueva cantidad a la unidad que ya esta en la nevera
+      const cantidadConvertida = convertirCantidad(cantidadNumerica, unidadElegida, unidadActual);
+
+      // Si la conversión falla (son de distinto tipo)
+      if (cantidadConvertida === null) {
+        mostrarMensaje(`❌ Incompatibilidad: No puedes mezclar "${unidadElegida}" con "${unidadActual}".`);
+        return; // Cortamos la ejecución, no se anade nada
+      }
+
+      // Si la conversión es exitosa, sumamos
       const nuevaLista = [...ingredientesNevera];
-      const cantidadActual = nuevaLista[index].cantidad || 1;
-      nuevaLista[index].cantidad = cantidadActual + cantidadNumerica;
-      nuevaLista[index].unidad = unidadElegida;
+      let sumaTotal = cantidadActual + cantidadConvertida;
       
+      // Redondeamos a un máximo de 2 decimales para que no salgan nmeros raros como 1.300000001
+      sumaTotal = Math.round(sumaTotal * 100) / 100;
+
+      nuevaLista[index].cantidad = sumaTotal;
       setIngredientesNevera(nuevaLista);
+
     } else {
+      // Es un ingrediente NUEVO, se anade tal cual
       setIngredientesNevera([
         ...ingredientesNevera, 
         { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }
       ]);
     }
+    mostrarMensaje(`✅ "${ingrediente.nombre}" añadido a tu nevera: ${cantidadNumerica} ${unidadElegida}.`, 'success'); // Feedback visual al usuario
   };
 
   const eliminarDeInventario = (nombre) => {
     setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre));
   };
 
-  return (
+ return (
     <>
       <div className="bg-gradient"></div>
       <main className="app-container">
@@ -69,6 +135,7 @@ function App() {
         <Buscador 
           ingredientesBase={ingredientesBase} 
           onAñadir={añadirAInventario} 
+          onError={(msg) => mostrarMensaje(msg, 'error')} 
         />
         
         <ListaNevera 
@@ -76,6 +143,12 @@ function App() {
           onEliminar={eliminarDeInventario} 
         />
       </main>
+
+      {toast.visible && (
+        <div className={`toast-notification ${toast.tipo}`}>
+          {toast.mensaje}
+        </div>
+      )}
     </>
   );
 }
