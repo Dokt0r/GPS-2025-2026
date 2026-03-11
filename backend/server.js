@@ -1,8 +1,8 @@
-// 1. Importamos la lógica de la aplicación desde src/app.js
-const app = require('./src/app');
-
-// 2. Importamos dotenv para leer las variables del archivo .env
+// 1. Importamos dotenv para leer las variables del archivo .env
 require('dotenv').config();
+
+// 2. Importamos la lógica de la aplicación desde src/app.js
+const app = require('./src/app');
 
 // 3. Definimos el puerto
 // Usará el del archivo .env o el 3000 por defecto si aquel no existe

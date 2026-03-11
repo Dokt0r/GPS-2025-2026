@@ -38,6 +38,7 @@ const convertirCantidad = (cantidad, unidadOrigen, unidadDestino) => {
 function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
+  const API_URL = 'http://localhost:3000';
 
 //Estado para nuestro mensaje Toast
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
@@ -54,7 +55,7 @@ function App() {
 
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/ingredientes')
+    fetch(`${API_URL}/api/ingredientes`)
       .then(res => res.json())
       .then(data => {
         if (data.length > 0) {
@@ -65,17 +66,53 @@ function App() {
             { nombre: 'Tomate', categoria: 'Vegetal' },
             { nombre: 'Arroz', categoria: 'Cereales' },
             { nombre: 'Leche', categoria: 'Lácteo' },
-            { nombre: 'Huevo', categoria: 'Proteína' }
+            { nombre: 'Huevo', categoria: 'Proteína' },
+            { nombre: 'Panceta', categoria: 'Proteína' }
           ]);
         }
       })
       .catch(() => {
         setIngredientesBase([
           { nombre: 'Pollo', categoria: 'Proteína' },
-          { nombre: 'Arroz', categoria: 'Cereales' }
+            { nombre: 'Tomate', categoria: 'Vegetal' },
+            { nombre: 'Arroz', categoria: 'Cereales' },
+            { nombre: 'Leche', categoria: 'Lácteo' },
+            { nombre: 'Huevo', categoria: 'Proteína' },
+            { nombre: 'Panceta', categoria: 'Proteína' }
         ]);
       });
   }, []);
+
+  useEffect(() => {
+    fetch(`${API_URL}/api/inventario`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setIngredientesNevera(data);
+        }
+      })
+      .catch(() => {
+        mostrarMensaje('⚠️ No se pudo cargar el inventario guardado.', 'error');
+      });
+  }, []);
+
+  const guardarInventario = async (listaActualizada) => {
+    try {
+      const response = await fetch(`${API_URL}/api/inventario`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ items: listaActualizada })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error guardando inventario');
+      }
+    } catch {
+      mostrarMensaje('⚠️ No se pudo guardar en la base de datos.', 'error');
+    }
+  };
 
   // 3. LOGICA DE ANADIDO
   const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
@@ -107,19 +144,24 @@ function App() {
 
       nuevaLista[index].cantidad = sumaTotal;
       setIngredientesNevera(nuevaLista);
+      guardarInventario(nuevaLista);
 
     } else {
       // Es un ingrediente NUEVO, se anade tal cual
-      setIngredientesNevera([
+      const nuevaLista = [
         ...ingredientesNevera, 
         { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }
-      ]);
+      ];
+      setIngredientesNevera(nuevaLista);
+      guardarInventario(nuevaLista);
     }
     mostrarMensaje(`✅ "${ingrediente.nombre}" añadido a tu nevera: ${cantidadNumerica} ${unidadElegida}.`, 'success'); // Feedback visual al usuario
   };
 
   const eliminarDeInventario = (nombre) => {
-    setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre));
+    const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
+    setIngredientesNevera(nuevaLista);
+    guardarInventario(nuevaLista);
   };
 
  return (
@@ -131,24 +173,32 @@ function App() {
           <h1>LazyChef</h1>
           <p>Gestiona tus alimentos con inteligencia</p>
         </header>
-        
-        <Buscador 
-          ingredientesBase={ingredientesBase} 
-          onAñadir={añadirAInventario} 
-          onError={(msg) => mostrarMensaje(msg, 'error')} 
-        />
-        
-        <ListaNevera 
-          ingredientes={ingredientesNevera} 
-          onEliminar={eliminarDeInventario} 
-        />
-      </main>
 
-      {toast.visible && (
-        <div className={`toast-notification ${toast.tipo}`}>
-          {toast.mensaje}
-        </div>
-      )}
+        <section className="split-layout">
+          <div className="left-panel">
+          <Buscador 
+            ingredientesBase={ingredientesBase} 
+            onAñadir={añadirAInventario} 
+            onError={(msg) => mostrarMensaje(msg, 'error')} 
+          />
+
+          <div className="messages-under-add" aria-live="polite">
+            {toast.visible && (
+              <div className={`toast-notification ${toast.tipo}`}>
+                {toast.mensaje}
+              </div>
+            )}
+          </div>
+          </div>
+
+          <div className="right-panel">
+          <ListaNevera 
+            ingredientes={ingredientesNevera} 
+            onEliminar={eliminarDeInventario} 
+          />
+          </div>
+        </section>
+      </main>
     </>
   );
 }
