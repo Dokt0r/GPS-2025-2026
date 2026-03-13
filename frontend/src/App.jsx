@@ -6,13 +6,22 @@ import './App.css';
 function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
+  // NUEVO: Estado para las notificaciones
+  const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
+
   const API_URL = 'http://localhost:3000';
+
+  // NUEVO: Función para mostrar mensajes
+  const mostrarMensaje = (mensaje, tipo) => {
+    setToast({ visible: true, mensaje, tipo });
+    setTimeout(() => setToast({ visible: false, mensaje: '', tipo: '' }), 3000);
+  };
 
   useEffect(() => {
     fetch(`${API_URL}/api/ingredientes`)
       .then(res => res.json())
       .then(data => {
-        if (data.length > 0) {
+        if (data && data.length > 0) {
           setIngredientesBase(data);
         } else {
           setIngredientesBase([
@@ -26,13 +35,11 @@ function App() {
         }
       })
       .catch(() => {
+        // Fallback si la API no responde
         setIngredientesBase([
           { nombre: 'Pollo', categoria: 'Proteína' },
           { nombre: 'Tomate', categoria: 'Vegetal' },
-          { nombre: 'Arroz', categoria: 'Cereales' },
-          { nombre: 'Leche', categoria: 'Lácteo' },
-          { nombre: 'Huevo', categoria: 'Proteína' },
-          { nombre: 'Panceta', categoria: 'Proteína' }
+          { nombre: 'Arroz', categoria: 'Cereales' }
         ]);
       });
   }, []);
@@ -41,12 +48,10 @@ function App() {
     fetch(`${API_URL}/api/inventario`)
       .then(res => res.json())
       .then(data => {
-        if (Array.isArray(data)) {
-          setIngredientesNevera(data);
-        }
+        if (Array.isArray(data)) setIngredientesNevera(data);
       })
       .catch(() => {
-        mostrarMensaje('⚠️ No se pudo cargar el inventario guardado.', 'error');
+        mostrarMensaje('⚠️ No se pudo cargar el inventario.', 'error');
       });
   }, []);
 
@@ -54,44 +59,31 @@ function App() {
     try {
       const response = await fetch(`${API_URL}/api/inventario`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: listaActualizada })
       });
-
-      if (!response.ok) {
-        throw new Error('Error guardando inventario');
-      }
+      if (!response.ok) throw new Error();
     } catch {
-      mostrarMensaje('⚠️ No se pudo guardar en la base de datos.', 'error');
+      mostrarMensaje('⚠️ Error al sincronizar con el servidor.', 'error');
     }
   };
 
-  // 3. LOGICA DE ANADIDO
   const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
-
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
+    let nuevaLista;
     if (index !== -1) {
-      const nuevaLista = [...ingredientesNevera];
-      const cantidadActual = nuevaLista[index].cantidad || 1;
-      nuevaLista[index].cantidad = cantidadActual + cantidadNumerica;
+      nuevaLista = [...ingredientesNevera];
+      nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
       nuevaLista[index].unidad = unidadElegida;
-
-      setIngredientesNevera(nuevaLista);
-      guardarInventario(nuevaLista);
-
     } else {
-      // Es un ingrediente NUEVO, se anade tal cual
-      const nuevaLista = [
-        ...ingredientesNevera,
-        { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }
-      ];
-      setIngredientesNevera(nuevaLista);
-      guardarInventario(nuevaLista);
+      nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }];
     }
+
+    setIngredientesNevera(nuevaLista);
+    guardarInventario(nuevaLista);
+    mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
 
   const eliminarDeInventario = (nombre) => {
@@ -118,7 +110,7 @@ function App() {
               onError={(msg) => mostrarMensaje(msg, 'error')}
             />
 
-            <div className="messages-under-add" aria-live="polite">
+            <div className="messages-under-add">
               {toast.visible && (
                 <div className={`toast-notification ${toast.tipo}`}>
                   {toast.mensaje}
@@ -134,10 +126,9 @@ function App() {
             />
           </div>
         </section>
-      </main >
+      </main>
     </>
   );
 }
-
 
 export default App;
