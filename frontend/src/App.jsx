@@ -39,13 +39,13 @@ function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
 
-//Estado para nuestro mensaje Toast
+  //Estado para nuestro mensaje Toast
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
 
   //Función para mostrar el mensaje y ocultarlo a los 3 segundos
   const mostrarMensaje = (mensaje, tipo = 'error') => {
     setToast({ visible: true, mensaje, tipo });
-    
+
     // El temporizador que lo hace desaparecer
     setTimeout(() => {
       setToast({ visible: false, mensaje: '', tipo: '' });
@@ -54,33 +54,20 @@ function App() {
 
 
   useEffect(() => {
-    fetch('http://localhost:3000/api/ingredientes')
+    fetch(`${import.meta.env.VITE_API_URL}/api/ingredientes`)
       .then(res => res.json())
       .then(data => {
-        if (data.length > 0) {
-          setIngredientesBase(data);
-        } else {
-          setIngredientesBase([
-            { nombre: 'Pollo', categoria: 'Proteína' },
-            { nombre: 'Tomate', categoria: 'Vegetal' },
-            { nombre: 'Arroz', categoria: 'Cereales' },
-            { nombre: 'Leche', categoria: 'Lácteo' },
-            { nombre: 'Huevo', categoria: 'Proteína' }
-          ]);
-        }
+        setIngredientesBase(data);
       })
-      .catch(() => {
-        setIngredientesBase([
-          { nombre: 'Pollo', categoria: 'Proteína' },
-          { nombre: 'Arroz', categoria: 'Cereales' }
-        ]);
+      .catch((err) => {
+        console.error('Error cargando ingredientes:', err);
       });
   }, []);
 
   // 3. LOGICA DE ANADIDO
   const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
-    
+
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
     if (index !== -1) {
@@ -101,7 +88,7 @@ function App() {
       // Si la conversión es exitosa, sumamos
       const nuevaLista = [...ingredientesNevera];
       let sumaTotal = cantidadActual + cantidadConvertida;
-      
+
       // Redondeamos a un máximo de 2 decimales para que no salgan nmeros raros como 1.300000001
       sumaTotal = Math.round(sumaTotal * 100) / 100;
 
@@ -111,7 +98,7 @@ function App() {
     } else {
       // Es un ingrediente NUEVO, se anade tal cual
       setIngredientesNevera([
-        ...ingredientesNevera, 
+        ...ingredientesNevera,
         { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }
       ]);
     }
@@ -122,7 +109,7 @@ function App() {
     setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre));
   };
 
- return (
+  return (
     <>
       <div className="bg-gradient"></div>
       <main className="app-container">
@@ -131,16 +118,16 @@ function App() {
           <h1>LazyChef</h1>
           <p>Gestiona tus alimentos con inteligencia</p>
         </header>
-        
-        <Buscador 
-          ingredientesBase={ingredientesBase} 
-          onAñadir={añadirAInventario} 
-          onError={(msg) => mostrarMensaje(msg, 'error')} 
+
+        <Buscador
+          ingredientesBase={ingredientesBase}
+          onAñadir={añadirAInventario}
+          onError={(msg) => mostrarMensaje(msg, 'error')}
         />
-        
-        <ListaNevera 
-          ingredientes={ingredientesNevera} 
-          onEliminar={eliminarDeInventario} 
+
+        <ListaNevera
+          ingredientes={ingredientesNevera}
+          onEliminar={eliminarDeInventario}
         />
       </main>
 

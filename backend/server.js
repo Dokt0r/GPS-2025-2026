@@ -1,14 +1,11 @@
-// 1. Importamos la lógica de la aplicación desde src/app.js
-const app = require('./src/app');
-
-// 2. Importamos dotenv para leer las variables del archivo .env
+// 1. Primero dotenv, antes de todo
 require('dotenv').config();
 
-// 3. Definimos el puerto
-// Usará el del archivo .env o el 3000 por defecto si aquel no existe
+// 2. Luego importamos la app
+const app = require('./src/app');
+
 const PORT = process.env.PORT || 3000;
 
-// 4. Arrancamos el servidor
 app.listen(PORT, () => {
     console.log(`🚀 Servidor de la Nevera Virtual funcionando en: http://localhost:${PORT}`);
     console.log('Presiona CTRL+C para detener el servidor');
