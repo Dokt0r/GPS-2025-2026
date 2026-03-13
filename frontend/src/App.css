@@ -29,6 +29,20 @@ body {
     gap: 20px;
 }
 
+.split-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+.left-panel,
+.right-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 /* Evita que el contenedor cambie de tamaño al añadir contenido */
 .card {
     background: var(--card-bg);
@@ -239,5 +253,37 @@ ul#mi-nevera li:hover {
 .btn-delete:hover {
     color: #f87171;
     transform: scale(1.2);
+}
+
+.messages-under-add {
+    min-height: 58px;
+    display: flex;
+    align-items: flex-end;
+}
+
+.toast-notification {
+    width: 100%;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-weight: 600;
+    border: 1px solid var(--glass-border);
+    background: rgba(15, 23, 42, 0.7);
+    box-sizing: border-box;
+}
+
+.toast-notification.success {
+    border-color: rgba(46, 204, 113, 0.5);
+    color: #9ef3bf;
+}
+
+.toast-notification.error {
+    border-color: rgba(239, 68, 68, 0.5);
+    color: #fca5a5;
+}
+
+@media (max-width: 900px) {
+    .split-layout {
+        grid-template-columns: 1fr;
+    }
 }
 

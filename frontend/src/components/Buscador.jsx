@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const Buscador = ({ ingredientesBase, onAñadir }) => {
+const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
   const [busqueda, setBusqueda] = useState('');
   const [cantidad, setCantidad] = useState(''); // Empieza vacío para que escribas lo que quieras
   const [unidad, setUnidad] = useState('u.'); // Vuelve a ser desplegable por defecto
@@ -35,7 +35,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
       setUnidad('u.');
       setSugerencias([]);
     } else {
-      alert("❌ Por favor, selecciona un ingrediente válido de las sugerencias.");
+      onError?.('❌ Por favor, selecciona un ingrediente válido de las sugerencias.');
     }
   };
 
