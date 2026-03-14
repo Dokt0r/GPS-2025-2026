@@ -1,0 +1,52 @@
+name: Ejecutar Tests (Front y Back)
+
+# Esto le dice a GitHub cuándo ejecutarse
+on:
+  push:
+    branches: [ "main" , "dev" ]
+  pull_request:
+    branches: [ "main", "dev" ]
+  merge:
+    branches: [ "main", "dev" ]
+
+jobs:
+  # TRABAJO 1: Tests del Backend
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+      
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Usa la versión de Node que estés usando tú
+          
+      - name: Instalar dependencias del Backend
+        # OJO: Si tu package.json del backend está en otra carpeta, cambia el directorio
+        working-directory: ./backend 
+        run: npm install
+        
+      - name: Ejecutar Tests del Backend
+        working-directory: ./backend
+        run: npm test # Asegúrate de que este comando ejecuta tus backendTests
+
+  # TRABAJO 2: Tests del Frontend
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+      
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Instalar dependencias del Frontend
+        working-directory: ./frontend # Cambia esto si tu front está en la raíz u otra carpeta
+        run: npm install
+        
+      - name: Ejecutar Tests del Frontend
+        working-directory: ./frontend
+        run: npm test # Asegúrate de que este comando ejecuta tus frontendTests
