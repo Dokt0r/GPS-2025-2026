@@ -4,11 +4,13 @@ const mongoose = require('mongoose');
 
 const app = express();
 const ingredientesRoutes = require('./routes/ingredientes');
+const inventarioRoutes = require('./routes/inventario');
 
 app.use(cors());
 app.use(express.json());
 
 app.use('/api/ingredientes', ingredientesRoutes);
+app.use('/api/inventario', inventarioRoutes);
 
 // Conexión a MongoDB
 mongoose.connect(process.env.MONGODB_URI)
