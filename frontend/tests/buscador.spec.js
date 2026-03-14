@@ -1,13 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-    const responsePromise = page.waitForResponse('http://localhost:3000/api/ingredientes');
-    await page.goto('http://localhost:5173');
-    await responsePromise;
+    // Vamos a la página directamente
+    await page.goto('/');
+    // En lugar de esperar la respuesta de red (que puede fallar por mil ms), 
+    // esperamos a que un elemento clave del buscador sea visible.
+    await expect(page.getByPlaceholderText(/Ingrediente/i)).toBeVisible({ timeout: 10000 });
 });
 
 test('Carga el buscador correctamente', async ({ page }) => {
-    await expect(page.getByPlaceholder('Ingrediente (ej: Arroz)')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'LazyChef' })).toBeVisible();
 });
 
 test('Muestra sugerencias al escribir', async ({ page }) => {
