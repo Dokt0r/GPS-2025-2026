@@ -7,6 +7,7 @@ on:
     branches: [ "main", "DEV" ]
 
 jobs:
+  # 1. JOB DE TESTS UNITARIOS BACKEND
   backend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -22,12 +23,13 @@ jobs:
         working-directory: ./backend
         run: npm install
         
-      - name: Ejecutar Tests del Backend
+      - name: Ejecutar Tests del Backend (Unitarios + integracion backend+mongo)
         working-directory: ./backend
         run: npm test
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
+  # 2. JOB DE TESTS UNITARIOS FRONTEND
   frontend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -47,6 +49,7 @@ jobs:
         working-directory: ./frontend
         run: npm test -- --run
 
+  # 3. JOB DE TESTS E2E (Integracion)
   e2e-tests:
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
@@ -59,36 +62,23 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Instalar dependencias del Backend
-        working-directory: ./backend
-        run: npm install
-
-      - name: Instalar dependencias del Frontend
-        working-directory: ./frontend
-        run: npm install
+      - name: Instalar dependencias de ambos
+        run: |
+          cd backend && npm install
+          cd ../frontend && npm install
 
       - name: Instalar navegadores de Playwright
         working-directory: ./frontend
         run: npx playwright install --with-deps
 
-      - name: Arrancar Backend
-        working-directory: ./backend
-        run: node server.js &
+      - name: Ejecutar Tests E2E (Playwright)
+        working-directory: ./frontend
+        # Playwright levantará los servidores según su config
+        run: npx playwright test
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
-      - name: Arrancar Frontend
-        working-directory: ./frontend
-        run: npm run dev &
-
-      - name: Esperar a que los servidores estén listos
-        working-directory: ./frontend
-        run: npx wait-on http://localhost:5173 http://localhost:3000 --timeout 60000
-
-      - name: Ejecutar Tests E2E (Playwright)
-        working-directory: ./frontend
-        run: npx playwright test
-
+  # 4. DESPLIEGUE (SOLO SI TODO LO ANTERIOR PASA)
   desplegar-vercel:
     needs: [backend-tests, frontend-tests, e2e-tests]
     runs-on: ubuntu-latest
