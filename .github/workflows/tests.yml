@@ -3,9 +3,9 @@ name: Ejecutar Tests (Front y Back)
 # Esto le dice a GitHub cuándo ejecutarse
 on:
   push:
-    branches: [ "main" , "dev" ]
+    branches: [ "main" , "DEV" ]
   pull_request:
-    branches: [ "main", "dev" ]
+    branches: [ "main", "DEV" ]
 
 jobs:
   # TRABAJO 1: Tests del Backend
