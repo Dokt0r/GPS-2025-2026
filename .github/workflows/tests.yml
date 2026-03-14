@@ -82,7 +82,8 @@ jobs:
         run: npm run dev &
 
       - name: Esperar a que los servidores estén listos
-        run: npx wait-on http://localhost:5173 http://localhost:3000
+        working-directory: ./frontend
+        run: npx wait-on http://localhost:5173 http://localhost:3000 --timeout 60000
 
       - name: Ejecutar Tests E2E (Playwright)
         working-directory: ./frontend
