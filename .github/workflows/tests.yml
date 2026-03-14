@@ -77,7 +77,7 @@ jobs:
         # y evitamos que cargue globalmente librerías de Vitest
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          VITE_API_URL: ${{ http://localhost:3000 }}
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
           NODE_ENV: test
         run: npx playwright test --config=playwright.config.js
 
