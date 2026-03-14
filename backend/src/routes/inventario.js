@@ -3,6 +3,7 @@ const router = express.Router();
 const InventarioItem = require('../models/InventarioItem');
 
 // GET /api/inventario - obtener el inventario
+/*
 router.get('/', async (req, res) => {
     try {
         const items = await InventarioItem.find();
@@ -28,5 +29,6 @@ router.put('/', async (req, res) => {
         res.status(500).json({ error: 'Error al guardar el inventario' });
     }
 });
+*/
 
 module.exports = router;

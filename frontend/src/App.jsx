@@ -44,6 +44,7 @@ function App() {
       });
   }, []);
 
+  /*
   useEffect(() => {
     fetch(`${API_URL}/api/inventario`)
       .then(res => res.json())
@@ -54,7 +55,8 @@ function App() {
         mostrarMensaje('⚠️ No se pudo cargar el inventario.', 'error');
       });
   }, []);
-
+  */
+ /*
   const guardarInventario = async (listaActualizada) => {
     try {
       const response = await fetch(`${API_URL}/api/inventario`, {
@@ -67,7 +69,8 @@ function App() {
       mostrarMensaje('⚠️ Error al sincronizar con el servidor.', 'error');
     }
   };
-
+  */
+ 
   const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);

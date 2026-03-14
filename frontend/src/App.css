@@ -72,6 +72,7 @@ body {
 /* --- FILA DE INPUTS (Flexbox) --- */
 .inputs-row {
     display: flex;
+    flex-wrap: wrap; /* Permite que los elementos bajen a la siguiente línea */
     gap: 12px;
     align-items: flex-start;
     width: 100%;
@@ -79,7 +80,8 @@ body {
 
 .buscador-wrapper {
     position: relative;
-    flex: 1; 
+    width: 100%; /*Obliga al buscador a ocupar el 100% del ancho de la tarjeta */
+    flex: none; /* Evita que el buscador se estire o encoja */
 }
 
 /* Estilo unificado (Texto, Cantidad, Selector) */
@@ -163,6 +165,15 @@ body {
     box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     max-height: 200px;
     overflow-y: auto;
+    
+    /*Ocultar scrollbar en Firefox y Edge */
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
+}
+
+/*Ocultar scrollbar en Chrome, Safari y Edge moderno */
+.sugerencias-box::-webkit-scrollbar {
+    display: none;
 }
 
 .sugerencia-item {
