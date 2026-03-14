@@ -13,25 +13,23 @@ export default defineConfig({
     {
       // 1. FRONTEND
       command: 'npm run dev',
-      // Usamos 127.0.0.1 en lugar de localhost para evitar problemas de IPv4/IPv6 con Vite en CI
-      url: 'http://127.0.0.1:5173', 
+      url: 'http://localhost:5173', 
       reuseExistingServer: !process.env.CI,
-      stdout: 'ignore',
+      stdout: 'pipe',
       stderr: 'pipe',
-      timeout: 120 * 1000, // Le damos hasta 2 minutos para arrancar en CI
+      timeout: 120 * 1000,
     },
     {
       // 2. BACKEND
-      command: 'cd ../backend && node server.js',
-      url: 'http://127.0.0.1:3000',
+      command: 'node ../backend/server.js', // <-- Forma más segura de ejecutarlo
+      url: 'http://localhost:3000',
       reuseExistingServer: !process.env.CI,
-      stdout: 'ignore',
+      stdout: 'pipe',
       stderr: 'pipe',
-      timeout: 120 * 1000, // Le damos hasta 2 minutos para arrancar en CI
+      timeout: 120 * 1000,
     }
   ],
   use: {
-    // La URL base para los tests (así solo pones page.goto('/') en tus tests)
-    baseURL: 'http://127.0.0.1:5173',
+    baseURL: 'http://localhost:5173',
   },
 });

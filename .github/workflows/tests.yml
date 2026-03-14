@@ -75,10 +75,10 @@ jobs:
         working-directory: ./frontend
         # Forzamos a Playwright a usar solo su archivo de configuración 
         # y evitamos que cargue globalmente librerías de Vitest
-        run: npx playwright test --config=playwright.config.js
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           NODE_ENV: test
+        run: npx playwright test --config=playwright.config.js
 
   # 4. DESPLIEGUE
   desplegar-vercel:
