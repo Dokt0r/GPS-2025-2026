@@ -18,16 +18,15 @@ jobs:
       - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Usa la versión de Node que estés usando tú
+          node-version: '20'
           
       - name: Instalar dependencias del Backend
-        # OJO: Si tu package.json del backend está en otra carpeta, cambia el directorio
-        working-directory: ./backend 
+        working-directory: ./backend
         run: npm install
         
       - name: Ejecutar Tests del Backend
         working-directory: ./backend
-        run: npm test # Asegúrate de que este comando ejecuta tus backendTests
+        run: npm test
 
   # TRABAJO 2: Tests del Frontend
   frontend-tests:
@@ -42,9 +41,9 @@ jobs:
           node-version: '20'
           
       - name: Instalar dependencias del Frontend
-        working-directory: ./frontend # Cambia esto si tu front está en la raíz u otra carpeta
+        working-directory: ./frontend
         run: npm install
         
       - name: Ejecutar Tests del Frontend
         working-directory: ./frontend
-        run: npm test # Asegúrate de que este comando ejecuta tus frontendTests
+        run: npm test 

@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, test, expect, vi } from 'vitest';
-import Buscador from '../../frontend/src/components/Buscador';
+import Buscador from '../src/components/Buscador';
 
 const ingredientesMock = [
     { nombre: 'Aceite' },
