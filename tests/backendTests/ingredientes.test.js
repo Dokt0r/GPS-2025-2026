@@ -13,8 +13,8 @@ jest.mock('../src/models/ingredientes', () => ({
     find: jest.fn()
 }));
 
-const app = require('../src/app');
-const Ingrediente = require('../src/models/ingredientes');
+const app = require('../../backend/src/app');
+const Ingrediente = require('../../backend/src/models/ingredientes');
 
 describe('GET /api/ingredientes', () => {
 
