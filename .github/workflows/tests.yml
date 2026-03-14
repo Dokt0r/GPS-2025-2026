@@ -86,7 +86,7 @@ jobs:
         if: always() # Súper importante: dile que lo guarde AUNQUE el test haya fallado
         with:
           name: playwright-report
-          path: frontend/playwright-report/
+          path: frontend/test-results/
           retention-days: 5
 
   # 4. DESPLIEGUE
