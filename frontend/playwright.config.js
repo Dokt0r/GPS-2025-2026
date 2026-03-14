@@ -31,5 +31,9 @@ export default defineConfig({
   ],
   use: {
     baseURL: 'http://localhost:5173',
+
+    trace: 'retain-on-failure',     // Guarda la traza completa solo si el test falla
+    screenshot: 'only-on-failure',  // Saca una foto en el momento exacto del error
+    video: 'retain-on-failure',     // Guarda el vídeo solo si falla
   },
 });
