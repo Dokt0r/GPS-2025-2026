@@ -47,3 +47,12 @@ jobs:
       - name: Ejecutar Tests del Frontend
         working-directory: ./frontend
         run: npm test 
+        
+  # TRABAJO 3: Desplegar en Vercel SI los tests pasan
+  desplegar-vercel:
+    needs: [backend-tests, frontend-tests] # Esto asegura que no se despliegue si hay errores
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Solo despliega si es un push/merge a main
+    steps:
+      - name: Avisar a Vercel
+        run: curl -X POST ${{ secrets.VERCEL_WEBHOOK }}
