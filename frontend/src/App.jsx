@@ -56,21 +56,21 @@ function App() {
       });
   }, []);
   */
- /*
-  const guardarInventario = async (listaActualizada) => {
-    try {
-      const response = await fetch(`${API_URL}/api/inventario`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: listaActualizada })
-      });
-      if (!response.ok) throw new Error();
-    } catch {
-      mostrarMensaje('⚠️ Error al sincronizar con el servidor.', 'error');
-    }
-  };
-  */
- 
+  /*
+   const guardarInventario = async (listaActualizada) => {
+     try {
+       const response = await fetch(`${API_URL}/api/inventario`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ items: listaActualizada })
+       });
+       if (!response.ok) throw new Error();
+     } catch {
+       mostrarMensaje('⚠️ Error al sincronizar con el servidor.', 'error');
+     }
+   };
+   */
+
   const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
@@ -85,14 +85,14 @@ function App() {
     }
 
     setIngredientesNevera(nuevaLista);
-    guardarInventario(nuevaLista);
+    //guardarInventario(nuevaLista);
     mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
 
   const eliminarDeInventario = (nombre) => {
     const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
     setIngredientesNevera(nuevaLista);
-    guardarInventario(nuevaLista);
+    //guardarInventario(nuevaLista);
   };
 
   return (
