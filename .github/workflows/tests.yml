@@ -23,7 +23,7 @@ jobs:
         working-directory: ./backend
         run: npm install
         
-      - name: Ejecutar Tests del Backend (Unitarios + integracion backend+mongo)
+      - name: Ejecutar Tests del Backend (Unitarios + Integración)
         working-directory: ./backend
         run: npm test
         env:
@@ -49,7 +49,7 @@ jobs:
         working-directory: ./frontend
         run: npm test -- --run
 
-  # 3. JOB DE TESTS E2E (Integracion)
+  # 3. JOB DE TESTS E2E (Integración/Aceptación)
   e2e-tests:
     runs-on: ubuntu-latest
     needs: [backend-tests, frontend-tests]
@@ -73,12 +73,14 @@ jobs:
 
       - name: Ejecutar Tests E2E (Playwright)
         working-directory: ./frontend
-        # Playwright levantará los servidores según su config
-        run: npx playwright test
+        # Forzamos a Playwright a usar solo su archivo de configuración 
+        # y evitamos que cargue globalmente librerías de Vitest
+        run: npx playwright test --config=playwright.config.js
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          NODE_ENV: test
 
-  # 4. DESPLIEGUE (SOLO SI TODO LO ANTERIOR PASA)
+  # 4. DESPLIEGUE
   desplegar-vercel:
     needs: [backend-tests, frontend-tests, e2e-tests]
     runs-on: ubuntu-latest

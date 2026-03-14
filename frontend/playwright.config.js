@@ -1,10 +1,14 @@
-// frontend/playwright.config.js
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
+  // INDICAR EXPLÍCITAMENTE DONDE ESTÁN LOS TESTS E2E
+  testDir: './tests',
+  // SOLO BUSCAR ARCHIVOS .spec.js
+  testMatch: /.*\.spec\.js/,
+
   webServer: [
     {
-      command: 'npm run dev', // O 'npm run build && npm run preview'
+      command: 'npm run dev',
       url: 'http://localhost:5173',
       reuseExistingServer: !process.env.CI,
       stdout: 'ignore',
