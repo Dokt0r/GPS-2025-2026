@@ -1,11 +1,8 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-    // Vamos a la página directamente
     await page.goto('/');
-    // En lugar de esperar la respuesta de red (que puede fallar por mil ms), 
-    // esperamos a que un elemento clave del buscador sea visible.
-    await expect(page.getByPlaceholderText(/Ingrediente/i)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByPlaceholder('Ingrediente (ej: Arroz)')).toBeVisible({ timeout: 10000 });
 });
 
 test('Carga el buscador correctamente', async ({ page }) => {
