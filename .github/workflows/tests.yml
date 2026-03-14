@@ -1,6 +1,5 @@
 name: Ejecutar Tests (Front y Back)
 
-# Esto le dice a GitHub cuándo ejecutarse
 on:
   push:
     branches: [ "main" , "DEV" ]
@@ -8,7 +7,6 @@ on:
     branches: [ "main", "DEV" ]
 
 jobs:
-  # TRABAJO 1: Tests del Backend
   backend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -27,8 +25,9 @@ jobs:
       - name: Ejecutar Tests del Backend
         working-directory: ./backend
         run: npm test
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
-  # TRABAJO 2: Tests del Frontend
   frontend-tests:
     runs-on: ubuntu-latest
     steps:
@@ -44,15 +43,55 @@ jobs:
         working-directory: ./frontend
         run: npm install
         
-      - name: Ejecutar Tests del Frontend
+      - name: Ejecutar Tests del Frontend (Vitest)
         working-directory: ./frontend
-        run: npm test 
-        
-  # TRABAJO 3: Desplegar en Vercel SI los tests pasan
-  desplegar-vercel:
-    needs: [backend-tests, frontend-tests] # Esto asegura que no se despliegue si hay errores
+        run: npm test -- --run
+
+  e2e-tests:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Solo despliega si es un push/merge a main
+    needs: [backend-tests, frontend-tests]
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias del Backend
+        working-directory: ./backend
+        run: npm install
+
+      - name: Instalar dependencias del Frontend
+        working-directory: ./frontend
+        run: npm install
+
+      - name: Instalar navegadores de Playwright
+        working-directory: ./frontend
+        run: npx playwright install --with-deps
+
+      - name: Arrancar Backend
+        working-directory: ./backend
+        run: node server.js &
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+
+      - name: Arrancar Frontend
+        working-directory: ./frontend
+        run: npm run dev &
+
+      - name: Esperar a que los servidores estén listos
+        run: npx wait-on http://localhost:5173 http://localhost:3000
+
+      - name: Ejecutar Tests E2E (Playwright)
+        working-directory: ./frontend
+        run: npx playwright test
+
+  desplegar-vercel:
+    needs: [backend-tests, frontend-tests, e2e-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:
       - name: Avisar a Vercel
         run: curl -X POST ${{ secrets.VERCEL_WEBHOOK }}
