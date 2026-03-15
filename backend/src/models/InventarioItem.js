@@ -8,11 +8,6 @@ const inventarioItemSchema = new mongoose.Schema(
       trim: true,
       unique: true
     },
-    categoria: {
-      type: String,
-      default: 'General',
-      trim: true
-    },
     cantidad: {
       type: Number,
       required: true,

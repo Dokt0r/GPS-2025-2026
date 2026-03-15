@@ -9,7 +9,8 @@ function App() {
   // NUEVO: Estado para las notificaciones
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  // Si existe VITE_API_URL la usa, si no, usa por defecto http://localhost:3000
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   // NUEVO: Función para mostrar mensajes
   const mostrarMensaje = (mensaje, tipo) => {
@@ -44,6 +45,7 @@ function App() {
       });
   }, []);
 
+  /*
   useEffect(() => {
     fetch(`${API_URL}/api/inventario`)
       .then(res => res.json())
@@ -54,19 +56,21 @@ function App() {
         mostrarMensaje('⚠️ No se pudo cargar el inventario.', 'error');
       });
   }, []);
-
-  const guardarInventario = async (listaActualizada) => {
-    try {
-      const response = await fetch(`${API_URL}/api/inventario`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: listaActualizada })
-      });
-      if (!response.ok) throw new Error();
-    } catch {
-      mostrarMensaje('⚠️ Error al sincronizar con el servidor.', 'error');
-    }
-  };
+  */
+  /*
+   const guardarInventario = async (listaActualizada) => {
+     try {
+       const response = await fetch(`${API_URL}/api/inventario`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ items: listaActualizada })
+       });
+       if (!response.ok) throw new Error();
+     } catch {
+       mostrarMensaje('⚠️ Error al sincronizar con el servidor.', 'error');
+     }
+   };
+   */
 
   const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
@@ -82,14 +86,14 @@ function App() {
     }
 
     setIngredientesNevera(nuevaLista);
-    guardarInventario(nuevaLista);
+    //guardarInventario(nuevaLista);
     mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
 
   const eliminarDeInventario = (nombre) => {
     const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
     setIngredientesNevera(nuevaLista);
-    guardarInventario(nuevaLista);
+    //guardarInventario(nuevaLista);
   };
 
   return (

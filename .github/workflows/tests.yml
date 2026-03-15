@@ -1,0 +1,99 @@
+name: Ejecutar Tests (Front y Back)
+
+on:
+  push:
+    branches: [ "main" , "DEV" ]
+  pull_request:
+    branches: [ "main", "DEV" ]
+
+jobs:
+  # 1. JOB DE TESTS UNITARIOS BACKEND
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+      
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Instalar dependencias del Backend
+        working-directory: ./backend
+        run: npm install
+        
+      - name: Ejecutar Tests del Backend (Unitarios + Integración)
+        working-directory: ./backend
+        run: npm test
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+
+  # 2. JOB DE TESTS UNITARIOS FRONTEND
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+      
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Instalar dependencias del Frontend
+        working-directory: ./frontend
+        run: npm install
+        
+      - name: Ejecutar Tests del Frontend (Vitest)
+        working-directory: ./frontend
+        run: npm test -- --run
+
+ # 3. JOB DE TESTS E2E (Integración/Aceptación)
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-tests, frontend-tests]
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias de ambos
+        run: |
+          cd backend && npm install
+          cd ../frontend && npm install
+
+      - name: Instalar navegadores de Playwright
+        working-directory: ./frontend
+        run: npx playwright install --with-deps
+
+      - name: Ejecutar Tests E2E (Playwright)
+        working-directory: ./frontend
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          VITE_API_URL: http://localhost:3000
+          NODE_ENV: test
+        run: npx playwright test --config=playwright.config.js
+
+      - name: Guardar reporte de Playwright
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/test-results/
+          retention-days: 5
+
+  # 4. DESPLIEGUE
+  # IMPORTANTE si se incluye finalmente el job de e2e-tests, el job de despliegue debería depender de él para asegurarnos que solo se despliega si todo ha pasado correctamente
+  # en ese caso el job de despliegue quedaría así:  needs: [backend-tests, frontend-tests, e2e-tests]
+  desplegar-vercel:
+    needs: [backend-tests, frontend-tests, e2e-tests]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Avisar a Vercel
+        run: curl -X POST ${{ secrets.VERCEL_WEBHOOK }}
