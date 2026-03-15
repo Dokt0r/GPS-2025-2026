@@ -10,7 +10,7 @@ test('Carga el buscador correctamente', async ({ page }) => {
 });
 
 test('Muestra sugerencias al escribir', async ({ page }) => {
-    await page.getByPlaceholder('Ingrediente (ej: Arroz)').fill('ace');
+    await page.getByPlaceholder('Ingrediente (ej: Arroz)').fill('ace', { delay: 100 });
     await expect(page.locator('.sugerencias-box')).toBeVisible();
     await expect(page.locator('.sugerencia-item').first()).toBeVisible();
 });
