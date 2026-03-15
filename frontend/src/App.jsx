@@ -9,7 +9,8 @@ function App() {
   // NUEVO: Estado para las notificaciones
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
 
-  const API_URL = import.meta.env.VITE_API_URL;
+  // Si existe VITE_API_URL la usa, si no, usa por defecto http://localhost:3000
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   // NUEVO: Función para mostrar mensajes
   const mostrarMensaje = (mensaje, tipo) => {
