@@ -32,10 +32,8 @@ describe('GET /api/ingredientes', () => {
         Ingrediente.find.mockReturnValue({
             limit: jest.fn().mockResolvedValue(mockIngredientes)
         });
-
         // Act
         const res = await request(app).get('/api/ingredientes');
-
         // Assert
         expect(res.status).toBe(200);
         expect(Array.isArray(res.body)).toBe(true);
@@ -51,10 +49,8 @@ describe('GET /api/ingredientes', () => {
         Ingrediente.find.mockReturnValue({
             limit: jest.fn().mockResolvedValue(mockFiltrados)
         });
-
         // Act
         const res = await request(app).get('/api/ingredientes?nombre=ace');
-
         // Assert
         expect(res.status).toBe(200);
         expect(res.body.length).toBe(2);
@@ -68,10 +64,8 @@ describe('GET /api/ingredientes', () => {
         Ingrediente.find.mockReturnValue({
             limit: jest.fn().mockResolvedValue([])
         });
-
         // Act
         const res = await request(app).get('/api/ingredientes?nombre=zzzzz');
-
         // Assert
         expect(res.status).toBe(200);
         expect(res.body.length).toBe(0);
@@ -86,15 +80,49 @@ describe('GET /api/ingredientes', () => {
         Ingrediente.find.mockReturnValue({
             limit: jest.fn().mockResolvedValue(mockIngredientes)
         });
-
         // Act
         const res = await request(app).get('/api/ingredientes?nombre=a');
-
         // Assert
         expect(res.status).toBe(200);
         res.body.forEach(ing => {
             expect(ing).toHaveProperty('nombre');
         });
     });
+
+    test('Maneja error de base de datos correctamente', async () => {
+        // Arrange
+        Ingrediente.find.mockReturnValue({
+            limit: jest.fn().mockRejectedValue(new Error('DB error'))
+        });
+        // Act
+        const res = await request(app).get('/api/ingredientes');
+        // Assert
+        expect(res.status).toBe(500);
+        expect(res.body).toHaveProperty('error');
+    });
+
+    test('Busqueda con espacios en blanco devuelve todos', async () => {
+        // Arrange
+        Ingrediente.find.mockReturnValue({
+            limit: jest.fn().mockResolvedValue([])
+        });
+        // Act
+        const res = await request(app).get('/api/ingredientes?nombre=   ');
+        // Assert
+        expect(res.status).toBe(200);
+    });
+
+    test('Busqueda con caracteres especiales no rompe la API', async () => {
+        // Arrange
+        Ingrediente.find.mockReturnValue({
+            limit: jest.fn().mockResolvedValue([])
+        });
+        // Act
+        const res = await request(app).get('/api/ingredientes?nombre=@#$%');
+        // Assert
+        expect(res.status).toBe(200);
+        expect(Array.isArray(res.body)).toBe(true);
+    });
+
 
 });
