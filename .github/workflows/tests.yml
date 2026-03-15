@@ -91,7 +91,7 @@ jobs:
   # IMPORTANTE si se incluye finalmente el job de e2e-tests, el job de despliegue debería depender de él para asegurarnos que solo se despliega si todo ha pasado correctamente
   # en ese caso el job de despliegue quedaría así:  needs: [backend-tests, frontend-tests, e2e-tests]
   desplegar-vercel:
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, frontend-tests, e2e-tests]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     steps:

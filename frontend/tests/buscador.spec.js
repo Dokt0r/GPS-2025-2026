@@ -16,7 +16,8 @@ test('Muestra sugerencias al escribir', async ({ page }) => {
 });
 
 test('Selecciona un ingrediente y lo añade a la nevera', async ({ page }) => {
-    await page.getByPlaceholder('Ingrediente (ej: Arroz)').fill('aceite');
+    // Escribimos "aceite" con un retraso de 100ms entre cada tecla
+    await page.getByPlaceholder('Ingrediente (ej: Arroz)').fill('Aceite', { delay: 100 });
     await page.locator('.sugerencia-item').first().click();
     await page.getByRole('button', { name: 'Confirmar Selección' }).click();
     await expect(page.locator('#mi-nevera')).toContainText('Aceite');
