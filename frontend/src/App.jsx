@@ -78,10 +78,12 @@ function App() {
 
     let nuevaLista;
     if (index !== -1) {
+      // Si ya existe, le sumamos la cantidad
       nuevaLista = [...ingredientesNevera];
       nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
       nuevaLista[index].unidad = unidadElegida;
     } else {
+      // Si es nuevo, lo añadimos al final (sin la 'q' que había antes)
       nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }];
     }
 

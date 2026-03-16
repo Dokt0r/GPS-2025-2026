@@ -27,13 +27,20 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
     if (encontrado) {
       // Si dejas la cantidad vacía, asume 1 por defecto
       const cantidadFinal = cantidad === '' ? 1 : cantidad;
-      onAñadir(encontrado, cantidadFinal, unidad);
-      
-      // Reseteamos
-      setBusqueda('');
-      setCantidad('');
-      setUnidad('u.');
-      setSugerencias([]);
+
+      if (cantidadFinal <= 0) {
+        onError?.('❌ La cantidad debe ser mayor que 0.');
+        
+      }else{
+
+        onAñadir(encontrado, cantidadFinal, unidad);
+        
+        // Reseteamos
+        setBusqueda('');
+        setCantidad('');
+        setUnidad('u.');
+        setSugerencias([]);
+      }
     } else {
       onError?.('❌ Por favor, selecciona un ingrediente válido de las sugerencias.');
     }
