@@ -77,7 +77,7 @@ function App() {
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
     let nuevaLista;
-    if (index !== -1) {
+    if (index !== -1 && cantidadNumerica > 0) {
       nuevaLista = [...ingredientesNevera];
       nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
       nuevaLista[index].unidad = unidadElegida;
