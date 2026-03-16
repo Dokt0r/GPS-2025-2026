@@ -18,7 +18,7 @@ test('Muestra sugerencias al escribir', async ({ page }) => {
     await page.getByPlaceholder('Ingrediente (ej: Arroz)').pressSequentially('ace', { delay: 100 });
     await expect(page.locator('.sugerencias-box')).toBeVisible();
     await expect(page.locator('.sugerencia-item').first()).toBeVisible();
-});
+}); 
 
 test('Selecciona un ingrediente y lo añade a la nevera', async ({ page }) => {
     await page.getByPlaceholder('Ingrediente (ej: Arroz)').pressSequentially('Aceite', { delay: 100 });
