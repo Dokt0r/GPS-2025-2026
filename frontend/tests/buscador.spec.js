@@ -49,14 +49,14 @@ test('Añade múltiples ingredientes a la nevera', async ({ page }) => {
 
     // Limpiamos el buscador (si es necesario) o simplemente escribimos el segundo
     await page.getByPlaceholder('Ingrediente (ej: Arroz)').fill(''); // Limpia rápido el input
-    await page.getByPlaceholder('Ingrediente (ej: Arroz)').pressSequentially('Tomate', { delay: 100 });
+    await page.getByPlaceholder('Ingrediente (ej: Arroz)').pressSequentially('Lombarda', { delay: 100 });
     await page.locator('.sugerencia-item').first().click();
     await page.getByRole('button', { name: 'Confirmar Selección' }).click();
 
     // Verificamos que AMBOS están en la lista
     const nevera = page.locator('#mi-nevera');
     await expect(nevera).toContainText('Aceite');
-    await expect(nevera).toContainText('Tomate');
+    await expect(nevera).toContainText('Lombarda');
     // Verificamos que hay exactamente 2 elementos (<li>)
     await expect(page.locator('.ingrediente-item')).toHaveCount(2);
 });
