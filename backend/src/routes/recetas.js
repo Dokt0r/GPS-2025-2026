@@ -1,20 +1,37 @@
 const express = require('express');
 const router = express.Router();
-const Receta = require('../models/Receta'); 
+const Receta = require('../models/recetas'); 
 
-// Función para estandarizar lo que viene del frontend a g, ml o ud
+// Función para estandarizar lo que viene del frontend a g, ml o ud de forma SEGURA
 const estandarizarNevera = (queryStr) => {
+    if (!queryStr) return [];
+    
     const items = queryStr.split(',');
     return items.map(item => {
-        let [nombre, cantidad, unidad] = item.split(':');
-        cantidad = parseFloat(cantidad);
-        unidad = unidad.toLowerCase();
+        let [nombre = "", cantidad = "1", unidad = ""] = item.split(':');
+        
+        cantidad = parseFloat(cantidad) || 1;
+        unidad = unidad.toLowerCase().trim();
 
-        // Conversiones clave
-        if (unidad === 'kg') { cantidad *= 1000; unidad = 'g'; }
-        else if (unidad === 'l' || unidad === 'litro' || unidad === 'litros') { cantidad *= 1000; unidad = 'ml'; }
-        else if (unidad === 'cucharada') { cantidad *= 15; }
-        else if (unidad === 'cucharadita') { cantidad *= 5; }
+        if (unidad === 'kg') { 
+            cantidad *= 1000; 
+            unidad = 'g'; 
+        }
+        else if (unidad === 'l' || unidad === 'litro' || unidad === 'litros') { 
+            cantidad *= 1000; 
+            unidad = 'ml'; 
+        }
+        else if (unidad === 'cucharada') { 
+            cantidad *= 15; 
+            unidad = 'g'; 
+        }
+        else if (unidad === 'cucharadita') { 
+            cantidad *= 5; 
+            unidad = 'g'; 
+        }
+        else if (unidad === 'u.' || unidad === 'u' || unidad === 'uds' || unidad === 'unidad') {
+            unidad = 'ud';
+        }
 
         return { nombre: nombre.trim(), cantidad, unidad };
     });
@@ -22,16 +39,34 @@ const estandarizarNevera = (queryStr) => {
 
 router.get('/', async (req, res) => {
     try {
-        if (!req.query.ingredientes) {
+        // CORRECCIÓN: Primero capturamos lo que viene de la URL
+        const queryStr = req.query.ingredientes;
+
+        console.log("\n=======================================");
+        console.log("📥 1. RAW QUERY DEL FRONTEND:", queryStr);
+
+        if (!queryStr) {
+            console.log("❌ Error: Faltan ingredientes en la petición.");
+            console.log("=======================================\n");
             return res.status(400).json({ error: "Faltan ingredientes" });
         }
 
         // 1. Convertimos el string a un array de objetos listos para comparar
-        // Ej: [{ nombre: "harina", cantidad: 1000, unidad: "g" }, ...]
-        const ingredientesNeveraEstandar = estandarizarNevera(req.query.ingredientes);
+        const ingredientesNeveraEstandar = estandarizarNevera(queryStr);
+        
+        console.log("🧠 2. INGREDIENTES PROCESADOS PARA MONGO:");
+        console.log(JSON.stringify(ingredientesNeveraEstandar, null, 2));
+        console.log("🚀 3. Buscando en la base de datos...");
 
         // 2. Pasamos el array completo al Modelo
         const recetasSugeridas = await Receta.buscarPorIngredientesYCantidades(ingredientesNeveraEstandar);
+
+        // 3. Imprimimos el resultado de la búsqueda
+        console.log(`✅ 4. RESULTADO: Mongo encontró ${recetasSugeridas.length} recetas.`);
+        if (recetasSugeridas.length > 0) {
+            console.log(`   (Ejemplo de la primera: "${recetasSugeridas[0].title}")`);
+        }
+        console.log("=======================================\n");
 
         res.json(recetasSugeridas);
     } catch (error) {

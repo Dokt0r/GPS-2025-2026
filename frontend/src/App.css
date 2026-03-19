@@ -470,8 +470,8 @@ ul#mi-nevera li:hover {
     transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     color: transparent; /* Oculta el feo texto 'alt' de navegador si falla la imagen */
 }
-/*
-.receta-tiempo {
+
+.receta-coincidentes {
     position: absolute;
     bottom: 12px;
     right: 12px;
@@ -480,7 +480,7 @@ ul#mi-nevera li:hover {
     -webkit-backdrop-filter: blur(12px);
     color: var(--text-main);
     padding: 6px 14px;
-    border-radius: 20px;  Más redondo para que sea estilo píldora 
+    border-radius: 20px; /* Más redondo para que sea estilo píldora */
     font-size: 0.8rem;
     font-weight: 800;
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -488,9 +488,9 @@ ul#mi-nevera li:hover {
     display: flex;
     align-items: center;
     gap: 6px;
-    z-index: 2;  Para que quede por encima del degradado 
+    z-index: 2; /* Para que quede por encima del degradado */
 }
-*/
+
 .receta-info {
     padding: 24px 20px;
     display: flex;

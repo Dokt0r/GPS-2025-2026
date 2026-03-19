@@ -6,43 +6,42 @@ const VistaRecetas = () => {
   const navigate = useNavigate();
   
   const query = searchParams.get('ingredientes');
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
   const [recetas, setRecetas] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (!query) return;
     
     console.log("Haciendo fetch con la query desde la URL:", query);
     
-    setTimeout(() => {
-      setRecetas([
-        { 
-          id: 1, 
-          titulo: 'Revuelto salvavidas', 
-          tiempo: '15 min',
-          imagen: 'https://images.unsplash.com/photo-1621288143244-9c869273c38b?auto=format&fit=crop&w=400&q=80' 
-        },
-        { 
-          id: 2, 
-          titulo: 'Guiso de lo que sobró', 
-          tiempo: '45 min',
-          imagen: 'https://images.unsplash.com/photo-1548943487-a2e4b4461a52?auto=format&fit=crop&w=400&q=80' 
-        },
-        {
-          id: 3, 
-          titulo: 'Arroz frito rápido', 
-          tiempo: '20 min',
-          imagen: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?auto=format&fit=crop&w=400&q=80'
-        }
-      ]);
-      setCargando(false);
-    }, 2000);
+    const fetchRecetasReales = async () => {
+      try {
+        setCargando(true);
+        // Hacemos la petición real al backend
+        const response = await fetch(`${API_URL}/api/recetas?ingredientes=${query}`);
+        
+        if (!response.ok) throw new Error('Error al conectar con el servidor');
+        
+        const data = await response.json();
+        console.log("👉 RESPUESTA DEL BACKEND:", data); // Para que lo veas en consola
+        
+        setRecetas(data);
+      } catch (err) {
+        console.error(err);
+        setError('Hubo un problema al buscar las recetas.');
+      } finally {
+        setCargando(false);
+      }
+    };
+
+    fetchRecetasReales();
   }, [query]);
 
   return (
     <section className="vista-recetas-container">
-      {/* Cabecera superior mejorada */}
       <div className="header-recetas-clean">
         <button className="btn-back-minimal" onClick={() => navigate(-1)}>
           ← <span>Volver a la Nevera</span>
@@ -50,20 +49,41 @@ const VistaRecetas = () => {
         <h2>Recetas sugeridas</h2>
       </div>
 
-      {cargando ? (
+      {cargando && (
         <div className="loading-container">
-          <p>Pensando recetas...</p>
+          <p>Buscando en tu base de datos...</p>
         </div>
-      ) : (
+      )}
+
+      {error && (
+        <div className="error-container" style={{ textAlign: 'center', color: 'red', marginTop: '20px' }}>
+          <p>{error}</p>
+        </div>
+      )}
+
+      {!cargando && !error && recetas.length === 0 && (
+        <div className="empty-container" style={{ textAlign: 'center', marginTop: '20px' }}>
+          <p>No encontramos recetas con esos ingredientes 😔</p>
+        </div>
+      )}
+
+      {!cargando && recetas.length > 0 && (
         <div className="recetas-grid">
           {recetas.map(r => (
-            <div key={r.id} className="receta-card card">
+            <div 
+              key={r._id} 
+              className="receta-card card"
+              // Al hacer clic, vamos a la pantalla de detalle de esa receta
+              onClick={() => navigate(`/receta/${encodeURIComponent(r.title)}`)}
+              style={{ cursor: 'pointer' }}
+            >
               <div className="receta-img-container">
-                <img src={r.imagen} alt={r.titulo} className="receta-img" />
-                {/* <span className="receta-tiempo">⏱️ {r.tiempo}</span> */}
+                <img src={r.image_url} alt={r.title} className="receta-img" />
+                {/* Mostramos la coincidencia que calculó el backend (ej: 3/5) */}
+                <span className="receta-coincidentes">Match: {r.coincidenciaTexto}</span>
               </div>
               <div className="receta-info">
-                <h3>{r.titulo}</h3>
+                <h3>{r.title}</h3>
               </div>
             </div>
           ))}

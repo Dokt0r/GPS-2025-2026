@@ -13,9 +13,15 @@ const recetaSchema = new mongoose.Schema({
     }]
 });
 
-// MÉTODO: Compara Nombres Y Cantidades
+// MÉTODO: Compara Nombres Y Cantidades con Búsqueda Flexible
 recetaSchema.statics.buscarPorIngredientesYCantidades = async function(neveraArray) {
-    return this.aggregate([
+    
+    // 🔍 LOG 1: Vemos qué recibe el modelo exactamente
+    console.log("-----------------------------------------");
+    console.log("🕵️‍♂️ MODELO: Recibidos estos ingredientes de la nevera:");
+    console.log(JSON.stringify(neveraArray, null, 2));
+
+    const pipeline = [
         {
             $addFields: {
                 // Filtramos los ingredientes de la receta que sí podemos cocinar
@@ -31,8 +37,16 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function(neveraArr
                                     as: "neveraIng",
                                     in: {
                                         $and: [
-                                            // 1. Que el nombre coincida (ignorando mayúsculas/minúsculas)
-                                            { $eq: [{ $toLower: "$$recetaIng.nombre" }, { $toLower: "$$neveraIng.nombre" }] },
+                                            // 1. Que el nombre sea "similar" (uno contenga al otro)
+                                            {
+                                                $or: [
+                                                    // Caso A: "romero seco" (receta) contiene "romero" (nevera)
+                                                    { $gte: [{ $indexOfCP: [{ $toLower: "$$recetaIng.nombre" }, { $toLower: "$$neveraIng.nombre" }] }, 0] },
+                                                    
+                                                    // Caso B: "tomate frito" (nevera) contiene "tomate" (receta)
+                                                    { $gte: [{ $indexOfCP: [{ $toLower: "$$neveraIng.nombre" }, { $toLower: "$$recetaIng.nombre" }] }, 0] }
+                                                ]
+                                            },
                                             // 2. Que tengamos en la nevera más o igual cantidad que la que pide la receta
                                             { $gte: ["$$neveraIng.cantidad", "$$recetaIng.cantidad"] }
                                         ]
@@ -46,12 +60,12 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function(neveraArr
             }
         },
         { 
-            // Contamos cuántos ingredientes cumplieron la regla (Nombre igual + Cantidad suficiente)
+            // Contamos cuántos ingredientes cumplieron la regla
             $addFields: { 
                 cantidadCoincidencias: { $size: "$ingredientesCumplidos" } 
             } 
         },
-        // Filtrar: Que la receta tenga al menos 1 ingrediente cumplido (o puedes poner 2, 3...)
+        // Filtrar: Que la receta tenga al menos 1 ingrediente cumplido
         { $match: { cantidadCoincidencias: { $gt: 0 } } },
         // Ordenar: Las que podemos hacer con más facilidad salen primero
         { $sort: { cantidadCoincidencias: -1 } },
@@ -60,7 +74,6 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function(neveraArr
                 _id: 1,
                 title: 1,
                 image_url: 1,
-                // Opcional: Esto devolverá un texto tipo "5/8" para saber cuántos ingredientes tienes listos
                 coincidenciaTexto: { 
                     $concat: [ 
                         { $toString: "$cantidadCoincidencias" }, "/", { $toString: "$totalIngredientesReceta" } 
@@ -68,7 +81,15 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function(neveraArr
                 }
             }
         }
-    ]);
+    ];
+
+    // 🔍 LOG 2: Vemos la "tubería" completa en formato JSON
+    console.log("⚙️ MODELO: Ejecutando este Pipeline en MongoDB:");
+    // Hacemos un stringify con espaciado 2 para que sea legible en la terminal
+    console.log(JSON.stringify(pipeline, null, 2));
+    console.log("-----------------------------------------");
+
+    return this.aggregate(pipeline);
 };
 
 module.exports = mongoose.model('Receta', recetaSchema);
