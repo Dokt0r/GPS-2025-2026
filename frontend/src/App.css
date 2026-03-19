@@ -16,6 +16,11 @@ body {
     margin: 0;
     min-height: 100vh;
     background-color: var(--bg-dark);
+    /* Degradado moderno con toques de tu color acento */
+    background-image: 
+        radial-gradient(circle at top left, rgba(45, 216, 116, 0.212) 0%, transparent 40%),
+        radial-gradient(circle at bottom right, rgb(23, 18, 70) 0%, #020617 100%);
+    background-attachment: fixed;
     color: var(--text-main);
     display: flex;
     justify-content: center;
@@ -248,6 +253,15 @@ header p {
     transform: scale(1.2);
 }
 
+/* Estilo para ajustar el botón de volver de las recetas */
+.btn-back {
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
 /* =========================================
    LISTA DE INVENTARIO
    ========================================= */
@@ -333,117 +347,192 @@ ul#mi-nevera li:hover {
 }
 
 /* =========================================
-   TARJETAS DE RECETAS Y VISTA RECETAS
+   VISTA RECETAS (LAYOUT Y GRID)
    ========================================= */
-.header-recetas {
-    margin-bottom: 24px;
-    padding: 24px;
-    min-height: auto;
+.vista-recetas-container {
+    width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
     gap: 16px;
 }
 
-.header-recetas-text h2 {
-    margin: 0;
-    color: var(--accent);
-    font-size: 1.8rem;
+.header-recetas-clean {
+    margin-bottom: 8px;
 }
 
-.header-recetas-text p {
-    margin: 8px 0 0 0;
+.header-recetas-clean h2 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 2.2rem;
+    letter-spacing: -0.5px;
+}
+
+.header-recetas-clean p {
+    margin: 0;
     color: var(--text-muted);
+    font-size: 1.1rem;
 }
 
-.loading-card {
-    text-align: center;
-    padding: 48px;
-    align-items: center;
-    justify-content: center;
-}
-
-.loading-card p {
-    font-size: 1.2rem;
-    color: var(--accent);
+.header-recetas-clean p span {
+    color: var(--text-main);
     font-weight: 600;
-    margin: 0;
 }
 
+.loading-container {
+    text-align: center;
+    padding: 60px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-container p {
+    font-size: 1.3rem;
+    color: var(--accent);
+    font-weight: 800;
+    margin: 0;
+    animation: pulse 1.5s infinite ease-in-out; 
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0.5; transform: scale(0.98); }
+}
+
+/* GRID INFALIBLE (A PRUEBA DE FALLOS CON MEDIA QUERIES) */
 .recetas-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    /* Por defecto (móviles): 1 sola columna */
+    grid-template-columns: 1fr; 
     gap: 24px;
     width: 100%;
+    align-items: stretch; /* Iguala las alturas de las tarjetas */
+}
+
+/* Tablets (pantallas medianas): 2 columnas */
+@media (min-width: 600px) {
+    .recetas-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Escritorio (pantallas grandes): 3 columnas */
+@media (min-width: 900px) {
+    .recetas-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 .receta-card {
     padding: 0; 
     overflow: hidden; 
-    min-height: auto;
+    min-height: 100%;
     display: flex;
     flex-direction: column;
-    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
     cursor: pointer;
     border: 1px solid var(--glass-border);
 }
 
 .receta-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
-    border-color: rgba(46, 204, 113, 0.4); 
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    border-color: rgba(46, 204, 113, 0.5); 
+}
+
+.receta-card:hover .receta-img {
+    transform: scale(1.08);
 }
 
 .receta-img-container {
     position: relative;
     width: 100%;
     height: 180px;
+    background-color: rgba(30, 41, 59, 0.8); /* Fondo por si falla la imagen */
+    overflow: hidden; /* Vital para que el zoom no se salga de la tarjeta */
+}
+
+/* Capa de degradado sobre la foto para que el texto resalte mejor */
+.receta-img-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 50%;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.418), transparent);
+    pointer-events: none;
 }
 
 .receta-img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    color: transparent; /* Oculta el feo texto 'alt' de navegador si falla la imagen */
 }
 
 .receta-tiempo {
     position: absolute;
     bottom: 12px;
     right: 12px;
-    background: rgba(15, 23, 42, 0.85);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     color: var(--text-main);
-    padding: 6px 12px;
-    border-radius: 12px;
-    font-size: 0.85rem;
+    padding: 6px 14px;
+    border-radius: 20px; /* Más redondo para que sea estilo píldora */
+    font-size: 0.8rem;
     font-weight: 800;
-    border: 1px solid var(--glass-border);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     display: flex;
     align-items: center;
     gap: 6px;
+    z-index: 2; /* Para que quede por encima del degradado */
 }
 
 .receta-info {
-    padding: 20px;
+    padding: 24px 20px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
     flex-grow: 1;
     background: var(--card-bg);
 }
 
 .receta-info h3 {
     margin: 0;
-    font-size: 1.25rem;
+    font-size: 1.15rem;
     color: var(--text-main);
-    line-height: 1.4;
-    font-weight: 800;
+    line-height: 1.5;
+    font-weight: 700;
+}
+
+.btn-back-minimal {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+}
+
+.btn-back-minimal:hover {
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+    border-color: rgba(46, 204, 113, 0.4);
+    transform: translateX(-4px); /* Pequeño salto hacia la izquierda */
 }
 
 /* =========================================
-   RESPONSIVO
+   RESPONSIVO GENERAL
    ========================================= */
 @media (max-width: 900px) {
     .split-layout {

@@ -15,7 +15,6 @@ const VistaRecetas = () => {
     
     console.log("Haciendo fetch con la query desde la URL:", query);
     
-    // Simulamos la carga (solo nombre, duración e imagen)
     setTimeout(() => {
       setRecetas([
         { 
@@ -42,21 +41,18 @@ const VistaRecetas = () => {
   }, [query]);
 
   return (
-    <section style={{ width: '100%' }}>
-      {/* Cabecera superior estructurada */}
-      <div className="card header-recetas">
-        <button className="btn-secundario" onClick={() => navigate(-1)}>
-          ⬅ Volver a la Nevera
+    <section className="vista-recetas-container">
+      {/* Cabecera superior mejorada */}
+      <div className="header-recetas-clean">
+        <button className="btn-back-minimal" onClick={() => navigate(-1)}>
+          ← <span>Volver a la Nevera</span>
         </button>
-        <div className="header-recetas-text">
-            <h2>Recetas sugeridas</h2>
-            <p>Ingredientes: <strong>{query}</strong></p>
-        </div>
+        <h2>Recetas sugeridas</h2>
       </div>
 
       {cargando ? (
-        <div className="card loading-card">
-          <p>Pensando recetas... 🍳</p>
+        <div className="loading-container">
+          <p>Pensando recetas...</p>
         </div>
       ) : (
         <div className="recetas-grid">
@@ -64,7 +60,6 @@ const VistaRecetas = () => {
             <div key={r.id} className="receta-card card">
               <div className="receta-img-container">
                 <img src={r.imagen} alt={r.titulo} className="receta-img" />
-                {/* El tiempo ahora es un badge sobre la imagen */}
                 <span className="receta-tiempo">⏱️ {r.tiempo}</span>
               </div>
               <div className="receta-info">
