@@ -2,6 +2,7 @@
 
 :root {
     --accent: #2ecc71;
+    --accent-glow: rgba(46, 204, 113, 0.4);
     --bg-dark: #0f172a;
     --card-bg: rgba(30, 41, 59, 0.7);
     --text-main: #f8fafc;
@@ -20,13 +21,31 @@ body {
     justify-content: center;
 }
 
+/* =========================================
+   LAYOUT PRINCIPAL
+   ========================================= */
 .app-container {
     width: 100%;
-    max-width: 900px; /* Ancho que pediste */
+    max-width: 900px;
     padding: 40px 20px;
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+header h1 {
+    color: var(--text-main);
+    margin-bottom: 0.2em;
+}
+
+header p {
+    color: var(--text-muted);
+    margin-top: 0;
 }
 
 .split-layout {
@@ -43,18 +62,19 @@ body {
     gap: 12px;
 }
 
-/* Evita que el contenedor cambie de tamaño al añadir contenido */
 .card {
     background: var(--card-bg);
     backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border);
     padding: 32px;
     border-radius: var(--radius);
     width: 100%;
     box-sizing: border-box;
-    min-height: 200px; /* Mantiene un tamaño base constante */
+    min-height: 200px;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .section-header h2 {
@@ -63,16 +83,12 @@ body {
     color: var(--accent);
 }
 
-/* Buscador */
-.buscador-wrapper {
-    position: relative;
-    width: 100%;
-}
-
-/* --- FILA DE INPUTS (Flexbox) --- */
+/* =========================================
+   BUSCADOR E INPUTS
+   ========================================= */
 .inputs-row {
     display: flex;
-    flex-wrap: wrap; /* Permite que los elementos bajen a la siguiente línea */
+    flex-wrap: wrap;
     gap: 12px;
     align-items: flex-start;
     width: 100%;
@@ -80,11 +96,10 @@ body {
 
 .buscador-wrapper {
     position: relative;
-    width: 100%; /*Obliga al buscador a ocupar el 100% del ancho de la tarjeta */
-    flex: none; /* Evita que el buscador se estire o encoja */
+    width: 100%;
+    flex: none;
 }
 
-/* Estilo unificado (Texto, Cantidad, Selector) */
 .input-neon {
     width: 100%; 
     background: rgba(15, 23, 42, 0.6);
@@ -98,22 +113,27 @@ body {
     outline: none; 
 }
 
-/* Ocultar las molestas flechas nativas del input numérico */
+.input-neon:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    background: rgba(15, 23, 42, 0.8);
+}
+
 .input-cantidad::-webkit-inner-spin-button,
 .input-cantidad::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
+
 .input-cantidad {
-    -moz-appearance: textfield; /* Para Firefox */
+    -moz-appearance: textfield;
     width: 90px;
     text-align: center;
 }
 
-/* Estilos específicos para el desplegable (Select) */
 .input-unidad {
     width: 130px;
-    appearance: none; /* Quita la flecha por defecto del sistema */
+    appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 15px center;
@@ -126,19 +146,61 @@ body {
     color: white;
 }
 
-/* El efecto Neón al hacer clic (Focus) */
-.input-neon:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 20px var(--accent-glow);
-    background: rgba(15, 23, 42, 0.8);
+/* =========================================
+   SUGERENCIAS (Autocomplete)
+   ========================================= */
+.sugerencias-box {
+    position: absolute;
+    width: 100%;
+    background: #1e293b;
+    border-radius: 12px;
+    z-index: 10;
+    margin-top: 5px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
 }
 
+.sugerencias-box::-webkit-scrollbar {
+    display: none;
+}
 
-/* Botón Neon */
+.sugerencia-item {
+    padding: 12px 18px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.sugerencia-item:last-child {
+    border-bottom: none;
+}
+
+.sugerencia-item:hover {
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+}
+
+.cat-tag {
+    font-size: 0.75rem;
+    background: rgba(46, 204, 113, 0.15);
+    color: var(--accent);
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 800;
+}
+
+/* =========================================
+   BOTONES
+   ========================================= */
 .btn-primary {
     width: 100%;
     background: var(--accent);
-    color: #064e3b; /* Texto oscuro para contraste sobre el neón */
+    color: #064e3b;
     border: none;
     padding: 18px;
     border-radius: 16px;
@@ -155,55 +217,40 @@ body {
     transform: scale(1.02);
 }
 
-.sugerencias-box {
-    position: absolute;
-    width: 100%;
-    background: #1e293b;
-    border-radius: 12px;
-    z-index: 10;
-    margin-top: 5px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    max-height: 200px;
-    overflow-y: auto;
-    
-    /*Ocultar scrollbar en Firefox y Edge */
-    scrollbar-width: none; 
-    -ms-overflow-style: none;
-}
-
-/*Ocultar scrollbar en Chrome, Safari y Edge moderno */
-.sugerencias-box::-webkit-scrollbar {
-    display: none;
-}
-
-.sugerencia-item {
-    padding: 12px 18px;
-    cursor: pointer;
-}
-
-.sugerencia-item:hover {
-    background: rgba(46, 204, 113, 0.1);
+.btn-secundario {
+    background: transparent;
     color: var(--accent);
-}
-
-/* Botón */
-.btn-primary {
-    background: var(--accent);
-    color: #064e3b;
-    border: none;
-    padding: 18px;
+    border: 1px solid var(--accent);
+    padding: 12px 24px;
     border-radius: 16px;
-    font-weight: 800;
+    font-weight: 600;
     cursor: pointer;
-    margin-top: 20px;
-    transition: 0.3s;
+    transition: all 0.3s;
 }
 
-.btn-primary:hover {
-    box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
+.btn-secundario:hover {
+    background: rgba(46, 204, 113, 0.1);
+    box-shadow: 0 0 15px var(--accent-glow);
 }
 
-/* --- LISTA DE INVENTARIO --- */
+.btn-delete {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: transform 0.2s, color 0.2s;
+    padding: 8px;
+}
+
+.btn-delete:hover {
+    color: #f87171;
+    transform: scale(1.2);
+}
+
+/* =========================================
+   LISTA DE INVENTARIO
+   ========================================= */
 ul#mi-nevera {
     list-style: none;
     padding: 0;
@@ -226,11 +273,10 @@ ul#mi-nevera li:hover {
     background: rgba(255, 255, 255, 0.06);
 }
 
-/* Agrupación del texto y el badge */
 .item-info {
     display: flex;
     align-items: center;
-    gap: 15px; /* Separación entre el nombre y el recuadro verde */
+    gap: 15px;
 }
 
 .item-nombre {
@@ -238,34 +284,22 @@ ul#mi-nevera li:hover {
     font-weight: 600;
 }
 
-/* El Recuadro Verde Moderno (Badge) */
 .badge-cantidad {
-    background: rgba(46, 204, 113, 0.1); /* Fondo verde translúcido */
-    color: var(--accent); /* Texto verde brillante */
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
     padding: 6px 12px;
-    border-radius: 8px; /* Recuadro ligeramente redondeado */
+    border-radius: 8px;
     font-size: 0.85rem;
     font-weight: 800;
-    border: 1px solid rgba(46, 204, 113, 0.4); /* Borde verde más marcado */
-    box-shadow: 0 0 10px rgba(46, 204, 113, 0.1); /* Brillo sutil */
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.1);
     letter-spacing: 0.5px;
-    text-transform: lowercase; /* Queda más estético para las medidas (ej: 2 kg) */
+    text-transform: lowercase;
 }
 
-.btn-delete {
-    background: transparent;
-    border: none;
-    color: #ef4444;
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: transform 0.2s, color 0.2s;
-}
-
-.btn-delete:hover {
-    color: #f87171;
-    transform: scale(1.2);
-}
-
+/* =========================================
+   NOTIFICACIONES (Toasts)
+   ========================================= */
 .messages-under-add {
     min-height: 58px;
     display: flex;
@@ -280,6 +314,7 @@ ul#mi-nevera li:hover {
     border: 1px solid var(--glass-border);
     background: rgba(15, 23, 42, 0.7);
     box-sizing: border-box;
+    animation: slideUp 0.3s ease forwards;
 }
 
 .toast-notification.success {
@@ -292,9 +327,126 @@ ul#mi-nevera li:hover {
     color: #fca5a5;
 }
 
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   TARJETAS DE RECETAS Y VISTA RECETAS
+   ========================================= */
+.header-recetas {
+    margin-bottom: 24px;
+    padding: 24px;
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.header-recetas-text h2 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 1.8rem;
+}
+
+.header-recetas-text p {
+    margin: 8px 0 0 0;
+    color: var(--text-muted);
+}
+
+.loading-card {
+    text-align: center;
+    padding: 48px;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-card p {
+    font-size: 1.2rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 0;
+}
+
+.recetas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 24px;
+    width: 100%;
+}
+
+.receta-card {
+    padding: 0; 
+    overflow: hidden; 
+    min-height: auto;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+    cursor: pointer;
+    border: 1px solid var(--glass-border);
+}
+
+.receta-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+    border-color: rgba(46, 204, 113, 0.4); 
+}
+
+.receta-img-container {
+    position: relative;
+    width: 100%;
+    height: 180px;
+}
+
+.receta-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.receta-tiempo {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--text-main);
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    border: 1px solid var(--glass-border);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.receta-info {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex-grow: 1;
+    background: var(--card-bg);
+}
+
+.receta-info h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-main);
+    line-height: 1.4;
+    font-weight: 800;
+}
+
+/* =========================================
+   RESPONSIVO
+   ========================================= */
 @media (max-width: 900px) {
     .split-layout {
         grid-template-columns: 1fr;
     }
 }
-

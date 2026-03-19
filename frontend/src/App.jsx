@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
 import Buscador from './components/Buscador';
 import ListaNevera from './components/ListaNevera';
+import BotonAccion from './components/BotonAccion';
+import VistaRecetas from './VistaRecetas';
 import './App.css';
 
 function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
-  // NUEVO: Estado para las notificaciones
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
+
+const navigate = useNavigate();
 
   // Si existe VITE_API_URL la usa, si no, usa por defecto http://localhost:3000
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  // NUEVO: Función para mostrar mensajes
+  //Función para mostrar mensajes
   const mostrarMensaje = (mensaje, tipo) => {
     setToast({ visible: true, mensaje, tipo });
     setTimeout(() => setToast({ visible: false, mensaje: '', tipo: '' }), 3000);
@@ -98,6 +102,23 @@ function App() {
     //guardarInventario(nuevaLista);
   };
 
+ const buscarRecetas = () => {
+    if (ingredientesNevera.length === 0) {
+      mostrarMensaje('❌ Tu nevera está vacía. Añade algo primero.', 'error');
+      return;
+    }
+
+    const partes = ingredientesNevera.map(ing => {
+      return `${ing.nombre.trim().toLowerCase()}:${ing.cantidad}:${ing.unidad.trim()}`;
+    });
+
+    const queryEnBruto = partes.join(',');
+    const querySegura = encodeURIComponent(queryEnBruto);
+    
+    // EN LUGAR DE CAMBIAR UN ESTADO, NAVEGAMOS A LA URL REAL
+    navigate(`/recetas?ingredientes=${querySegura}`);
+  };
+
   return (
     <>
       <div className="bg-gradient"></div>
@@ -108,30 +129,47 @@ function App() {
           <p>Gestiona tus alimentos con inteligencia</p>
         </header>
 
-        <section className="split-layout">
-          <div className="left-panel">
-            <Buscador
-              ingredientesBase={ingredientesBase}
-              onAñadir={añadirAInventario}
-              onError={(msg) => mostrarMensaje(msg, 'error')}
-            />
+        {/* DEFINIMOS LAS RUTAS DE LA APLICACIÓN */}
+        <Routes>
+          {/* RUTA PRINCIPAL: LA NEVERA */}
+          <Route path="/" element={
+            <section className="split-layout">
+              <div className="left-panel">
+                <Buscador
+                  ingredientesBase={ingredientesBase}
+                  onAñadir={añadirAInventario}
+                  onError={(msg) => mostrarMensaje(msg, 'error')}
+                />
 
-            <div className="messages-under-add">
-              {toast.visible && (
-                <div className={`toast-notification ${toast.tipo}`}>
-                  {toast.mensaje}
+                <div className="actions-nevera" style={{ marginTop: '20px', textAlign: 'center' }}>
+                  <BotonAccion 
+                    texto="Buscar Recetas" 
+                    alHacerClic={buscarRecetas} 
+                  />
                 </div>
-              )}
-            </div>
-          </div>
 
-          <div className="right-panel">
-            <ListaNevera
-              ingredientes={ingredientesNevera}
-              onEliminar={eliminarDeInventario}
-            />
-          </div>
-        </section>
+                <div className="messages-under-add">
+                  {toast.visible && (
+                    <div className={`toast-notification ${toast.tipo}`}>
+                      {toast.mensaje}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="right-panel">
+                <ListaNevera
+                  ingredientes={ingredientesNevera}
+                  onEliminar={eliminarDeInventario}
+                />
+              </div>
+            </section>
+          } />
+
+          {/* RUTA DE RECETAS */}
+          <Route path="/recetas" element={<VistaRecetas />} />
+        </Routes>
+
       </main>
     </>
   );
