@@ -60,7 +60,7 @@ const VistaRecetas = () => {
             <div key={r.id} className="receta-card card">
               <div className="receta-img-container">
                 <img src={r.imagen} alt={r.titulo} className="receta-img" />
-                <span className="receta-tiempo">⏱️ {r.tiempo}</span>
+                {/* <span className="receta-tiempo">⏱️ {r.tiempo}</span> */}
               </div>
               <div className="receta-info">
                 <h3>{r.titulo}</h3>

@@ -102,7 +102,7 @@ const navigate = useNavigate();
     //guardarInventario(nuevaLista);
   };
 
- const buscarRecetas = () => {
+const buscarRecetas = () => {
     if (ingredientesNevera.length === 0) {
       mostrarMensaje('❌ Tu nevera está vacía. Añade algo primero.', 'error');
       return;
@@ -115,7 +115,6 @@ const navigate = useNavigate();
     const queryEnBruto = partes.join(',');
     const querySegura = encodeURIComponent(queryEnBruto);
     
-    // EN LUGAR DE CAMBIAR UN ESTADO, NAVEGAMOS A LA URL REAL
     navigate(`/recetas?ingredientes=${querySegura}`);
   };
 
