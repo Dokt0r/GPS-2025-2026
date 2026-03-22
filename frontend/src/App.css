@@ -348,11 +348,12 @@ ul#mi-nevera li:hover {
 /* =========================================
    VISTA RECETAS (LAYOUT Y GRID)
    ========================================= */
+
 .vista-recetas-container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #ffffff;
 }
 
 .header-recetas-clean {
@@ -538,55 +539,90 @@ ul#mi-nevera li:hover {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 15px;
+  gap: 12px;
   margin-top: 40px;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  flex-wrap: wrap; /* Para que en móviles no se rompa la pantalla */
 }
 
 .pagination-numbers {
   display: flex;
-  gap: 5px;
+  gap: 6px;
 }
 
+/* Botones de texto (Anterior / Siguiente) */
 .btn-pagination {
-  padding: 8px 16px;
-  border: 1px solid #4ade80; /* Cambia esto al color neón de tu app */
+   background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+    transition: all 0.3s;
+}
+
+/* Botones cuadrados con iconos (« / ») */
+.btn-pagination-icon {
+  background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+    transition: all 0.3s;
+}
+
+/* Hover general para los botones interactivos */
+.btn-pagination:hover:not(:disabled),
+.btn-pagination-icon:hover:not(:disabled) {
+   background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+    border-color: rgba(46, 204, 113, 0.4);
+}
+
+/* Estilo para botones desactivados (Ej: Si estamos en la pag 1) */
+.btn-pagination:disabled,
+.btn-pagination-icon:disabled {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
   background: transparent;
+}
+
+/* Números de página individuales */
+.btn-page-number {
+  padding: 8px 14px;
+  border: 1px solid transparent;
+background: rgba(255, 255, 255, 0.05);   
   color: #fff;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-pagination:disabled {
-  border-color: #555;
-  color: #555;
-  cursor: not-allowed;
-}
-
-.btn-pagination:hover:not(:disabled) {
-  background: #4ade80;
-  color: #1a1a2e;
-}
-
-.btn-page-number {
-  padding: 8px 12px;
-  border: 1px solid transparent;
-  background: #2a2a3e;
-  color: #fff;
-  border-radius: 6px;
-  cursor: pointer;
+  font-weight: 500;
   transition: all 0.2s ease;
 }
 
 .btn-page-number:hover {
-  background: #3a3a5e;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* Estilo del número de la página en la que nos encontramos */
 .btn-page-number.active {
-  background: #4ade80;
-  color: #1a1a2e;
-  font-weight: bold;
+  background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+    border-color: rgba(46, 204, 113, 0.4);
 }
 
 /* =========================================
