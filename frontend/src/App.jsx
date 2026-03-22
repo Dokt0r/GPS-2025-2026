@@ -6,6 +6,12 @@ import BotonAccion from './components/BotonAccion';
 import VistaRecetas from './VistaRecetas';
 import './App.css';
 
+/**
+ * Componente principal de la aplicación LazyChef.
+ * Gestiona el estado global del inventario del usuario (la nevera), la conexión
+ * inicial con la base de datos para obtener los ingredientes disponibles, 
+ * y el sistema global de notificaciones (toast).
+ */
 function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
@@ -14,11 +20,21 @@ function App() {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+  /**
+   * Muestra una notificación temporal (toast) en la interfaz de usuario.
+   * Útil para dar feedback visual de éxito o error en las operaciones.
+   * La notificación desaparece automáticamente tras 3 segundos.
+   */
   const mostrarMensaje = (mensaje, tipo) => {
     setToast({ visible: true, mensaje, tipo });
     setTimeout(() => setToast({ visible: false, mensaje: '', tipo: '' }), 3000);
   };
 
+  /**
+   * Hook de inicialización. Se ejecuta una única vez al montar el componente.
+   * Realiza una petición GET al backend para cargar el catálogo completo de 
+   * ingredientes. Maneja estados de error y de base de datos vacía.
+   */
   useEffect(() => {
     fetch(`${API_URL}/api/ingredientes`)
       .then(res => {
@@ -31,28 +47,35 @@ function App() {
         if (data && data.length > 0) {
           setIngredientesBase(data);
         } else {
-          // Si el servidor responde pero la base de datos está vacía
+          // El servidor responde correctamente, pero la colección está vacía
           setIngredientesBase([]);
           mostrarMensaje('⚠️ La base de datos de ingredientes está vacía.', 'error');
         }
       })
       .catch((error) => {
-        // Si hay un error de conexión (ej. backend caído)
+        // Fallo de red o servidor caído
         console.error("Error cargando ingredientes:", error);
         setIngredientesBase([]);
         mostrarMensaje('❌ No se pudo conectar con el servidor para cargar los ingredientes.', 'error');
       });
   }, []);
 
+  /**
+   * Añade un ingrediente al inventario del usuario.
+   * Si el ingrediente ya existe en la nevera, suma la nueva cantidad a la existente.
+   * Si es nuevo, lo inserta en el array manteniendo sus propiedades originales (unidad, equivalencia).
+   */
   const añadirAInventario = (ingrediente, cantidadAñadida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
     let nuevaLista;
     if (index !== -1) {
+      // Clona el array y suma la cantidad al elemento existente
       nuevaLista = [...ingredientesNevera];
       nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
     } else {
+      // Añade el nuevo objeto ingrediente al final del array
       nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica }];
     }
 
@@ -60,17 +83,27 @@ function App() {
     mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
   
+  /**
+   * Elimina completamente un ingrediente del inventario del usuario
+   * utilizando su nombre como identificador único.
+   */
   const eliminarDeInventario = (nombre) => {
     const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
     setIngredientesNevera(nuevaLista);
   };
 
+  /**
+   * Procesa los ingredientes actuales de la nevera y redirige al usuario a la vista de recetas.
+   * Transforma el array de objetos en un string formateado (nombre|cantidad|unidad|equivalencia)
+   * que se envía de forma segura a través de los parámetros de la URL (Query Params).
+   */
   const buscarRecetas = () => {
     if (ingredientesNevera.length === 0) {
       mostrarMensaje('❌ Tu nevera está vacía. Añade algo primero.', 'error');
       return;
     }
 
+    // Formatear los datos para enviarlos por URL
     const partes = ingredientesNevera.map(ing => {
       const unidad = (ing.unidad ?? '').trim();
       const equivalencia = ing.equivalencia_g_ml ?? '';
@@ -93,7 +126,7 @@ function App() {
         </header>
 
         <Routes>
-          {/* RUTA 1: LA NEVERA */}
+          {/* RUTA 1: VISTA PRINCIPAL (LA NEVERA) */}
           <Route path="/" element={
             <section className="split-layout">
               <div className="left-panel">
@@ -119,7 +152,7 @@ function App() {
             </section>
           } />
 
-          {/* RUTA 2: LA LISTA DE RECETAS */}
+          {/* RUTA 2: RESULTADOS DE BÚSQUEDA (RECETAS) */}
           <Route path="/recetas" element={<VistaRecetas />} />
 
         </Routes>

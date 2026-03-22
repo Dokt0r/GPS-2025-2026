@@ -531,6 +531,65 @@ ul#mi-nevera li:hover {
 }
 
 /* =========================================
+  PAGINACIÓN
+   ========================================= */
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 40px;
+  margin-bottom: 20px;
+}
+
+.pagination-numbers {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-pagination {
+  padding: 8px 16px;
+  border: 1px solid #4ade80; /* Cambia esto al color neón de tu app */
+  background: transparent;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-pagination:disabled {
+  border-color: #555;
+  color: #555;
+  cursor: not-allowed;
+}
+
+.btn-pagination:hover:not(:disabled) {
+  background: #4ade80;
+  color: #1a1a2e;
+}
+
+.btn-page-number {
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  background: #2a2a3e;
+  color: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-page-number:hover {
+  background: #3a3a5e;
+}
+
+.btn-page-number.active {
+  background: #4ade80;
+  color: #1a1a2e;
+  font-weight: bold;
+}
+
+/* =========================================
    RESPONSIVO GENERAL
    ========================================= */
 @media (max-width: 900px) {
