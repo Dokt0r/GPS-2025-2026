@@ -4,7 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 const VistaRecetas = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  
+
   const query = searchParams.get('ingredientes');
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -14,20 +14,21 @@ const VistaRecetas = () => {
 
   useEffect(() => {
     if (!query) return;
-    
+
     console.log("Haciendo fetch con la query desde la URL:", query);
-    
+
     const fetchRecetasReales = async () => {
       try {
         setCargando(true);
         // Hacemos la petición real al backend
-        const response = await fetch(`${API_URL}/api/recetas?ingredientes=${query}`);
-        
+        // ✅ re-encodea por si acaso el router de React ya decodificó la URL
+        const response = await fetch(`${API_URL}/api/recetas?ingredientes=${encodeURIComponent(query)}`);
+
         if (!response.ok) throw new Error('Error al conectar con el servidor');
-        
+
         const data = await response.json();
         console.log("👉 RESPUESTA DEL BACKEND:", data); // Para que lo veas en consola
-        
+
         setRecetas(data);
       } catch (err) {
         console.error(err);
@@ -70,8 +71,8 @@ const VistaRecetas = () => {
       {!cargando && recetas.length > 0 && (
         <div className="recetas-grid">
           {recetas.map(r => (
-            <div 
-              key={r._id} 
+            <div
+              key={r._id}
               className="receta-card card"
               // Al hacer clic, vamos a la pantalla de detalle de esa receta
               onClick={() => navigate(`/receta/${encodeURIComponent(r.title)}`)}

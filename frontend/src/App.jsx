@@ -45,7 +45,7 @@ function App() {
       });
   }, []);
 
-  const añadirAInventario = (ingrediente, cantidadAñadida, unidadElegida) => {
+  const añadirAInventario = (ingrediente, cantidadAñadida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
@@ -53,15 +53,15 @@ function App() {
     if (index !== -1) {
       nuevaLista = [...ingredientesNevera];
       nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
-      nuevaLista[index].unidad = unidadElegida;
+      // ❌ ya no tocamos la unidad, ya es la correcta desde la BD
     } else {
-      nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica, unidad: unidadElegida }];
+      // ✅ ingrediente ya trae { nombre, unidad, equivalencia_g_ml } desde la BD
+      nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica }];
     }
 
     setIngredientesNevera(nuevaLista);
     mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
-
   const eliminarDeInventario = (nombre) => {
     const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
     setIngredientesNevera(nuevaLista);
@@ -74,12 +74,14 @@ function App() {
     }
 
     const partes = ingredientesNevera.map(ing => {
-      return `${ing.nombre.trim().toLowerCase()}:${ing.cantidad}:${ing.unidad.trim()}`;
+      const unidad = (ing.unidad ?? '').trim();
+      const equivalencia = ing.equivalencia_g_ml ?? '';
+      // usar | como separador interno en vez de :
+      return `${ing.nombre.trim().toLowerCase()}|${ing.cantidad}|${unidad}|${equivalencia}`;
     });
 
     const queryEnBruto = partes.join(',');
     const querySegura = encodeURIComponent(queryEnBruto);
-    
     navigate(`/recetas?ingredientes=${querySegura}`);
   };
 

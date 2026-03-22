@@ -15,8 +15,7 @@ const recetaSchema = new mongoose.Schema({
 
 // MÉTODO: Compara Nombres Y Cantidades con Búsqueda Flexible
 recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraArray) {
-    console.log("-----------------------------------------");
-    console.log("🕵️‍♂️ MODELO: Recibidos estos ingredientes de la nevera:");
+    console.log("🕵️‍♂️ MODELO: ingredientes recibidos:");
     console.log(JSON.stringify(neveraArray, null, 2));
 
     const pipeline = [
@@ -32,21 +31,84 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                                     input: neveraArray,
                                     as: "neveraIng",
                                     in: {
-                                        $and: [
-                                            // Solo un sentido: lo que tengo en nevera está contenido en la receta
-                                            {
-                                                $gte: [
-                                                    {
-                                                        $indexOfCP: [
-                                                            { $toLower: "$$recetaIng.nombre" }, // donde busco
-                                                            { $toLower: "$$neveraIng.nombre" }  // qué busco
-                                                        ]
-                                                    },
-                                                    0
-                                                ]
+                                        $let: {
+                                            vars: {
+                                                // ¿Coincide el nombre? (nevera contenida en receta)
+                                                nombreOk: {
+                                                    $gte: [
+                                                        {
+                                                            $indexOfCP: [
+                                                                { $toLower: "$$recetaIng.nombre" },
+                                                                { $toLower: "$$neveraIng.nombre" }
+                                                            ]
+                                                        },
+                                                        0
+                                                    ]
+                                                },
+                                                // Unidad de la nevera (ya estandarizada)
+                                                unidadNevera: { $toLower: "$$neveraIng.unidad" },
+                                                // Unidad de la receta (estandarizar también)
+                                                unidadReceta: { $toLower: "$$recetaIng.unidad" },
+                                                // Factor de conversión (puede ser null)
+                                                factor: "$$neveraIng.equivalencia_g_ml",
+                                                // Cantidades
+                                                cantNevera: "$$neveraIng.cantidad",
+                                                cantReceta: "$$recetaIng.cantidad"
                                             },
-                                            { $gte: ["$$neveraIng.cantidad", "$$recetaIng.cantidad"] }
-                                        ]
+                                            in: {
+                                                $and: [
+                                                    "$$nombreOk",
+                                                    {
+                                                        $switch: {
+                                                            branches: [
+                                                                // CASO 1: misma unidad → comparación directa
+                                                                {
+                                                                    case: { $eq: ["$$unidadNevera", "$$unidadReceta"] },
+                                                                    then: { $gte: ["$$cantNevera", "$$cantReceta"] }
+                                                                },
+                                                                // CASO 2: nevera en g/ml, receta en ud
+                                                                // → convertir g a ud: cantNevera / factor >= cantReceta
+                                                                {
+                                                                    case: {
+                                                                        $and: [
+                                                                            { $in: ["$$unidadNevera", ["g", "ml"]] },
+                                                                            { $eq: ["$$unidadReceta", "ud"] },
+                                                                            { $gt: ["$$factor", 0] }
+                                                                        ]
+                                                                    },
+                                                                    then: {
+                                                                        $gte: [
+                                                                            { $divide: ["$$cantNevera", "$$factor"] },
+                                                                            "$$cantReceta"
+                                                                        ]
+                                                                    }
+                                                                },
+                                                                // CASO 3: nevera en ud, receta en g/ml
+                                                                // → convertir ud a g: cantNevera * factor >= cantReceta
+                                                                {
+                                                                    case: {
+                                                                        $and: [
+                                                                            { $eq: ["$$unidadNevera", "ud"] },
+                                                                            { $in: ["$$unidadReceta", ["g", "ml"]] },
+                                                                            { $gt: ["$$factor", 0] }
+                                                                        ]
+                                                                    },
+                                                                    then: {
+                                                                        $gte: [
+                                                                            { $multiply: ["$$cantNevera", "$$factor"] },
+                                                                            "$$cantReceta"
+                                                                        ]
+                                                                    }
+                                                                }
+                                                            ],
+                                                            // CASO DEFAULT: unidades incompatibles sin factor
+                                                            // → solo se acepta si el nombre coincide (sin validar cantidad)
+                                                            default: false
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -70,16 +132,14 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                 image_url: 1,
                 coincidenciaTexto: {
                     $concat: [
-                        { $toString: "$cantidadCoincidencias" }, "/", { $toString: "$totalIngredientesReceta" }
+                        { $toString: "$cantidadCoincidencias" },
+                        "/",
+                        { $toString: "$totalIngredientesReceta" }
                     ]
                 }
             }
         }
     ];
-
-    console.log("⚙️ MODELO: Ejecutando este Pipeline en MongoDB:");
-    console.log(JSON.stringify(pipeline, null, 2));
-    console.log("-----------------------------------------");
 
     return this.aggregate(pipeline);
 };

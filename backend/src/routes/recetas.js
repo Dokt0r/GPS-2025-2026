@@ -1,39 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const Receta = require('../models/recetas'); 
+const Receta = require('../models/recetas');
 
 // Función para estandarizar lo que viene del frontend a g, ml o ud de forma SEGURA
 const estandarizarNevera = (queryStr) => {
     if (!queryStr) return [];
-    
+
     const items = queryStr.split(',');
     return items.map(item => {
-        let [nombre = "", cantidad = "1", unidad = ""] = item.split(':');
-        
+        // separar por | en vez de :
+        let [nombre = "", cantidad = "1", unidad = "", equivalencia = ""] = item.split('|');
+
         cantidad = parseFloat(cantidad) || 1;
         unidad = unidad.toLowerCase().trim();
+        const equivalencia_g_ml = parseFloat(equivalencia) || null;
 
-        if (unidad === 'kg') { 
-            cantidad *= 1000; 
-            unidad = 'g'; 
-        }
-        else if (unidad === 'l' || unidad === 'litro' || unidad === 'litros') { 
-            cantidad *= 1000; 
-            unidad = 'ml'; 
-        }
-        else if (unidad === 'cucharada') { 
-            cantidad *= 15; 
-            unidad = 'g'; 
-        }
-        else if (unidad === 'cucharadita') { 
-            cantidad *= 5; 
-            unidad = 'g'; 
-        }
-        else if (unidad === 'u.' || unidad === 'u' || unidad === 'uds' || unidad === 'unidad') {
-            unidad = 'ud';
-        }
+        if (unidad === 'kg') { cantidad *= 1000; unidad = 'g'; }
+        else if (['l', 'litro', 'litros'].includes(unidad)) { cantidad *= 1000; unidad = 'ml'; }
+        else if (unidad === 'cucharada') { cantidad *= 15; unidad = 'g'; }
+        else if (unidad === 'cucharadita') { cantidad *= 5; unidad = 'g'; }
+        else if (['u.', 'u', 'uds', 'unidad'].includes(unidad)) { unidad = 'ud'; }
 
-        return { nombre: nombre.trim(), cantidad, unidad };
+        return { nombre: nombre.trim(), cantidad, unidad, equivalencia_g_ml };
     });
 };
 
@@ -53,7 +41,7 @@ router.get('/', async (req, res) => {
 
         // 1. Convertimos el string a un array de objetos listos para comparar
         const ingredientesNeveraEstandar = estandarizarNevera(queryStr);
-        
+
         console.log("🧠 2. INGREDIENTES PROCESADOS PARA MONGO:");
         console.log(JSON.stringify(ingredientesNeveraEstandar, null, 2));
         console.log("🚀 3. Buscando en la base de datos...");
@@ -74,7 +62,6 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
-
 // ENDPOINT 2: Obtener el detalle completo de una receta
 router.get('/detalle', async (req, res) => {
     try {
