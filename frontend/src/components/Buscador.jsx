@@ -3,14 +3,16 @@ import React, { useState } from 'react';
 const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
   const [busqueda, setBusqueda] = useState('');
   const [cantidad, setCantidad] = useState('');
-  const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null); // ✅ guarda el objeto completo
+  const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null);
   const [sugerencias, setSugerencias] = useState([]);
 
   const manejarInput = (e) => {
     const valor = e.target.value;
     setBusqueda(valor);
-    setIngredienteSeleccionado(null); // si escribe de nuevo, limpia la selección
-    if (valor.trim() !== '') {
+    setIngredienteSeleccionado(null);
+    
+    // Si ingredientesBase está vacío, no hacemos nada
+    if (valor.trim() !== '' && ingredientesBase.length > 0) {
       const filtrados = ingredientesBase.filter(ing =>
         ing.nombre.toLowerCase().includes(valor.toLowerCase())
       );
@@ -22,11 +24,17 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
 
   const seleccionarSugerencia = (ing) => {
     setBusqueda(ing.nombre);
-    setIngredienteSeleccionado(ing); // ✅ guardamos el objeto con unidad y equivalencia
+    setIngredienteSeleccionado(ing);
     setSugerencias([]);
   };
 
   const handleConfirmar = () => {
+    // Si la base de datos no cargó, mostramos error
+    if (ingredientesBase.length === 0) {
+        onError?.('❌ No se pueden buscar ingredientes porque no hay conexión con la base de datos.');
+        return;
+    }
+
     if (!ingredienteSeleccionado) {
       onError?.('❌ Por favor, selecciona un ingrediente válido de las sugerencias.');
       return;
@@ -39,7 +47,7 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
       return;
     }
 
-    onAñadir(ingredienteSeleccionado, cantidadFinal); // ✅ sin unidad, ya viene en el objeto
+    onAñadir(ingredienteSeleccionado, cantidadFinal);
 
     setBusqueda('');
     setCantidad('');
@@ -57,18 +65,18 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
         <div className="buscador-wrapper">
           <input
             type="text"
-            placeholder="Ingrediente (ej: Arroz)"
+            placeholder={ingredientesBase.length === 0 ? "Sin conexión..." : "Ingrediente (ej: Arroz)"}
             value={busqueda}
             onChange={manejarInput}
             autoComplete="off"
             className="input-neon"
+            disabled={ingredientesBase.length === 0} // Deshabilita si no hay datos
           />
           {sugerencias.length > 0 && (
             <div className="sugerencias-box">
               {sugerencias.map((ing, i) => (
                 <div key={i} className="sugerencia-item" onClick={() => seleccionarSugerencia(ing)}>
                   {ing.nombre}
-                  {/* ✅ mostramos la unidad por defecto en la sugerencia */}
                   <small className="cat-tag">{ing.unidad}</small>
                 </div>
               ))}
@@ -82,18 +90,20 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
           value={cantidad}
           onChange={(e) => setCantidad(e.target.value)}
           className="input-neon input-cantidad"
+          disabled={ingredientesBase.length === 0}
         />
 
-        {/* ✅ Unidad fija, solo lectura, viene del ingrediente seleccionado */}
+        {/* Unidad fija, solo lectura */}
         <input
           type="text"
           value={ingredienteSeleccionado ? ingredienteSeleccionado.unidad : '—'}
           readOnly
           className="input-neon input-unidad"
+          disabled={ingredientesBase.length === 0}
         />
       </div>
 
-      <button className="btn-primary" onClick={handleConfirmar}>
+      <button className="btn-primary" onClick={handleConfirmar} disabled={ingredientesBase.length === 0}>
         <span>Confirmar Selección</span>
       </button>
     </section>

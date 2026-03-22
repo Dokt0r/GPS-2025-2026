@@ -21,27 +21,26 @@ function App() {
 
   useEffect(() => {
     fetch(`${API_URL}/api/ingredientes`)
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error('Error al conectar con el servidor');
+        }
+        return res.json();
+      })
       .then(data => {
         if (data && data.length > 0) {
           setIngredientesBase(data);
         } else {
-          setIngredientesBase([
-            { nombre: 'Pollo', categoria: 'Proteína' },
-            { nombre: 'Tomate', categoria: 'Vegetal' },
-            { nombre: 'Arroz', categoria: 'Cereales' },
-            { nombre: 'Leche', categoria: 'Lácteo' },
-            { nombre: 'Huevo', categoria: 'Proteína' },
-            { nombre: 'Panceta', categoria: 'Proteína' }
-          ]);
+          // Si el servidor responde pero la base de datos está vacía
+          setIngredientesBase([]);
+          mostrarMensaje('⚠️ La base de datos de ingredientes está vacía.', 'error');
         }
       })
-      .catch(() => {
-        setIngredientesBase([
-          { nombre: 'Pollo', categoria: 'Proteína' },
-          { nombre: 'Tomate', categoria: 'Vegetal' },
-          { nombre: 'Arroz', categoria: 'Cereales' }
-        ]);
+      .catch((error) => {
+        // Si hay un error de conexión (ej. backend caído)
+        console.error("Error cargando ingredientes:", error);
+        setIngredientesBase([]);
+        mostrarMensaje('❌ No se pudo conectar con el servidor para cargar los ingredientes.', 'error');
       });
   }, []);
 
@@ -53,15 +52,14 @@ function App() {
     if (index !== -1) {
       nuevaLista = [...ingredientesNevera];
       nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
-      // ❌ ya no tocamos la unidad, ya es la correcta desde la BD
     } else {
-      // ✅ ingrediente ya trae { nombre, unidad, equivalencia_g_ml } desde la BD
       nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica }];
     }
 
     setIngredientesNevera(nuevaLista);
     mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
+  
   const eliminarDeInventario = (nombre) => {
     const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
     setIngredientesNevera(nuevaLista);
@@ -76,7 +74,6 @@ function App() {
     const partes = ingredientesNevera.map(ing => {
       const unidad = (ing.unidad ?? '').trim();
       const equivalencia = ing.equivalencia_g_ml ?? '';
-      // usar | como separador interno en vez de :
       return `${ing.nombre.trim().toLowerCase()}|${ing.cantidad}|${unidad}|${equivalencia}`;
     });
 
