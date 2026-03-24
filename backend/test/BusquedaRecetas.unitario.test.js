@@ -1,19 +1,11 @@
 const request = require('supertest');
 
-// 🛠️ MOCK DEFINITIVO PARA MONGOOSE
+// --- MOCKS ---
 jest.mock('mongoose', () => {
-    // Creamos una clase real para simular el Schema perfectamente
     class MockSchema {
-        constructor() {
-            this.statics = {}; // ¡Garantizamos que siempre nazca con esto!
-            this.methods = {};
-        }
-        // Añadimos métodos vacíos por si tu modelo los llama al configurarse
-        index() {} 
-        pre() {}
-        post() {}
+        constructor() { this.statics = {}; this.methods = {}; }
+        index() { } pre() { } post() { }
     }
-
     return {
         connect: jest.fn().mockResolvedValue(true),
         disconnect: jest.fn().mockResolvedValue(true),
@@ -22,120 +14,144 @@ jest.mock('mongoose', () => {
     };
 });
 
-// Mockeamos el modelo Ingrediente
-jest.mock('../src/models/ingredientes', () => ({
-    find: jest.fn()
+jest.mock('../src/models/recetas', () => ({
+    buscarPorIngredientesYCantidades: jest.fn(),
+    findOne: jest.fn()
 }));
 
 const app = require('../src/app');
-const Ingrediente = require('../src/models/ingredientes');
+const Receta = require('../src/models/recetas');
 
-describe('GET /api/ingredientes', () => {
+describe('API de Recetas - Tests de Integración Completos', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    test('Devuelve todos los ingredientes sin filtro', async () => {
-        // Arrange
-        const mockIngredientes = [
-            { nombre: 'Aceite' },
-            { nombre: 'Cebolla' },
-            { nombre: 'Tomate' }
-        ];
-        Ingrediente.find.mockReturnValue({
-            limit: jest.fn().mockResolvedValue(mockIngredientes)
+    // ==========================================
+    // ENDPOINT: GET /api/recetas
+    // ==========================================
+    describe('GET /api/recetas', () => {
+
+        test('Error 400 si no se pasan ingredientes o están vacíos', async () => {
+            const res = await request(app).get('/api/recetas?ingredientes=   ');
+            expect(res.status).toBe(400);
+            expect(res.body).toHaveProperty('error', 'Faltan ingredientes');
+            expect(Receta.buscarPorIngredientesYCantidades).not.toHaveBeenCalled();
         });
-        // Act
-        const res = await request(app).get('/api/ingredientes');
-        // Assert
-        expect(res.status).toBe(200);
-        expect(Array.isArray(res.body)).toBe(true);
-        expect(res.body.length).toBe(3);
+
+        test('Estandarización: Convierte kg a g y l a ml correctamente', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+
+            await request(app).get('/api/recetas?ingredientes=Harina|1|kg|,Leche|2|l|');
+
+            const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
+            expect(llamada[0]).toMatchObject({ nombre: 'Harina', cantidad: 1000, unidad: 'g' });
+            expect(llamada[1]).toMatchObject({ nombre: 'Leche', cantidad: 2000, unidad: 'ml' });
+        });
+
+        test('Casos Límite: Ingrediente sin cantidad usa 1 y sin unidad queda vacía', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+
+            await request(app).get('/api/recetas?ingredientes=Sal||,Pimienta|5||');
+
+            const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
+            expect(llamada[0]).toMatchObject({ nombre: 'Sal', cantidad: 1 });
+            expect(llamada[1]).toMatchObject({ nombre: 'Pimienta', cantidad: 5, unidad: '' });
+        });
+
+        test('Éxito: Devuelve recetas con formato correcto (title y coincidenciaTexto)', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([
+                { _id: '1', title: 'Tortilla', coincidenciaTexto: '2/3' }
+            ]);
+
+            const res = await request(app).get('/api/recetas?ingredientes=Huevo|2|ud|');
+
+            expect(res.status).toBe(200);
+            expect(res.body[0]).toHaveProperty('title', 'Tortilla');
+            expect(res.body[0]).toHaveProperty('coincidenciaTexto');
+        });
+
+        test('Manejo de error 500 en búsqueda de recetas', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockRejectedValue(new Error('DB error'));
+            const res = await request(app).get('/api/recetas?ingredientes=Tomate|1|ud|');
+
+            expect(res.status).toBe(500);
+            expect(res.body).toHaveProperty('error', 'Error interno del servidor');
+        });
+
+        test('Estandarización: Procesa correctamente la equivalencia_g_ml', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+
+            // Enviamos un ingrediente con el 4º parámetro (60)
+            await request(app).get('/api/recetas?ingredientes=Huevo|2|ud|60');
+
+            const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
+            expect(llamada[0]).toMatchObject({
+                nombre: 'Huevo',
+                cantidad: 2,
+                unidad: 'ud',
+                equivalencia_g_ml: 60
+            });
+        });
+
+        test('Estandarización: Convierte cucharadas y cucharaditas a gramos', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+
+            await request(app).get('/api/recetas?ingredientes=Aceite|1|cucharada|,Sal|1|cucharadita|');
+
+            const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
+            // 1 cucharada = 15g, 1 cucharadita = 5g
+            expect(llamada[0]).toMatchObject({ nombre: 'Aceite', cantidad: 15, unidad: 'g' });
+            expect(llamada[1]).toMatchObject({ nombre: 'Sal', cantidad: 5, unidad: 'g' });
+        });
+
+        test('Estandarización: Normaliza variantes de "unidad" a "ud"', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+
+            await request(app).get('/api/recetas?ingredientes=Limon|2|uds|,Ajo|1|u.|');
+
+            const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
+            expect(llamada[0].unidad).toBe('ud');
+            expect(llamada[1].unidad).toBe('ud');
+        });
     });
 
-    test('Filtra ingredientes por nombre', async () => {
-        // Arrange
-        const mockFiltrados = [
-            { nombre: 'Aceite' },
-            { nombre: 'Acelgas' }
-        ];
-        Ingrediente.find.mockReturnValue({
-            limit: jest.fn().mockResolvedValue(mockFiltrados)
+    // ==========================================
+    // ENDPOINT: GET /api/recetas/detalle
+    // ==========================================
+    describe('GET /api/recetas/detalle', () => {
+
+        test('Error 400 si falta el parámetro título', async () => {
+            const res = await request(app).get('/api/recetas/detalle');
+            expect(res.status).toBe(400);
+            expect(res.body).toHaveProperty('error', 'Falta el título');
         });
-        // Act
-        const res = await request(app).get('/api/ingredientes?nombre=ace');
-        // Assert
-        expect(res.status).toBe(200);
-        expect(res.body.length).toBe(2);
-        res.body.forEach(ing => {
-            expect(ing.nombre.toLowerCase()).toContain('ace');
+
+        test('Error 404 si la receta no existe', async () => {
+            Receta.findOne.mockResolvedValue(null);
+            const res = await request(app).get('/api/recetas/detalle?titulo=Inexistente');
+
+            expect(res.status).toBe(404);
+            expect(res.body).toHaveProperty('error', 'Receta no encontrada');
+        });
+
+        test('Éxito: Devuelve el objeto completo de la receta', async () => {
+            const mockReceta = { title: 'Pasta', ingredientes: [], instrucciones: 'Cocinar' };
+            Receta.findOne.mockResolvedValue(mockReceta);
+
+            const res = await request(app).get('/api/recetas/detalle?titulo=Pasta');
+
+            expect(res.status).toBe(200);
+            expect(res.body.title).toBe('Pasta');
+        });
+
+        test('Manejo de error 500 en detalle', async () => {
+            Receta.findOne.mockRejectedValue(new Error('DB fail'));
+            const res = await request(app).get('/api/recetas/detalle?titulo=Pasta');
+
+            expect(res.status).toBe(500);
+            expect(res.body).toHaveProperty('error', 'Error interno');
         });
     });
-
-    test('Devuelve array vacío si no hay coincidencias', async () => {
-        // Arrange
-        Ingrediente.find.mockReturnValue({
-            limit: jest.fn().mockResolvedValue([])
-        });
-        // Act
-        const res = await request(app).get('/api/ingredientes?nombre=zzzzz');
-        // Assert
-        expect(res.status).toBe(200);
-        expect(res.body.length).toBe(0);
-    });
-
-    test('Cada ingrediente tiene campo nombre', async () => {
-        // Arrange
-        const mockIngredientes = [
-            { nombre: 'Leche' },
-            { nombre: 'Huevo' }
-        ];
-        Ingrediente.find.mockReturnValue({
-            limit: jest.fn().mockResolvedValue(mockIngredientes)
-        });
-        // Act
-        const res = await request(app).get('/api/ingredientes?nombre=a');
-        // Assert
-        expect(res.status).toBe(200);
-        res.body.forEach(ing => {
-            expect(ing).toHaveProperty('nombre');
-        });
-    });
-
-    test('Maneja error de base de datos correctamente', async () => {
-        // Arrange
-        Ingrediente.find.mockReturnValue({
-            limit: jest.fn().mockRejectedValue(new Error('DB error'))
-        });
-        // Act
-        const res = await request(app).get('/api/ingredientes');
-        // Assert
-        expect(res.status).toBe(500);
-        expect(res.body).toHaveProperty('error');
-    });
-
-    test('Busqueda con espacios en blanco devuelve todos', async () => {
-        // Arrange
-        Ingrediente.find.mockReturnValue({
-            limit: jest.fn().mockResolvedValue([])
-        });
-        // Act
-        const res = await request(app).get('/api/ingredientes?nombre=   ');
-        // Assert
-        expect(res.status).toBe(200);
-    });
-
-    test('Busqueda con caracteres especiales no rompe la API', async () => {
-        // Arrange
-        Ingrediente.find.mockReturnValue({
-            limit: jest.fn().mockResolvedValue([])
-        });
-        // Act
-        const res = await request(app).get('/api/ingredientes?nombre=@#$%');
-        // Assert
-        expect(res.status).toBe(200);
-        expect(Array.isArray(res.body)).toBe(true);
-    });
-
 });

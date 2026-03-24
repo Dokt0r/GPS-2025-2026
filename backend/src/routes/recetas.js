@@ -30,31 +30,20 @@ router.get('/', async (req, res) => {
         // CORRECCIÓN: Primero capturamos lo que viene de la URL
         const queryStr = req.query.ingredientes;
 
-        console.log("\n=======================================");
-        console.log("📥 1. RAW QUERY DEL FRONTEND:", queryStr);
-
         if (!queryStr) {
-            console.log("❌ Error: Faltan ingredientes en la petición.");
-            console.log("=======================================\n");
             return res.status(400).json({ error: "Faltan ingredientes" });
         }
 
         // 1. Convertimos el string a un array de objetos listos para comparar
         const ingredientesNeveraEstandar = estandarizarNevera(queryStr);
-
-        console.log("🧠 2. INGREDIENTES PROCESADOS PARA MONGO:");
         console.log(JSON.stringify(ingredientesNeveraEstandar, null, 2));
-        console.log("🚀 3. Buscando en la base de datos...");
 
         // 2. Pasamos el array completo al Modelo
         const recetasSugeridas = await Receta.buscarPorIngredientesYCantidades(ingredientesNeveraEstandar);
 
-        // 3. Imprimimos el resultado de la búsqueda
-        console.log(`✅ 4. RESULTADO: Mongo encontró ${recetasSugeridas.length} recetas.`);
         if (recetasSugeridas.length > 0) {
             console.log(`   (Ejemplo de la primera: "${recetasSugeridas[0].title}")`);
         }
-        console.log("=======================================\n");
 
         res.json(recetasSugeridas);
     } catch (error) {
