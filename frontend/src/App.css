@@ -625,6 +625,258 @@ background: rgba(255, 255, 255, 0.05);
     border-color: rgba(46, 204, 113, 0.4);
 }
 
+/* ==========================================================================
+   VISTA DETALLE DE RECETA
+   ========================================================================== */
+
+/* Contenedor base pantalla completa */
+.detalle-pantalla-completa {
+  position: fixed;
+  inset: 0; /* Sustituye top, left, width y height en CSS moderno */
+  background-color: #0f172a; /* Fondo principal */
+  z-index: 9999;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: #f8fafc;
+  scroll-behavior: smooth;
+}
+
+/* Botón flotante estilo nativo (Glassmorphism) */
+.btn-flotante-volver {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 100px; /* Estilo píldora */
+  cursor: pointer;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-flotante-volver:hover {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: #4ade80;
+  color: #4ade80;
+  transform: translateY(-2px);
+}
+
+/* Hero Section: Imagen inmersiva controlada */
+.hero-section-modern {
+  position: relative;
+  width: 100%;
+  height: 70vh; /* Ocupa exactamente la mitad de la pantalla inicialmente */
+  min-height: 350px;
+  max-height: 600px;
+  z-index: 0;
+}
+
+.hero-image-modern {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center; /* Centra la imagen para evitar cortes malos */
+  display: block;
+}
+
+/* Gradiente que oscurece el fondo de la imagen para legibilidad */
+.hero-gradient-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom, 
+    rgba(15, 23, 42, 0.1) 0%, 
+    rgba(15, 23, 42, 0.6) 60%, 
+    #0f172a 100%
+  );
+  pointer-events: none;
+}
+
+/* Contenido superpuesto (Efecto solapado de App) */
+.contenido-superpuesto-modern {
+  position: relative;
+  margin-top: -60px; /* Sube la tarjeta sobre la imagen */
+  background: #0f172a; /* Mismo color que el fondo para fusionarse */
+  border-radius: 40px 40px 0 0; /* Bordes redondeados modernos arriba */
+  padding: 40px 30px 80px;
+  max-width: 1100px;
+  margin-inline: auto; /* Centrado horizontal automático */
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+}
+
+/* Título */
+.titulo-neon-modern {
+  margin: 0 0 40px 0;
+  font-size: 3.2rem;
+  color: #4ade80; /* Tu verde */
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+/* Grid layout */
+.grid-info-modern {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr; /* 40% izquierda, 60% derecha */
+  gap: 60px;
+}
+
+.titulo-seccion-modern {
+  font-size: 1.4rem;
+  color: #fff;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+
+.icono-seccion {
+  font-size: 1.6rem;
+}
+
+/* --- ESTILO INGREDIENTES (Píldoras) --- */
+.lista-ingredientes-modern {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.item-ingrediente {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  transition: background 0.3s;
+}
+
+.item-ingrediente:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ing-pildora {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.ing-nombre {
+  color: #cbd5e1;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+/* --- ESTILO PREPARACIÓN (Timeline Moderno) --- */
+.timeline-preparacion {
+  position: relative;
+  padding-left: 10px;
+}
+
+/* Línea conectora */
+.timeline-preparacion::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 30px; /* Centrado con el círculo */
+  width: 2px;
+  background: rgba(74, 222, 128, 0.2);
+}
+
+.timeline-item {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.timeline-item:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-marker {
+  width: 40px;
+  height: 40px;
+  background: #0f172a; /* Oculta la línea detrás del número */
+  border: 2px solid #4ade80;
+  color: #4ade80;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  z-index: 2;
+  box-shadow: 0 0 15px rgba(74, 222, 128, 0.2);
+}
+
+.timeline-content {
+  padding-top: 6px;
+}
+
+.timeline-content p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 1.15rem;
+  line-height: 1.7;
+}
+
+.texto-vacio {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Responsivo para móviles */
+@media (max-width: 850px) {
+  .hero-section-modern {
+    height: 40vh;
+  }
+  .contenido-superpuesto-modern {
+    padding: 30px 20px 60px;
+    border-radius: 30px 30px 0 0;
+  }
+  .titulo-neon-modern {
+    font-size: 2.4rem;
+    margin-bottom: 30px;
+  }
+  .grid-info-modern {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .timeline-preparacion::before {
+    left: 20px;
+  }
+  .timeline-marker {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
+  }
+  .timeline-item {
+    gap: 16px;
+  }
+}
 /* =========================================
    RESPONSIVO GENERAL
    ========================================= */

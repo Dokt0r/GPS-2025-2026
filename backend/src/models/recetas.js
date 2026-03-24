@@ -1,19 +1,49 @@
 const mongoose = require('mongoose');
 
+// 1. Sub-esquema para los ingredientes (más limpio y sin crear un _id por cada ingrediente)
+const ingredienteSchema = new mongoose.Schema({
+    nombre: { type: String, required: true },
+    cantidad: { type: Number, required: true },
+    unidad: { type: String, default: null }
+}, { _id: false });
+
+// 2. Esquema principal de la receta actualizado a tu JSON
 const recetaSchema = new mongoose.Schema({
-    title: { type: String, required: true },
-    steps: [String],
-    nutritions: Object,
-    tags: [String],
-    image_url: String,
-    ingredients: [{
-        nombre: String,
-        cantidad: Number,
-        unidad: String
-    }]
+    title: { 
+        type: String, 
+        required: true,
+        trim: true
+    },
+    steps: {
+        type: [String],
+        required: true
+    },
+    nutritions: {
+        calories: { type: Number },
+        carbohydrateContent: { type: Number },
+        fatContent: { type: Number },
+        proteinContent: { type: Number }
+    },
+    tags: {
+        type: [String],
+        default: []
+    },
+    image_url: {
+        type: String,
+        required: true
+    },
+    ingredients: {
+        type: [ingredienteSchema],
+        required: true
+    }
+}, { 
+    collection: 'recetas', // Para asegurar que apunta a la colección correcta
+    timestamps: true 
 });
 
-// MÉTODO: Compara Nombres Y Cantidades con Búsqueda Flexible
+// =========================================================================
+// MÉTODO: Compara Nombres Y Cantidades con Búsqueda Flexible (Para la Nevera)
+// =========================================================================
 recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraArray) {
     console.log("🕵️‍♂️ MODELO: ingredientes recibidos:");
     console.log(JSON.stringify(neveraArray, null, 2));
