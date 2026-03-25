@@ -37,7 +37,7 @@ const VistaDetalles = () => {
 
   if (cargando) {
     return (
-      <main className="detalle-pantalla-completa">
+      <main className="receta-view-wrapper">
         <div className="loading-container" style={{ marginTop: '40vh' }}>
           <p>Preparando la receta...</p>
         </div>
@@ -47,7 +47,7 @@ const VistaDetalles = () => {
 
   if (error || !receta) {
     return (
-      <main className="detalle-pantalla-completa">
+      <main className="receta-view-wrapper">
         <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Volver
@@ -60,72 +60,68 @@ const VistaDetalles = () => {
   }
 
   return (
-    <main className="detalle-pantalla-completa">
+    <main className="receta-view-wrapper">
       
-      {/* Botón flotante estilo Glassmorphism */}
+      {/* Botón Flotante */}
       <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         <span>Volver</span>
       </button>
 
-      {/* Sección Hero: Imagen de borde a borde */}
-      <div className="hero-section-modern">
-        <img src={receta.image_url || receta.imagen} alt={receta.title} className="hero-image-modern" />
-        <div className="hero-gradient-overlay"></div>
-      </div>
+      {/* Hero Parallax Puro */}
+      <section className="receta-hero-parallax">
+        <img src={receta.image_url || receta.imagen} alt={receta.title} />
+        <div className="receta-hero-overlay"></div>
+      </section>
 
-      {/* Contenedor principal con efecto de tarjeta superpuesta */}
-      <div className="contenido-superpuesto-modern">
-        <div className="header-receta-modern">
-          <h1 className="titulo-neon-modern">{receta.title}</h1>
-        </div>
+      {/* Contenido principal que solapa */}
+      <article className="receta-content-card">
+        <header className="receta-header">
+          <h1 className="receta-titulo-principal">{receta.title}</h1>
+        </header>
 
-        <div className="grid-info-modern">
+        <div className="receta-grid-layout">
           
-          {/* Ingredientes */}
-          <div className="seccion-moderna">
-            <h3 className="titulo-seccion-modern">
-              <span className="icono-seccion">🛒</span> Ingredientes
-            </h3>
-            <ul className="lista-ingredientes-modern">
+          {/* Columna Ingredientes */}
+          <section className="receta-seccion">
+            <h3 className="receta-seccion-titulo"><span className="icono">🛒</span> Ingredientes</h3>
+            <ul className="receta-lista-ing">
               {receta.ingredients && receta.ingredients.length > 0 ? (
                 receta.ingredients.map((ing, i) => (
-                  <li key={i} className="item-ingrediente">
-                    <span className="ing-pildora">
+                  <li key={i} className="receta-ing-item">
+                    <span className="receta-ing-badge">
                       {ing.cantidad} {ing.unidad ? ing.unidad : ''}
                     </span>
-                    <span className="ing-nombre">{ing.nombre}</span>
+                    <span className="receta-ing-nombre">{ing.nombre}</span>
                   </li>
                 ))
               ) : (
-                <p className="texto-vacio">No hay ingredientes especificados.</p>
+                <p className="receta-texto-vacio">No hay ingredientes especificados.</p>
               )}
             </ul>
-          </div>
+          </section>
 
-          {/* Preparación (Timeline) */}
-          <div className="seccion-moderna">
-            <h3 className="titulo-seccion-modern">
-              <span className="icono-seccion">👩‍🍳</span> Preparación
-            </h3>
-            <div className="timeline-preparacion">
+          {/* Columna Preparación */}
+          <section className="receta-seccion">
+            <h3 className="receta-seccion-titulo"><span className="icono">👩‍🍳</span> Preparación</h3>
+            <div className="receta-timeline">
               {receta.steps && receta.steps.length > 0 ? (
                 receta.steps.map((paso, i) => (
-                  <div className="timeline-item" key={i}>
-                    <div className="timeline-marker">{i + 1}</div>
-                    <div className="timeline-content">
+                  <div className="receta-step" key={i}>
+                    <div className="receta-step-number">{i + 1}</div>
+                    <div className="receta-step-text">
                       <p>{paso}</p>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="texto-vacio">No hay instrucciones disponibles.</p>
+                <p className="receta-texto-vacio">No hay instrucciones disponibles.</p>
               )}
             </div>
-          </div>
+          </section>
 
         </div>
-      </div>
+      </article>
     </main>
   );
 };

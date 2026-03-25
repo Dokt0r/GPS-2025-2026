@@ -626,14 +626,14 @@ background: rgba(255, 255, 255, 0.05);
 }
 
 /* ==========================================================================
-   VISTA DETALLE DE RECETA
+   NUEVA VISTA DETALLE DE RECETA (ESTRUCTURA ROBUSTA)
    ========================================================================== */
 
-/* Contenedor base pantalla completa */
-.detalle-pantalla-completa {
+/* Contenedor principal: Ocupa toda la pantalla y maneja el scroll */
+.receta-view-wrapper {
   position: fixed;
-  inset: 0; /* Sustituye top, left, width y height en CSS moderno */
-  background-color: #0f172a; /* Fondo principal */
+  inset: 0;
+  background-color: #0f172a;
   z-index: 9999;
   overflow-y: auto;
   overflow-x: hidden;
@@ -641,21 +641,23 @@ background: rgba(255, 255, 255, 0.05);
   scroll-behavior: smooth;
 }
 
-/* Botón flotante estilo nativo (Glassmorphism) */
+/* El botón flotante se queda fijo respecto al contenedor */
 .btn-flotante-volver {
-  position: absolute;
+  position: sticky;
   top: 24px;
   left: 24px;
+  float: left; /* Permite que se posicione sobre la imagen */
+  margin-bottom: -60px; /* Evita que empuje el contenido hacia abajo */
   background: rgba(15, 23, 42, 0.4);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #fff;
   padding: 10px 18px;
-  border-radius: 100px; /* Estilo píldora */
+  border-radius: 100px;
   cursor: pointer;
   z-index: 50;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
   font-weight: 600;
@@ -671,154 +673,163 @@ background: rgba(255, 255, 255, 0.05);
   transform: translateY(-2px);
 }
 
-/* Hero Section: Imagen inmersiva controlada */
-.hero-section-modern {
-  position: relative;
+/* --- SECCIÓN PARALLAX (LA IMAGEN) --- */
+.receta-hero-parallax {
+  position: sticky;
+  top: 0;
   width: 100%;
-  height: 70vh; /* Ocupa exactamente la mitad de la pantalla inicialmente */
-  min-height: 350px;
-  max-height: 600px;
+  height: 55vh; /* Altura controlada */
+  min-height: 300px;
   z-index: 0;
+  overflow: hidden;
 }
 
-.hero-image-modern {
+.receta-hero-parallax img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center; /* Centra la imagen para evitar cortes malos */
-  display: block;
 }
 
-/* Gradiente que oscurece el fondo de la imagen para legibilidad */
-.hero-gradient-overlay {
+.receta-hero-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
     to bottom, 
-    rgba(15, 23, 42, 0.1) 0%, 
-    rgba(15, 23, 42, 0.6) 60%, 
+    rgba(15, 23, 42, 0.2) 0%, 
+    rgba(15, 23, 42, 0.5) 60%, 
     #0f172a 100%
   );
   pointer-events: none;
 }
 
-/* Contenido superpuesto (Efecto solapado de App) */
-.contenido-superpuesto-modern {
+/* --- TARJETA DE CONTENIDO QUE SOLAPA --- */
+.receta-content-card {
   position: relative;
-  margin-top: -60px; /* Sube la tarjeta sobre la imagen */
-  background: #0f172a; /* Mismo color que el fondo para fusionarse */
-  border-radius: 40px 40px 0 0; /* Bordes redondeados modernos arriba */
-  padding: 40px 30px 80px;
+  z-index: 2;
+  
+  /* --- EFECTO CRISTAL --- */
+  /* 1. Fondo semi-transparente (tu azul oscuro con 70% de opacidad) */
+  background: rgba(15, 23, 42, 0.7);
+  
+  /* 2. El desenfoque del fondo (la magia) */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); /* Soporte para Safari */
+  
+  /* 3. Borde sutil superior y lateral para dar volumen al cristal */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  /* ---------------------- */
+
+  /* Tus ajustes de posicionamiento */
+  margin-top: -60px; 
+  margin-inline: auto; /* Centrado perfecto */
+  
+  border-radius: 40px 40px 0 0;
+  padding: 50px 40px 100px;
+  min-height: 100vh; 
+  max-width: 60%;
+  box-shadow: 0 -15px 40px rgba(0,0,0,0.5);
+}
+.receta-header {
   max-width: 1100px;
-  margin-inline: auto; /* Centrado horizontal automático */
-  box-shadow: 0 -10px 40px rgba(0,0,0,0.3);
+  margin: 0 auto 40px;
+  text-align: left;
 }
 
-/* Título */
-.titulo-neon-modern {
-  margin: 0 0 40px 0;
-  font-size: 3.2rem;
-  color: #4ade80; /* Tu verde */
+.receta-titulo-principal {
+  margin: 0;
+  font-size: 3.5rem;
+  color: #4ade80;
   font-weight: 800;
   line-height: 1.1;
   letter-spacing: -1px;
 }
 
-/* Grid layout */
-.grid-info-modern {
+/* Grid layout interno */
+.receta-grid-layout {
+  max-width: 1100px;
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1.5fr; /* 40% izquierda, 60% derecha */
+  grid-template-columns: 35% 1fr; /* 35% Ingredientes / 65% Preparación */
   gap: 60px;
+  align-items: start;
 }
 
-.titulo-seccion-modern {
-  font-size: 1.4rem;
+.receta-seccion-titulo {
+  font-size: 1.5rem;
   color: #fff;
+  margin-top: 0;
   margin-bottom: 24px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   padding-bottom: 12px;
 }
 
-.icono-seccion {
-  font-size: 1.6rem;
-}
-
-/* --- ESTILO INGREDIENTES (Píldoras) --- */
-.lista-ingredientes-modern {
+/* Ingredientes */
+.receta-lista-ing {
   list-style: none;
   padding: 0;
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
 }
 
-.item-ingrediente {
+.receta-ing-item {
   display: flex;
   align-items: center;
   gap: 16px;
   background: rgba(255, 255, 255, 0.02);
-  padding: 12px 16px;
+  padding: 14px 18px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.03);
-  transition: background 0.3s;
 }
 
-.item-ingrediente:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.ing-pildora {
+.receta-ing-badge {
   background: rgba(74, 222, 128, 0.1);
   color: #4ade80;
   font-weight: 700;
   font-size: 0.95rem;
   padding: 6px 12px;
-  border-radius: 12px;
+  border-radius: 10px;
   white-space: nowrap;
 }
 
-.ing-nombre {
-  color: #cbd5e1;
-  font-size: 1.1rem;
-  line-height: 1.4;
+.receta-ing-nombre {
+  color: #e2e8f0;
+  font-size: 1.05rem;
 }
 
-/* --- ESTILO PREPARACIÓN (Timeline Moderno) --- */
-.timeline-preparacion {
+/* Preparación (Timeline) */
+.receta-timeline {
   position: relative;
   padding-left: 10px;
 }
 
-/* Línea conectora */
-.timeline-preparacion::before {
+.receta-timeline::before {
   content: '';
   position: absolute;
   top: 10px;
   bottom: 0;
-  left: 30px; /* Centrado con el círculo */
+  left: 30px;
   width: 2px;
-  background: rgba(74, 222, 128, 0.2);
+  background: rgba(74, 222, 128, 0.15);
 }
 
-.timeline-item {
+.receta-step {
   position: relative;
   display: flex;
   gap: 24px;
-  margin-bottom: 32px;
+  margin-bottom: 35px;
 }
 
-.timeline-item:last-child {
-  margin-bottom: 0;
-}
-
-.timeline-marker {
-  width: 40px;
-  height: 40px;
-  background: #0f172a; /* Oculta la línea detrás del número */
+.receta-step-number {
+  width: 42px;
+  height: 42px;
+  background: #0f172a;
   border: 2px solid #4ade80;
   color: #4ade80;
   border-radius: 50%;
@@ -829,59 +840,52 @@ background: rgba(255, 255, 255, 0.05);
   font-size: 1.1rem;
   flex-shrink: 0;
   z-index: 2;
-  box-shadow: 0 0 15px rgba(74, 222, 128, 0.2);
+  box-shadow: 0 0 15px rgba(74, 222, 128, 0.1);
 }
 
-.timeline-content {
-  padding-top: 6px;
+.receta-step-text {
+  padding-top: 8px;
 }
 
-.timeline-content p {
+.receta-step-text p {
   margin: 0;
   color: #cbd5e1;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   line-height: 1.7;
 }
 
-.texto-vacio {
+.receta-texto-vacio {
   color: #64748b;
   font-style: italic;
 }
 
-/* Responsivo para móviles */
-@media (max-width: 850px) {
-  .hero-section-modern {
-    height: 40vh;
-  }
-  .contenido-superpuesto-modern {
-    padding: 30px 20px 60px;
-    border-radius: 30px 30px 0 0;
-  }
-  .titulo-neon-modern {
-    font-size: 2.4rem;
-    margin-bottom: 30px;
-  }
-  .grid-info-modern {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
-  .timeline-preparacion::before {
-    left: 20px;
-  }
-  .timeline-marker {
-    width: 32px;
-    height: 32px;
-    font-size: 1rem;
-  }
-  .timeline-item {
-    gap: 16px;
-  }
-}
 /* =========================================
-   RESPONSIVO GENERAL
+   RESPONSIVO MÓVIL VISTA DETALLE
    ========================================= */
 @media (max-width: 900px) {
-    .split-layout {
-        grid-template-columns: 1fr;
-    }
+  .receta-hero-parallax {
+    height: 40vh; /* Imagen más pequeña en móvil */
+  }
+
+  .receta-content-card {
+    padding: 30px 20px 60px;
+    border-radius: 30px 30px 0 0;
+    margin-top: -40px; /* Menor solape en móvil */
+  }
+
+  .receta-titulo-principal {
+    font-size: 2.2rem;
+  }
+
+  .receta-grid-layout {
+    grid-template-columns: 1fr; /* Todo a una columna */
+    gap: 40px;
+  }
+
+  .btn-flotante-volver {
+    top: 16px;
+    left: 16px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
 }
