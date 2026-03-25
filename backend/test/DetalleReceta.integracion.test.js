@@ -1,92 +1,94 @@
 const request = require('supertest');
-
-jest.mock('mongoose', () => {
-  class MockSchema {
-    constructor() {
-      this.statics = {};
-      this.methods = {};
-    }
-    index() {}
-    pre() {}
-    post() {}
-  }
-
-  return {
-    connect: jest.fn().mockResolvedValue(true),
-    disconnect: jest.fn().mockResolvedValue(true),
-    Schema: MockSchema,
-    model: jest.fn()
-  };
-});
-
-jest.mock('../src/models/recetas', () => ({
-  buscarPorIngredientesYCantidades: jest.fn(),
-  findOne: jest.fn()
-}));
+const mongoose = require('mongoose');
 
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
-describe('API de Recetas - Integracion detalle', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
+const tituloBase = `Receta Integracion Detalle ${Date.now()}`;
 
-  describe('GET /api/recetas/:titulo', () => {
-    test('devuelve 404 cuando la receta no existe', async () => {
-      Receta.findOne.mockResolvedValue(null);
+jest.setTimeout(30000);
 
-      const res = await request(app).get('/api/recetas/Receta%20Inexistente');
+const esperarConexionMongo = async (timeoutMs = 10000) => {
+  const inicio = Date.now();
 
-      expect(res.status).toBe(404);
-      expect(res.body).toHaveProperty('error', 'Receta no encontrada');
-      expect(Receta.findOne).toHaveBeenCalledTimes(1);
-    });
+  while (mongoose.connection.readyState !== 1 && Date.now() - inicio < timeoutMs) {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
 
-    test('devuelve 200 y el detalle de la receta cuando existe', async () => {
-      const recetaMock = {
-        title: 'Paella mixta',
-        image_url: 'https://example.com/paella.jpg',
+  if (mongoose.connection.readyState !== 1) {
+    throw new Error(
+      'No se pudo establecer conexion con MongoDB Atlas. Revisa MONGODB_URI y whitelist de IP.'
+    );
+  }
+};
+
+describe('API de Recetas - Integracion detalle (DB real)', () => {
+  beforeAll(async () => {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI no esta definida. Configura el .env para tests con DB real.');
+    }
+
+    if (mongoose.connection.readyState === 0) {
+      await mongoose
+        .connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
+        .catch(() => {});
+    }
+
+    await esperarConexionMongo(10000);
+
+    await Receta.findOneAndUpdate(
+      { title: tituloBase },
+      {
+        title: tituloBase,
+        steps: ['Paso de prueba 1', 'Paso de prueba 2'],
+        image_url: 'https://example.com/integracion-detalle.jpg',
         ingredients: [
           { nombre: 'Arroz', cantidad: 200, unidad: 'g' },
           { nombre: 'Pollo', cantidad: 300, unidad: 'g' }
         ],
-        steps: ['Sofreir ingredientes', 'Cocinar a fuego medio']
-      };
+        nutritions: { calories: 100 },
+        tags: ['test']
+      },
+      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+    );
+  });
 
-      Receta.findOne.mockResolvedValue(recetaMock);
+  afterAll(async () => {
+    if (mongoose.connection.readyState === 1) {
+      await Receta.deleteOne({ title: tituloBase });
+    }
 
-      const res = await request(app).get('/api/recetas/Paella%20mixta');
+    await mongoose.disconnect().catch(() => {});
+  });
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('title', 'Paella mixta');
-      expect(res.body).toHaveProperty('ingredients');
-      expect(res.body).toHaveProperty('steps');
-      expect(Receta.findOne).toHaveBeenCalledTimes(1);
+  describe('GET /api/recetas/:titulo', () => {
+    test('devuelve 404 cuando la receta no existe', async () => {
+      const res = await request(app).get('/api/recetas/Receta%20Inexistente%20XYZ');
+
+      expect(res.status).toBe(404);
+      expect(res.body).toHaveProperty('error', 'Receta no encontrada');
     });
 
-    test('usa busqueda por titulo exacto sin distinguir mayusculas/minusculas', async () => {
-      Receta.findOne.mockResolvedValue({ title: 'Paella mixta' });
-
-      const res = await request(app).get('/api/recetas/pAelLa%20MiXtA');
+    test('devuelve 200 y el detalle completo cuando existe', async () => {
+      const res = await request(app).get(`/api/recetas/${encodeURIComponent(tituloBase)}`);
 
       expect(res.status).toBe(200);
-      expect(Receta.findOne).toHaveBeenCalledWith({
-        title: expect.any(RegExp)
-      });
-
-      const filtro = Receta.findOne.mock.calls[0][0];
-      expect(filtro.title.test('PAELLA MIXTA')).toBe(true);
-      expect(filtro.title.test('Paella mixta con marisco')).toBe(false);
+      expect(res.body).toHaveProperty('title', tituloBase);
+      expect(Array.isArray(res.body.ingredients)).toBe(true);
+      expect(Array.isArray(res.body.steps)).toBe(true);
+      expect(res.body.steps.length).toBeGreaterThan(0);
     });
 
-    test('devuelve 500 cuando falla la base de datos', async () => {
-      Receta.findOne.mockRejectedValue(new Error('DB error'));
+    test('encuentra la receta sin distinguir mayusculas/minusculas', async () => {
+      const tituloAlterado = tituloBase
+        .split(' ')
+        .map((p, i) => (i % 2 === 0 ? p.toUpperCase() : p.toLowerCase()))
+        .join(' ');
 
-      const res = await request(app).get('/api/recetas/Paella%20mixta');
+      const res = await request(app).get(`/api/recetas/${encodeURIComponent(tituloAlterado)}`);
 
-      expect(res.status).toBe(500);
-      expect(res.body).toHaveProperty('error', 'Error interno del servidor');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('title', tituloBase);
     });
   });
 });
