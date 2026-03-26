@@ -1,15 +1,83 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useNevera } from './NeveraContext';
+
+// ─────────────────────────────────────────────
+// HELPERS DE UNIDADES (espejo del backend)
+// ─────────────────────────────────────────────
+
+/**
+ * Dado un ingrediente de la nevera y uno de la receta,
+ * devuelve true si la nevera tiene cantidad suficiente.
+ */
+const tienesSuficiente = (neveraIng, recetaIng) => {
+  const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
+  const unidadR = (recetaIng.unidad || '').toLowerCase().trim();
+  const factor = neveraIng.equivalencia_g_ml || 0;
+
+  if (unidadN === unidadR) {
+    return neveraIng.cantidad >= recetaIng.cantidad;
+  }
+  // Nevera g/ml → receta ud
+  if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0) {
+    return (neveraIng.cantidad / factor) >= recetaIng.cantidad;
+  }
+  // Nevera ud → receta g/ml
+  if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
+    return (neveraIng.cantidad * factor) >= recetaIng.cantidad;
+  }
+  return false;
+};
+
+/**
+ * Dado el array de ingredientes de la receta y la nevera actual,
+ * devuelve los ingredientes de la receta que faltan o son insuficientes.
+ */
+const calcularFaltantes = (ingredientesReceta, ingredientesNevera) => {
+  const faltantes = [];
+
+  for (const recetaIng of ingredientesReceta) {
+    const neveraIng = ingredientesNevera.find(n =>
+      recetaIng.nombre.toLowerCase().includes(n.nombre.toLowerCase())
+    );
+
+    if (!neveraIng) {
+      faltantes.push({
+        nombre: recetaIng.nombre,
+        cantidadNecesaria: recetaIng.cantidad,
+        unidad: recetaIng.unidad || '',
+        motivo: 'no disponible en tu nevera',
+      });
+    } else if (!tienesSuficiente(neveraIng, recetaIng)) {
+      faltantes.push({
+        nombre: recetaIng.nombre,
+        cantidadNecesaria: recetaIng.cantidad,
+        unidad: recetaIng.unidad || '',
+        motivo: `solo tienes ${neveraIng.cantidad} ${neveraIng.unidad}`,
+      });
+    }
+  }
+
+  return faltantes;
+};
+
+// ─────────────────────────────────────────────
+// COMPONENTE
+// ─────────────────────────────────────────────
 
 const VistaDetalles = () => {
   const { titulo } = useParams();
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+  const { ingredientesNevera, restarIngredientesReceta } = useNevera();
+
   const [receta, setReceta] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+
   const [recetaCompletada, setRecetaCompletada] = useState(false);
+  const [errorCompletar, setErrorCompletar] = useState(null);
 
   useEffect(() => {
     const fetchDetalleReceta = async () => {
@@ -36,9 +104,23 @@ const VistaDetalles = () => {
     if (titulo) fetchDetalleReceta();
   }, [titulo, API_URL]);
 
+  // ── LÓGICA PRINCIPAL: COMPLETAR RECETA ──────
   const handleCompletarReceta = () => {
+    if (!receta?.ingredients) return;
+
+    const faltantes = calcularFaltantes(receta.ingredients, ingredientesNevera);
+
+    if (faltantes.length > 0) {
+      setErrorCompletar(faltantes);
+      return;
+    }
+
+    restarIngredientesReceta(receta.ingredients);
+    setErrorCompletar(null);
     setRecetaCompletada(true);
   };
+
+  // ── RENDERS DE ESTADO ───────────────────────
 
   if (cargando) {
     return (
@@ -67,19 +149,16 @@ const VistaDetalles = () => {
   return (
     <main className="receta-view-wrapper">
 
-      {/* Botón Flotante */}
       <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
         <span>Volver</span>
       </button>
 
-      {/* Hero Parallax Puro */}
       <section className="receta-hero-parallax">
         <img src={receta.image_url || receta.imagen} alt={receta.title} />
         <div className="receta-hero-overlay"></div>
       </section>
 
-      {/* Contenido principal que solapa */}
       <article className="receta-content-card">
         <header className="receta-header">
           <h1 className="receta-titulo-principal">{receta.title}</h1>
@@ -121,7 +200,7 @@ const VistaDetalles = () => {
                     </div>
                   ))}
 
-                  {/* Nodo final: Botón Completar Receta */}
+                  {/* ── NODO FINAL: COMPLETAR RECETA ── */}
                   <div className="receta-step receta-step-completar">
                     <div
                       className="receta-step-number"
@@ -137,48 +216,89 @@ const VistaDetalles = () => {
                     >
                       {recetaCompletada ? '✓' : ''}
                     </div>
-                    <div className="receta-step-text" style={{ display: 'flex', alignItems: 'center' }}>
-                      {recetaCompletada ? (
-                        <span style={{
-                          color: '#00e676',
-                          fontWeight: '600',
-                          fontSize: '1rem',
-                        }}>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+
+                      {/* Estado: completada */}
+                      {recetaCompletada && (
+                        <span style={{ color: '#00e676', fontWeight: '600', fontSize: '1rem' }}>
                           ¡Receta completada! Buen provecho
                         </span>
-                      ) : (
-                        <button
-                          className="btn-completar-receta"
-                          onClick={handleCompletarReceta}
-                          style={{
-                            background: 'transparent',
-                            border: '2px solid #00e676',
-                            color: '#00e676',
-                            padding: '10px 24px',
-                            borderRadius: '50px',
-                            fontSize: '0.95rem',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            letterSpacing: '0.05em',
-                            transition: 'all 0.25s ease',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                          onMouseEnter={e => {
-                            e.currentTarget.style.background = '#00e676';
-                            e.currentTarget.style.color = '#0d1117';
-                          }}
-                          onMouseLeave={e => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#00e676';
-                          }}
-                        >
-                          <span>Completar Receta</span>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="20 6 9 17 4 12"/>
-                          </svg>
-                        </button>
+                      )}
+
+                      {/* Estado: botón */}
+                      {!recetaCompletada && (
+                        <>
+                          <button
+                            onClick={handleCompletarReceta}
+                            style={{
+                              background: 'transparent',
+                              border: '2px solid #00e676',
+                              color: '#00e676',
+                              padding: '10px 24px',
+                              borderRadius: '50px',
+                              fontSize: '0.95rem',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              letterSpacing: '0.05em',
+                              transition: 'all 0.25s ease',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              alignSelf: 'flex-start',
+                              gap: '8px',
+                            }}
+                            onMouseEnter={e => {
+                              e.currentTarget.style.background = '#00e676';
+                              e.currentTarget.style.color = '#0d1117';
+                            }}
+                            onMouseLeave={e => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = '#00e676';
+                            }}
+                          >
+                            <span>Completar Receta</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="20 6 9 17 4 12"/>
+                            </svg>
+                          </button>
+
+                          {/* Error: ingredientes insuficientes */}
+                          {errorCompletar && errorCompletar.length > 0 && (
+                            <div style={{
+                              background: 'rgba(255, 82, 82, 0.1)',
+                              border: '1px solid rgba(255, 82, 82, 0.4)',
+                              borderRadius: '12px',
+                              padding: '12px 16px',
+                              maxWidth: '380px',
+                            }}>
+                              <p style={{
+                                color: '#ff5252',
+                                fontWeight: '600',
+                                marginBottom: '8px',
+                                fontSize: '0.9rem',
+                              }}>
+                                No tienes suficientes ingredientes:
+                              </p>
+                              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                {errorCompletar.map((f, i) => (
+                                  <li key={i} style={{
+                                    color: 'rgba(255,255,255,0.75)',
+                                    fontSize: '0.85rem',
+                                    display: 'flex',
+                                    alignItems: 'baseline',
+                                    gap: '6px',
+                                  }}>
+                                    <span style={{ color: '#ff5252', fontWeight: 'bold' }}>•</span>
+                                    <span>
+                                      <strong style={{ color: 'rgba(255,255,255,0.9)' }}>{f.nombre}</strong>
+                                      {' '}— necesitas {f.cantidadNecesaria} {f.unidad}, {f.motivo}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -195,7 +315,6 @@ const VistaDetalles = () => {
   );
 };
 
-// Esta función fuerza la codificación de los paréntesis y otros símbolos rebeldes
 const codificarTitulo = (texto) => {
   return encodeURIComponent(texto).replace(/[!'()*]/g, (c) => {
     return '%' + c.charCodeAt(0).toString(16).toUpperCase();
