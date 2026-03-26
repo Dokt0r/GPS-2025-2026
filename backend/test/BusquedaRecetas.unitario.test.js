@@ -22,7 +22,7 @@ jest.mock('../src/models/recetas', () => ({
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
-describe('API de Recetas - Tests de Integración Completos', () => {
+describe('API de Recetas - Tests Unitarios Completos', () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -83,7 +83,6 @@ describe('API de Recetas - Tests de Integración Completos', () => {
         test('Estandarización: Procesa correctamente la equivalencia_g_ml', async () => {
             Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
 
-            // Enviamos un ingrediente con el 4º parámetro (60)
             await request(app).get('/api/recetas?ingredientes=Huevo|2|ud|60');
 
             const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
@@ -101,7 +100,6 @@ describe('API de Recetas - Tests de Integración Completos', () => {
             await request(app).get('/api/recetas?ingredientes=Aceite|1|cucharada|,Sal|1|cucharadita|');
 
             const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
-            // 1 cucharada = 15g, 1 cucharadita = 5g
             expect(llamada[0]).toMatchObject({ nombre: 'Aceite', cantidad: 15, unidad: 'g' });
             expect(llamada[1]).toMatchObject({ nombre: 'Sal', cantidad: 5, unidad: 'g' });
         });
@@ -118,19 +116,20 @@ describe('API de Recetas - Tests de Integración Completos', () => {
     });
 
     // ==========================================
-    // ENDPOINT: GET /api/recetas/detalle
+    // ENDPOINT: GET /api/recetas/:titulo
     // ==========================================
     describe('GET /api/recetas/detalle', () => {
 
-        test('Error 400 si falta el parámetro título', async () => {
+        // El endpoint usa /:titulo, así que sin título devuelve 404 (ruta no encontrada)
+        test('Error 404 si falta el parámetro título', async () => {
             const res = await request(app).get('/api/recetas/detalle');
-            expect(res.status).toBe(400);
-            expect(res.body).toHaveProperty('error', 'Falta el título');
+            expect(res.status).toBe(404);
+            expect(res.body).toHaveProperty('error', 'Receta no encontrada');
         });
 
         test('Error 404 si la receta no existe', async () => {
             Receta.findOne.mockResolvedValue(null);
-            const res = await request(app).get('/api/recetas/detalle?titulo=Inexistente');
+            const res = await request(app).get('/api/recetas/Inexistente');
 
             expect(res.status).toBe(404);
             expect(res.body).toHaveProperty('error', 'Receta no encontrada');
@@ -140,7 +139,7 @@ describe('API de Recetas - Tests de Integración Completos', () => {
             const mockReceta = { title: 'Pasta', ingredientes: [], instrucciones: 'Cocinar' };
             Receta.findOne.mockResolvedValue(mockReceta);
 
-            const res = await request(app).get('/api/recetas/detalle?titulo=Pasta');
+            const res = await request(app).get('/api/recetas/Pasta');
 
             expect(res.status).toBe(200);
             expect(res.body.title).toBe('Pasta');
@@ -148,10 +147,10 @@ describe('API de Recetas - Tests de Integración Completos', () => {
 
         test('Manejo de error 500 en detalle', async () => {
             Receta.findOne.mockRejectedValue(new Error('DB fail'));
-            const res = await request(app).get('/api/recetas/detalle?titulo=Pasta');
+            const res = await request(app).get('/api/recetas/Pasta');
 
             expect(res.status).toBe(500);
-            expect(res.body).toHaveProperty('error', 'Error interno');
+            expect(res.body).toHaveProperty('error', 'Error interno del servidor');
         });
     });
 });

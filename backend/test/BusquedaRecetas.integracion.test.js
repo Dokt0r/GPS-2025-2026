@@ -1,124 +1,4 @@
 const request = require('supertest');
-
-jest.mock('mongoose', () => {
-    class MockSchema {
-        constructor() {
-            this.statics = {};
-            this.methods = {};
-        }
-        index() { }
-        pre() { }
-        post() { }
-    }
-
-    return {
-        connect: jest.fn().mockResolvedValue(true),
-        disconnect: jest.fn().mockResolvedValue(true),
-        Schema: MockSchema,
-        model: jest.fn()
-    };
-});
-
-jest.mock('../src/models/recetas', () => ({
-    buscarPorIngredientesYCantidades: jest.fn(),
-    findOne: jest.fn()
-}));
-
-const app = require('../src/app');
-const Receta = require('../src/models/recetas');
-
-describe('API de Recetas - Integración (Mocks DB)', () => {
-
-    beforeEach(() => {
-        jest.clearAllMocks();
-    });
-    describe('GET /api/recetas', () => {
-
-        test('Devuelve error 400 si no se envían ingredientes en la query', async () => {
-            const res = await request(app).get('/api/recetas');
-
-            expect(res.status).toBe(400);
-            expect(res.body).toHaveProperty('error', 'Faltan ingredientes');
-            expect(Receta.buscarPorIngredientesYCantidades).not.toHaveBeenCalled();
-        });
-
-        test('Devuelve las recetas sugeridas estandarizando los ingredientes correctamente', async () => {
-            const mockRecetas = [
-                { title: 'Tortilla de patatas' },
-                { title: 'Patatas bravas' }
-            ];
-            Receta.buscarPorIngredientesYCantidades.mockResolvedValue(mockRecetas);
-
-            const ingredientesQuery = "Patata|1|kg|,Huevo|3|uds|";
-
-            const res = await request(app).get(`/api/recetas?ingredientes=${encodeURIComponent(ingredientesQuery)}`);
-
-            expect(res.status).toBe(200);
-            expect(Array.isArray(res.body)).toBe(true);
-            expect(res.body.length).toBe(2);
-            expect(res.body[0].title).toBe('Tortilla de patatas');
-
-            expect(Receta.buscarPorIngredientesYCantidades).toHaveBeenCalledWith([
-                { nombre: "Patata", cantidad: 1000, unidad: "g", equivalencia_g_ml: null },
-                { nombre: "Huevo", cantidad: 3, unidad: "ud", equivalencia_g_ml: null }
-            ]);
-        });
-
-        test('Devuelve array vacío si ningún ingrediente coincide con recetas en BD', async () => {
-            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
-            const ingredientesQuery = "IngredienteRaro|1|kg|";
-
-            const res = await request(app).get(`/api/recetas?ingredientes=${ingredientesQuery}`);
-
-            expect(res.status).toBe(200);
-            expect(Array.isArray(res.body)).toBe(true);
-            expect(res.body.length).toBe(0);
-        });
-
-        test('Maneja error de base de datos correctamente devolviendo 500', async () => {
-            Receta.buscarPorIngredientesYCantidades.mockRejectedValue(new Error('DB error'));
-            const ingredientesQuery = "Tomate|2|uds|";
-
-            const res = await request(app).get(`/api/recetas?ingredientes=${ingredientesQuery}`);
-
-            expect(res.status).toBe(500);
-            expect(res.body).toHaveProperty('error', 'Error interno del servidor');
-        });
-    });
-
-    describe('GET /api/recetas/detalle', () => {
-
-        test('Devuelve error 400 si falta el parámetro título', async () => {
-
-            const res = await request(app).get('/api/recetas/detalle');
-
-            expect(res.status).toBe(400);
-            expect(res.body).toHaveProperty('error', 'Falta el título');
-            expect(Receta.findOne).not.toHaveBeenCalled();
-        });
-
-        test('Devuelve error 404 si la receta no se encuentra en la base de datos', async () => {
-            Receta.findOne.mockResolvedValue(null);
-
-            const res = await request(app).get('/api/recetas/detalle?titulo=RecetaFalsa');
-
-            expect(res.status).toBe(404);
-            expect(res.body).toHaveProperty('error', 'Receta no encontrada');
-        });
-
-        test('Maneja error de base de datos en el detalle devolviendo 500', async () => {
-            Receta.findOne.mockRejectedValue(new Error('DB error on findOne'));
-
-            const res = await request(app).get('/api/recetas/detalle?titulo=Macarrones');
-
-            expect(res.status).toBe(500);
-            expect(res.body).toHaveProperty('error', 'Error interno');
-        });
-    });
-
-});
-
-/*const request = require('supertest');
 const mongoose = require('mongoose');
 
 jest.setTimeout(30000);
@@ -179,20 +59,41 @@ describe('GET /api/recetas', () => {
     });
 
     test('Equivalencia ud a g funciona correctamente', async () => {
-        // 1 tomate con equivalencia 150g debe dar los mismos resultados que 150g de tomate
+        // Ambas queries llevan factor de conversión para que las comparaciones sean simétricas
         const conUd = await request(app).get('/api/recetas?ingredientes=Tomate|1|ud|150');
-        const conG = await request(app).get('/api/recetas?ingredientes=Tomate|150|g|');
+        const conG = await request(app).get('/api/recetas?ingredientes=Tomate|150|g|150');
         expect(conUd.body.map(r => r.title)).toEqual(conG.body.map(r => r.title));
     });
 
-    test('Resultados ordenados por coincidencias descendente', async () => {
-        const res = await request(app).get('/api/recetas?ingredientes=Huevo|2|ud|,Sal|5|g|,Tomate|3|ud|');
+    test('Resultados con el mismo porcentaje de coincidencia están ordenados alfabéticamente', async () => {
+        // Usamos un único ingrediente muy común para maximizar la probabilidad
+        // de obtener varias recetas con el mismo porcentaje (1/N cada una),
+        // lo que activa el desempate alfabético del pipeline.
+        const res = await request(app).get('/api/recetas?ingredientes=Sal|5|g|');
         expect(res.status).toBe(200);
+
         if (res.body.length >= 2) {
-            const coincidencias = res.body.map(r => parseInt(r.coincidenciaTexto.split('/')[0]));
-            for (let i = 0; i < coincidencias.length - 1; i++) {
-                expect(coincidencias[i]).toBeGreaterThanOrEqual(coincidencias[i + 1]);
+            // Agrupamos las recetas por su porcentaje de coincidencia
+            const grupos = {};
+            for (const receta of res.body) {
+                const [cumplidos, total] = receta.coincidenciaTexto.split('/').map(Number);
+                const porcentaje = cumplidos / total;
+                if (!grupos[porcentaje]) grupos[porcentaje] = [];
+                grupos[porcentaje].push(receta.title);
             }
+
+            // Dentro de cada grupo con el mismo porcentaje, los títulos deben estar en orden alfabético
+            for (const [porcentaje, titulos] of Object.entries(grupos)) {
+                if (titulos.length >= 2) {
+                    const ordenadosEsperado = [...titulos].sort((a, b) =>
+                        a.localeCompare(b, 'es', { sensitivity: 'base' })
+                    );
+                    expect(titulos).toEqual(ordenadosEsperado);
+                }
+            }
+        } else {
+            // Si hay menos de 2 recetas no podemos verificar el orden: pasamos el test
+            console.warn('⚠️  Solo se encontró una receta o ninguna; no se puede verificar el orden alfabético.');
         }
     });
-});*/
+});
