@@ -9,6 +9,7 @@ const VistaDetalles = () => {
   const [receta, setReceta] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
+  const [recetaCompletada, setRecetaCompletada] = useState(false);
 
   useEffect(() => {
     const fetchDetalleReceta = async () => {
@@ -16,7 +17,6 @@ const VistaDetalles = () => {
         setCargando(true);
         setError(null);
         const response = await fetch(`${API_URL}/api/recetas/${codificarTitulo(titulo)}`);
-        
 
         if (!response.ok) {
           if (response.status === 404) throw new Error('Receta no encontrada.');
@@ -35,6 +35,10 @@ const VistaDetalles = () => {
 
     if (titulo) fetchDetalleReceta();
   }, [titulo, API_URL]);
+
+  const handleCompletarReceta = () => {
+    setRecetaCompletada(true);
+  };
 
   if (cargando) {
     return (
@@ -62,7 +66,7 @@ const VistaDetalles = () => {
 
   return (
     <main className="receta-view-wrapper">
-      
+
       {/* Botón Flotante */}
       <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -82,7 +86,7 @@ const VistaDetalles = () => {
         </header>
 
         <div className="receta-grid-layout">
-          
+
           {/* Columna Ingredientes */}
           <section className="receta-seccion">
             <h3 className="receta-seccion-titulo"> Ingredientes</h3>
@@ -107,14 +111,78 @@ const VistaDetalles = () => {
             <h3 className="receta-seccion-titulo"> Preparación</h3>
             <div className="receta-timeline">
               {receta.steps && receta.steps.length > 0 ? (
-                receta.steps.map((paso, i) => (
-                  <div className="receta-step" key={i}>
-                    <div className="receta-step-number">{i + 1}</div>
-                    <div className="receta-step-text">
-                      <p>{paso}</p>
+                <>
+                  {receta.steps.map((paso, i) => (
+                    <div className="receta-step" key={i}>
+                      <div className="receta-step-number">{i + 1}</div>
+                      <div className="receta-step-text">
+                        <p>{paso}</p>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Nodo final: Botón Completar Receta */}
+                  <div className="receta-step receta-step-completar">
+                    <div
+                      className="receta-step-number"
+                      style={{
+                        background: recetaCompletada
+                          ? 'linear-gradient(135deg, #00e676, #00c853)'
+                          : 'transparent',
+                        border: '2px solid #00e676',
+                        color: recetaCompletada ? '#0d1117' : '#00e676',
+                        fontSize: '1.2rem',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {recetaCompletada ? '✓' : ''}
+                    </div>
+                    <div className="receta-step-text" style={{ display: 'flex', alignItems: 'center' }}>
+                      {recetaCompletada ? (
+                        <span style={{
+                          color: '#00e676',
+                          fontWeight: '600',
+                          fontSize: '1rem',
+                        }}>
+                          ¡Receta completada! Buen provecho
+                        </span>
+                      ) : (
+                        <button
+                          className="btn-completar-receta"
+                          onClick={handleCompletarReceta}
+                          style={{
+                            background: 'transparent',
+                            border: '2px solid #00e676',
+                            color: '#00e676',
+                            padding: '10px 24px',
+                            borderRadius: '50px',
+                            fontSize: '0.95rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            letterSpacing: '0.05em',
+                            transition: 'all 0.25s ease',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = '#00e676';
+                            e.currentTarget.style.color = '#0d1117';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#00e676';
+                          }}
+                        >
+                          <span>Completar Receta</span>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))
+                </>
               ) : (
                 <p className="receta-texto-vacio">No hay instrucciones disponibles.</p>
               )}
