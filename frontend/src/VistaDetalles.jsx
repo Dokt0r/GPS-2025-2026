@@ -15,7 +15,8 @@ const VistaDetalles = () => {
       try {
         setCargando(true);
         setError(null);
-        const response = await fetch(`${API_URL}/api/recetas/${encodeURIComponent(titulo)}`);
+        const response = await fetch(`${API_URL}/api/recetas/${codificarTitulo(titulo)}`);
+        
 
         if (!response.ok) {
           if (response.status === 404) throw new Error('Receta no encontrada.');
@@ -84,7 +85,7 @@ const VistaDetalles = () => {
           
           {/* Columna Ingredientes */}
           <section className="receta-seccion">
-            <h3 className="receta-seccion-titulo"><span className="icono">🛒</span> Ingredientes</h3>
+            <h3 className="receta-seccion-titulo"> Ingredientes</h3>
             <ul className="receta-lista-ing">
               {receta.ingredients && receta.ingredients.length > 0 ? (
                 receta.ingredients.map((ing, i) => (
@@ -103,7 +104,7 @@ const VistaDetalles = () => {
 
           {/* Columna Preparación */}
           <section className="receta-seccion">
-            <h3 className="receta-seccion-titulo"><span className="icono">👩‍🍳</span> Preparación</h3>
+            <h3 className="receta-seccion-titulo"> Preparación</h3>
             <div className="receta-timeline">
               {receta.steps && receta.steps.length > 0 ? (
                 receta.steps.map((paso, i) => (
@@ -124,6 +125,13 @@ const VistaDetalles = () => {
       </article>
     </main>
   );
+};
+
+// Esta función fuerza la codificación de los paréntesis y otros símbolos rebeldes
+const codificarTitulo = (texto) => {
+  return encodeURIComponent(texto).replace(/[!'()*]/g, (c) => {
+    return '%' + c.charCodeAt(0).toString(16).toUpperCase();
+  });
 };
 
 export default VistaDetalles;

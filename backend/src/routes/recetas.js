@@ -25,6 +25,10 @@ const estandarizarNevera = (queryStr) => {
     });
 };
 
+const escaparRegex = (texto) => {
+    return texto.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
+
 router.get('/', async (req, res) => {
     try {
         // CORRECCIÓN: Primero capturamos lo que viene de la URL
@@ -73,16 +77,16 @@ router.get('/:titulo', async (req, res) => {
         if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
 
         console.log(`\n🔍 Buscando detalles de la receta: "${tituloReceta}"`);
-
+        const tituloSeguro = escaparRegex(tituloReceta);
         // 2. Buscamos usando una Expresión Regular (Regex)
         // La 'i' final hace que la búsqueda sea case-insensitive (ignora mayúsculas/minúsculas)
         // El ^ y el $ aseguran que sea exactamente ese título y no solo una parte.
         const recetaCompleta = await Receta.findOne({ 
-            title: new RegExp('^' + tituloReceta + '$', 'i') 
+            title: new RegExp('^' + tituloSeguro + '$', 'i') 
         });
 
         if (!recetaCompleta) {
-            console.log(`❌ No se encontró: "${tituloReceta}"`);
+            console.log(`❌ No se encontró: "${tituloSeguro}"`);
             return res.status(404).json({ error: "Receta no encontrada" });
         }
 
