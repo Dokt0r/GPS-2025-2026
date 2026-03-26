@@ -118,6 +118,7 @@ const VistaDetalles = () => {
     restarIngredientesReceta(receta.ingredients);
     setErrorCompletar(null);
     setRecetaCompletada(true);
+    setTimeout(() => navigate('/'), 3500);
   };
 
   // ── RENDERS DE ESTADO ───────────────────────
@@ -201,112 +202,107 @@ const VistaDetalles = () => {
                   ))}
 
                   {/* ── NODO FINAL: COMPLETAR RECETA ── */}
-                  <div className="receta-step receta-step-completar">
-                    <div
-                      className="receta-step-number"
-                      style={{
-                        background: recetaCompletada
-                          ? 'linear-gradient(135deg, #00e676, #00c853)'
-                          : 'transparent',
-                        border: '2px solid #00e676',
-                        color: recetaCompletada ? '#0d1117' : '#00e676',
-                        fontSize: '1.2rem',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {recetaCompletada ? '✓' : ''}
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
-
-                      {/* Estado: completada */}
-                      {recetaCompletada && (
+                  <div className="receta-step receta-step-completar" style={{ alignItems: 'center' }}>
+                    {recetaCompletada ? (
+                      <>
+                        <div
+                          className="receta-step-number"
+                          style={{
+                            background: 'linear-gradient(135deg, #00e676, #00c853)',
+                            border: '2px solid #00e676',
+                            color: '#0d1117',
+                            fontSize: '1.2rem',
+                            flexShrink: 0,
+                          }}
+                        >
+                          ✓
+                        </div>
                         <span style={{ color: '#00e676', fontWeight: '600', fontSize: '1rem' }}>
                           ¡Receta completada! Buen provecho
                         </span>
-                      )}
-
-                      {/* Estado: botón */}
-                      {!recetaCompletada && (
-                        <>
-                          <button
-                            onClick={handleCompletarReceta}
-                            style={{
-                              background: 'transparent',
-                              border: '2px solid #00e676',
-                              color: '#00e676',
-                              padding: '10px 24px',
-                              borderRadius: '50px',
-                              fontSize: '0.95rem',
-                              fontWeight: '600',
-                              cursor: 'pointer',
-                              letterSpacing: '0.05em',
-                              transition: 'all 0.25s ease',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              alignSelf: 'flex-start',
-                              gap: '8px',
-                            }}
-                            onMouseEnter={e => {
-                              e.currentTarget.style.background = '#00e676';
-                              e.currentTarget.style.color = '#0d1117';
-                            }}
-                            onMouseLeave={e => {
-                              e.currentTarget.style.background = 'transparent';
-                              e.currentTarget.style.color = '#00e676';
-                            }}
-                          >
-                            <span>Completar Receta</span>
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="20 6 9 17 4 12"/>
-                            </svg>
-                          </button>
-
-                          {/* Error: ingredientes insuficientes */}
-                          {errorCompletar && errorCompletar.length > 0 && (
-                            <div style={{
-                              background: 'rgba(255, 82, 82, 0.1)',
-                              border: '1px solid rgba(255, 82, 82, 0.4)',
-                              borderRadius: '12px',
-                              padding: '12px 16px',
-                              maxWidth: '380px',
-                            }}>
-                              <p style={{
-                                color: '#ff5252',
-                                fontWeight: '600',
-                                marginBottom: '8px',
-                                fontSize: '0.9rem',
-                              }}>
-                                No tienes suficientes ingredientes:
-                              </p>
-                              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                {errorCompletar.map((f, i) => (
-                                  <li key={i} style={{
-                                    color: 'rgba(255,255,255,0.75)',
-                                    fontSize: '0.85rem',
-                                    display: 'flex',
-                                    alignItems: 'baseline',
-                                    gap: '6px',
-                                  }}>
-                                    <span style={{ color: '#ff5252', fontWeight: 'bold' }}>•</span>
-                                    <span>
-                                      <strong style={{ color: 'rgba(255,255,255,0.9)' }}>{f.nombre}</strong>
-                                      {' '}— necesitas {f.cantidadNecesaria} {f.unidad}, {f.motivo}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
+                      </>
+                    ) : (
+                      <button
+                        onClick={handleCompletarReceta}
+                        style={{
+                          background: 'transparent',
+                          border: '2px solid #00e676',
+                          color: '#00e676',
+                          padding: '10px 24px',
+                          borderRadius: '50px',
+                          fontSize: '0.95rem',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          letterSpacing: '0.05em',
+                          transition: 'all 0.25s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          alignSelf: 'flex-start',
+                          flexShrink: 0,
+                          gap: '8px',
+                          whiteSpace: 'nowrap',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.background = '#00e676';
+                          e.currentTarget.style.color = '#0d1117';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = '#00e676';
+                        }}
+                      >
+                        <span>Completar Receta</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                      </button>
+                    )}
                   </div>
+
                 </>
               ) : (
                 <p className="receta-texto-vacio">No hay instrucciones disponibles.</p>
               )}
             </div>
+
+            {/* Error fuera del receta-timeline para no alargar la línea */}
+            {!recetaCompletada && errorCompletar && errorCompletar.length > 0 && (
+              <div style={{
+                background: 'rgba(255, 82, 82, 0.1)',
+                border: '1px solid rgba(255, 82, 82, 0.4)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                marginTop: '12px',
+                marginLeft: '80px',
+                maxWidth: '420px',
+              }}>
+                <p style={{
+                  color: '#ff5252',
+                  fontWeight: '600',
+                  marginBottom: '8px',
+                  fontSize: '0.9rem',
+                }}>
+                  No tienes suficientes ingredientes:
+                </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {errorCompletar.map((f, i) => (
+                    <li key={i} style={{
+                      color: 'rgba(255,255,255,0.75)',
+                      fontSize: '0.85rem',
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: '6px',
+                    }}>
+                      <span style={{ color: '#ff5252', fontWeight: 'bold' }}>•</span>
+                      <span>
+                        <strong style={{ color: 'rgba(255,255,255,0.9)' }}>{f.nombre}</strong>
+                        {' '}— necesitas {f.cantidadNecesaria} {f.unidad}, {f.motivo}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </section>
 
         </div>
