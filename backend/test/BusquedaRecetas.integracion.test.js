@@ -112,6 +112,26 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         expect(tUd).toEqual(tG);
     });
 
+    test('El factor de conversión (equivalencia_g_ml) transforma correctamente ud a g', async () => {
+        // 1. Creamos una receta que pide 120g de un ingrediente
+        await Receta.create({
+            title: "TEST_Receta_Conversion",
+            ingredients: [{ nombre: "Huevo", cantidad: 120, unidad: "g" }],
+            image_url: "https://via.placeholder.com/150",
+            isTest: true
+        });
+
+        // 2. CASO A: Enviamos 2 unidades con un factor de 60 (2 * 60 = 120g) -> DEBE ENCONTRARLA
+        const resSuficiente = await request(app).get('/api/recetas?ingredientes=Huevo|2|ud|60');
+        const titulosSuficiente = resSuficiente.body.map(r => r.title);
+        expect(titulosSuficiente).toContain("TEST_Receta_Conversion");
+
+        // 3. CASO B: Enviamos 2 unidades pero con un factor de 40 (2 * 40 = 80g) -> NO DEBE ENCONTRARLA
+        const resInsuficiente = await request(app).get('/api/recetas?ingredientes=Huevo|2|ud|40');
+        const titulosInsuficiente = resInsuficiente.body.map(r => r.title);
+        expect(titulosInsuficiente).not.toContain("TEST_Receta_Conversion");
+    });
+
     // NUEVO TEST 2: Ordenar según Match (Coincidencias)
     test('Ordena las recetas por número de coincidencias descendente', async () => {
         // "Arroz con Leche" tiene 2 ingredientes. "Batido" tiene 1.
