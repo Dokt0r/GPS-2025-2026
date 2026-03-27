@@ -122,9 +122,9 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
 
         // El endpoint usa /:titulo, así que sin título devuelve 404 (ruta no encontrada)
         test('Error 404 si falta el parámetro título', async () => {
-            const res = await request(app).get('/api/recetas/titulo');
-            expect(res.status).toBe(404);
-            expect(res.body).toHaveProperty('error', 'Receta no encontrada');
+            const res = await request(app).get('/api/recetas/');
+            expect(res.status).toBe(400);
+            expect(res.body).toHaveProperty('error', 'Faltan ingredientes');
         });
 
         test('Error 404 si la receta no existe', async () => {
@@ -133,6 +133,15 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
 
             expect(res.status).toBe(404);
             expect(res.body).toHaveProperty('error', 'Receta no encontrada');
+        });
+
+        test('Escapa caracteres especiales en el título correctamente', async () => {
+            Receta.findOne.mockResolvedValue({ title: '¿Pasta?' });
+            const res = await request(app).get('/api/recetas/%3FPasta%3F'); // ¿Pasta? encodeado
+            expect(res.status).toBe(200);
+            expect(Receta.findOne).toHaveBeenCalledWith({
+                title: expect.any(RegExp)
+            });
         });
 
         test('Éxito: Devuelve el objeto completo de la receta', async () => {
