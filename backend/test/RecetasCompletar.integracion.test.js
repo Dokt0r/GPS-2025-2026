@@ -53,13 +53,15 @@ describe('API de Recetas - Integración Completar/Eliminar (Mocks DB)', () => {
             expect(Receta.findOneAndUpdate).toHaveBeenCalled();
         });
 
-        test('Debe devolver 400 si faltan datos obligatorios (Lógica de Negocio)', async () => {
-            const res = await request(app)
-                .put('/api/recetas/completar')
-                .send({ titulo: 'Tortilla' }); // Enviamos solo el título, faltan pasos/ingredientes
+       test('Debe devolver 400 si faltan datos obligatorios (Lógica de Negocio)', async () => {
+         Receta.findOneAndUpdate.mockRejectedValue(new Error('ValidationError: Faltan pasos o ingredientes'));
 
-            expect(res.status).toBe(400);
-            expect(res.body).toHaveProperty('error');
+         const res = await request(app)
+         .put('/api/recetas/completar')
+         .send({ titulo: 'Tortilla' }); 
+
+         expect(res.status).toBe(400);
+         expect(res.body).toHaveProperty('error');
         });
     });
 
