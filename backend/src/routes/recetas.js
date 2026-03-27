@@ -98,5 +98,44 @@ router.get('/:titulo', async (req, res) => {
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
+// ENDPOINT 3: Completar una receta (Actualizar pasos e ingredientes)
+router.put('/completar', async (req, res) => {
+    try {
+        const { titulo, steps, ingredients } = req.body;
 
+        // Buscamos y actualizamos. {new: true} devuelve la receta ya cambiada
+        // Aquí es donde saltarán las validaciones que pusimos en el Modelo (LC-49)
+        const recetaActualizada = await Receta.findOneAndUpdate(
+            { title: new RegExp('^' + escaparRegex(titulo) + '$', 'i') },
+            { $set: { steps, ingredients, isCompleted: true } },
+            { new: true, runValidators: true } 
+        );
+
+        if (!recetaActualizada) return res.status(404).json({ error: "Receta no encontrada" });
+
+        res.json(recetaActualizada);
+    } catch (error) {
+        // Si falla la validación del modelo (ej: cantidad 0), enviamos error 400
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// ENDPOINT 4: Eliminar un ingrediente de una receta
+router.delete('/ingrediente', async (req, res) => {
+    try {
+        const { titulo, nombreIngrediente } = req.body;
+
+        const receta = await Receta.findOneAndUpdate(
+            { title: new RegExp('^' + escaparRegex(titulo) + '$', 'i') },
+            { $pull: { ingredients: { nombre: nombreIngrediente } } }, // $pull borra del array
+            { new: true }
+        );
+
+        if (!receta) return res.status(404).json({ error: "Receta no encontrada" });
+
+        res.json(receta);
+    } catch (error) {
+        res.status(500).json({ error: "Error al eliminar ingrediente" });
+    }
+});
 module.exports = router;

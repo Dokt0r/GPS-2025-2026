@@ -261,7 +261,5 @@ recetaSchema.pre('save', function(next) {
     
     next();
 });
-// =========================================================================
-// EXPORTACIÓN DEL MODELO
-// =========================================================================
+
 module.exports = mongoose.model('Receta', recetaSchema);
