@@ -646,15 +646,14 @@ background: rgba(255, 255, 255, 0.05);
 }
 
 /* ==========================================================================
-   NUEVA VISTA DETALLE DE RECETA (ESTRUCTURA ROBUSTA)
+   VISTA DETALLE DE RECETA
    ========================================================================== */
 
-/* Contenedor principal: Ocupa toda la pantalla y maneja el scroll */
+/* --- 1. LAYOUT PRINCIPAL Y NAVEGACIÓN --- */
 .receta-view-wrapper {
   position: fixed;
   inset: 0;
   background-color: #0f172a;
-  
   z-index: 9999;
   overflow-y: auto;
   overflow-x: hidden;
@@ -662,7 +661,6 @@ background: rgba(255, 255, 255, 0.05);
   scroll-behavior: smooth;
 }
 
-/* El botón flotante se queda fijo respecto al contenedor */
 .btn-flotante-volver {
   position: sticky;
   top: 24px;
@@ -694,12 +692,12 @@ background: rgba(255, 255, 255, 0.05);
   transform: translateY(-2px);
 }
 
-/* --- SECCIÓN PARALLAX (LA IMAGEN) --- */
+/* --- 2. SECCIÓN PARALLAX (HERO) --- */
 .receta-hero-parallax {
   position: sticky;
   top: 0;
   width: 100%;
-  height: 70vh; /* Altura controlada */
+  height: 70vh;
   min-height: 300px;
   z-index: 0;
   overflow: hidden;
@@ -723,35 +721,25 @@ background: rgba(255, 255, 255, 0.05);
   pointer-events: none;
 }
 
-/* --- TARJETA DE CONTENIDO QUE SOLAPA --- */
+/* --- 3. TARJETA DE CONTENIDO (GLASSMORPHISM) --- */
 .receta-content-card {
   position: relative;
   z-index: 2;
-  
-  /* --- EFECTO CRISTAL --- */
-  /* 1. Fondo semi-transparente (tu azul oscuro con 70% de opacidad) */
   background: rgba(25, 40, 75, 0.1);
-  
-  /* 2. El desenfoque del fondo (la magia) */
   backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px); /* Soporte para Safari */
-  
-  /* 3. Borde sutil superior y lateral para dar volumen al cristal */
+  -webkit-backdrop-filter: blur(20px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-left: 1px solid rgba(255, 255, 255, 0.05);
   border-right: 1px solid rgba(255, 255, 255, 0.05);
-  /* ---------------------- */
-
-  /* Tus ajustes de posicionamiento */
   margin-top: -400px; 
-  margin-inline: auto; /* Centrado perfecto */
-  
+  margin-inline: auto; 
   border-radius: 40px 40px 0 0;
   padding: 50px 40px 100px;
   min-height: 100vh; 
   max-width: 60%;
   box-shadow: 0 -15px 40px rgba(0,0,0,0.5);
 }
+
 .receta-header {
   max-width: 1100px;
   margin: 0 auto 40px;
@@ -767,12 +755,12 @@ background: rgba(255, 255, 255, 0.05);
   letter-spacing: -1px;
 }
 
-/* Grid layout interno */
+/* --- 4. GRID LAYOUT: INGREDIENTES Y PREPARACIÓN --- */
 .receta-grid-layout {
   max-width: 1100px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 35% 1fr; /* 35% Ingredientes / 65% Preparación */
+  grid-template-columns: 35% 1fr;
   gap: 60px;
   align-items: start;
 }
@@ -785,11 +773,11 @@ background: rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   gap: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.397);
   padding-bottom: 12px;
 }
 
-/* Ingredientes */
+/* Lista de Ingredientes */
 .receta-lista-ing {
   list-style: none;
   padding: 0;
@@ -803,29 +791,30 @@ background: rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.055);
   padding: 14px 18px;
   border-radius: 16px;
+  box-shadow: #0206172f 0px 0px 4px;
   border: 1px solid rgba(255, 255, 255, 0.03);
 }
 
 .receta-ing-badge {
-  background: rgba(74, 222, 128, 0.1);
+  background: rgba(74, 222, 128, 0.2);
   color: #4ade80;
   font-weight: 700;
   font-size: 0.95rem;
   padding: 6px 12px;
   border-radius: 10px;
   white-space: nowrap;
-
   min-width: 50px;
   text-align: center; 
-  flex-shrink: 0; /* Evita que la píldora se haga pequeña si el nombre del ingrediente es muy largo */
+  flex-shrink: 0;
 }
 
 .receta-ing-nombre {
-  color: #e2e8f0;
+  color: #ffffff;
   font-size: 1.05rem;
+  text-shadow: #020617 0px 0px 2px;
 }
 
 /* Preparación (Timeline) */
@@ -838,7 +827,7 @@ background: rgba(255, 255, 255, 0.05);
   content: '';
   position: absolute;
   top: 10px;
-  bottom: 0;
+  bottom: 40px;
   left: 30px;
   width: 2px;
   background: rgba(74, 222, 128, 0.15);
@@ -865,7 +854,6 @@ background: rgba(255, 255, 255, 0.05);
   font-size: 1.1rem;
   flex-shrink: 0;
   z-index: 2;
-  
 }
 
 .receta-step-text {
@@ -874,7 +862,8 @@ background: rgba(255, 255, 255, 0.05);
 
 .receta-step-text p {
   margin: 0;
-  color: #cbd5e1;
+  color: #ffffff;
+  text-shadow: 0 0 2px rgba(0,0,0,0.8);
   font-size: 1.1rem;
   line-height: 1.7;
 }
@@ -882,6 +871,99 @@ background: rgba(255, 255, 255, 0.05);
 .receta-texto-vacio {
   color: #64748b;
   font-style: italic;
+}
+
+/* --- 5. ESTADOS Y COMPONENTES INTERACTIVOS (CARGA, ÉXITO, ALERTAS) --- */
+.loading-container.centrado-vertical,
+.error-container.centrado-vertical {
+  margin-top: 40vh;
+  text-align: center;
+}
+
+/* Modificadores del paso final de receta */
+.receta-step-completar {
+  align-items: center; /* Centra el botón/mensaje con el círculo */
+}
+
+.receta-step-number-completado {
+  background: linear-gradient(135deg, #00e676, #00c853);
+  border-color: #00e676;
+  color: #0d1117;
+  font-size: 1.3rem; /* Un poco más grande para el tick */
+}
+
+.texto-exito {
+  color: #00e676;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.btn-completar-receta {
+  background: transparent;
+  border: 2px solid #00e676;
+  color: #00e676;
+  padding: 10px 24px;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  flex-shrink: 0;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn-completar-receta:hover {
+  background: #00e676;
+  color: #0d1117;
+}
+
+/* Alerta de ingredientes faltantes */
+.alerta-faltantes-container {
+  background: rgba(255, 82, 82, 0.1);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  margin-left: 66px; /* Ajustado para alinearse con el texto del timeline (42px circulo + 24px gap) */
+  max-width: 420px;
+}
+
+.alerta-faltantes-titulo {
+  color: #ff5252;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.alerta-faltantes-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alerta-faltantes-item {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.alerta-bullet {
+  color: #ff5252;
+  font-weight: bold;
+}
+
+.alerta-ingrediente-nombre {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 /* =========================================

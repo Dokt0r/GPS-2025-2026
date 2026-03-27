@@ -6,10 +6,6 @@ import { useNevera } from './NeveraContext';
 // HELPERS DE UNIDADES (espejo del backend)
 // ─────────────────────────────────────────────
 
-/**
- * Dado un ingrediente de la nevera y uno de la receta,
- * devuelve true si la nevera tiene cantidad suficiente.
- */
 const tienesSuficiente = (neveraIng, recetaIng) => {
   const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
   const unidadR = (recetaIng.unidad || '').toLowerCase().trim();
@@ -18,21 +14,15 @@ const tienesSuficiente = (neveraIng, recetaIng) => {
   if (unidadN === unidadR) {
     return neveraIng.cantidad >= recetaIng.cantidad;
   }
-  // Nevera g/ml → receta ud
   if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0) {
     return (neveraIng.cantidad / factor) >= recetaIng.cantidad;
   }
-  // Nevera ud → receta g/ml
   if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
     return (neveraIng.cantidad * factor) >= recetaIng.cantidad;
   }
   return false;
 };
 
-/**
- * Dado el array de ingredientes de la receta y la nevera actual,
- * devuelve los ingredientes de la receta que faltan o son insuficientes.
- */
 const calcularFaltantes = (ingredientesReceta, ingredientesNevera) => {
   const faltantes = [];
 
@@ -126,7 +116,7 @@ const VistaDetalles = () => {
   if (cargando) {
     return (
       <main className="receta-view-wrapper">
-        <div className="loading-container" style={{ marginTop: '40vh' }}>
+        <div className="loading-container centrado-vertical">
           <p>Preparando la receta...</p>
         </div>
       </main>
@@ -140,7 +130,7 @@ const VistaDetalles = () => {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
           Volver
         </button>
-        <div className="error-container" style={{ marginTop: '40vh', textAlign: 'center' }}>
+        <div className="error-container centrado-vertical">
           <p>❌ {error || 'No se pudo cargar la receta.'}</p>
         </div>
       </main>
@@ -202,55 +192,18 @@ const VistaDetalles = () => {
                   ))}
 
                   {/* ── NODO FINAL: COMPLETAR RECETA ── */}
-                  <div className="receta-step receta-step-completar" style={{ alignItems: 'center' }}>
+                  <div className="receta-step receta-step-completar">
                     {recetaCompletada ? (
                       <>
-                        <div
-                          className="receta-step-number"
-                          style={{
-                            background: 'linear-gradient(135deg, #00e676, #00c853)',
-                            border: '2px solid #00e676',
-                            color: '#0d1117',
-                            fontSize: '1.2rem',
-                            flexShrink: 0,
-                          }}
-                        >
+                        <div className="receta-step-number receta-step-number-completado">
                           ✓
                         </div>
-                        <span style={{ color: '#00e676', fontWeight: '600', fontSize: '1rem' }}>
+                        <span className="texto-exito">
                           ¡Receta completada! Buen provecho
                         </span>
                       </>
                     ) : (
-                      <button
-                        onClick={handleCompletarReceta}
-                        style={{
-                          background: 'transparent',
-                          border: '2px solid #00e676',
-                          color: '#00e676',
-                          padding: '10px 24px',
-                          borderRadius: '50px',
-                          fontSize: '0.95rem',
-                          fontWeight: '600',
-                          cursor: 'pointer',
-                          letterSpacing: '0.05em',
-                          transition: 'all 0.25s ease',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          alignSelf: 'flex-start',
-                          flexShrink: 0,
-                          gap: '8px',
-                          whiteSpace: 'nowrap',
-                        }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.background = '#00e676';
-                          e.currentTarget.style.color = '#0d1117';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = '#00e676';
-                        }}
-                      >
+                      <button className="btn-completar-receta" onClick={handleCompletarReceta}>
                         <span>Completar Receta</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                           <polyline points="20 6 9 17 4 12"/>
@@ -265,37 +218,18 @@ const VistaDetalles = () => {
               )}
             </div>
 
-            {/* Error fuera del receta-timeline para no alargar la línea */}
+            {/* Error de ingredientes faltantes integrado en el flujo visual */}
             {!recetaCompletada && errorCompletar && errorCompletar.length > 0 && (
-              <div style={{
-                background: 'rgba(255, 82, 82, 0.1)',
-                border: '1px solid rgba(255, 82, 82, 0.4)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                marginTop: '12px',
-                marginLeft: '80px',
-                maxWidth: '420px',
-              }}>
-                <p style={{
-                  color: '#ff5252',
-                  fontWeight: '600',
-                  marginBottom: '8px',
-                  fontSize: '0.9rem',
-                }}>
+              <div className="alerta-faltantes-container">
+                <p className="alerta-faltantes-titulo">
                   No tienes suficientes ingredientes:
                 </p>
-                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <ul className="alerta-faltantes-lista">
                   {errorCompletar.map((f, i) => (
-                    <li key={i} style={{
-                      color: 'rgba(255,255,255,0.75)',
-                      fontSize: '0.85rem',
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      gap: '6px',
-                    }}>
-                      <span style={{ color: '#ff5252', fontWeight: 'bold' }}>•</span>
+                    <li key={i} className="alerta-faltantes-item">
+                      <span className="alerta-bullet">•</span>
                       <span>
-                        <strong style={{ color: 'rgba(255,255,255,0.9)' }}>{f.nombre}</strong>
+                        <strong className="alerta-ingrediente-nombre">{f.nombre}</strong>
                         {' '}— necesitas {f.cantidadNecesaria} {f.unidad}, {f.motivo}
                       </span>
                     </li>
