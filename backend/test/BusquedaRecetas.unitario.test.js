@@ -118,11 +118,11 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
     // ==========================================
     // ENDPOINT: GET /api/recetas/:titulo
     // ==========================================
-    describe('GET /api/recetas/detalle', () => {
+    describe('GET /api/recetas/titulo', () => {
 
         // El endpoint usa /:titulo, así que sin título devuelve 404 (ruta no encontrada)
         test('Error 404 si falta el parámetro título', async () => {
-            const res = await request(app).get('/api/recetas/detalle');
+            const res = await request(app).get('/api/recetas/titulo');
             expect(res.status).toBe(404);
             expect(res.body).toHaveProperty('error', 'Receta no encontrada');
         });
