@@ -34,9 +34,6 @@ router.get('/', async (req, res) => {
         // CORRECCIÓN: Primero capturamos lo que viene de la URL
         const queryStr = req.query.ingredientes;
 
-        console.log("\n=======================================");
-        console.log("📥 1. RAW QUERY DEL FRONTEND:", queryStr);
-
         if (!queryStr) {
             console.log("❌ Error: Faltan ingredientes en la petición.");
             console.log("=======================================\n");
@@ -45,22 +42,11 @@ router.get('/', async (req, res) => {
 
         // 1. Convertimos el string a un array de objetos listos para comparar
         const ingredientesNeveraEstandar = estandarizarNevera(queryStr);
-
-        console.log("🧠 2. INGREDIENTES PROCESADOS PARA MONGO:");
-        console.log(JSON.stringify(ingredientesNeveraEstandar, null, 2));
-        console.log("🚀 3. Buscando en la base de datos...");
-
         // 2. Pasamos el array completo al Modelo
         const recetasSugeridas = await Receta.buscarPorIngredientesYCantidades(ingredientesNeveraEstandar);
 
-        // 3. Imprimimos el resultado de la búsqueda
-        console.log(`✅ 4. RESULTADO: Mongo encontró ${recetasSugeridas.length} recetas.`);
-        if (recetasSugeridas.length > 0) {
-            console.log(`   (Ejemplo de la primera: "${recetasSugeridas[0].title}")`);
-        }
-        console.log("=======================================\n");
-
         res.json(recetasSugeridas);
+
     } catch (error) {
         console.error("Error buscando recetas:", error);
         res.status(500).json({ error: "Error interno del servidor" });
@@ -73,7 +59,7 @@ router.get('/:titulo', async (req, res) => {
         // 1. Usamos req.params en lugar de req.query
         // Y decodificamos por si vienen espacios como %20
         const tituloReceta = decodeURIComponent(req.params.titulo).trim();
-        
+
         if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
 
         console.log(`\n🔍 Buscando detalles de la receta: "${tituloReceta}"`);
@@ -81,8 +67,8 @@ router.get('/:titulo', async (req, res) => {
         // 2. Buscamos usando una Expresión Regular (Regex)
         // La 'i' final hace que la búsqueda sea case-insensitive (ignora mayúsculas/minúsculas)
         // El ^ y el $ aseguran que sea exactamente ese título y no solo una parte.
-        const recetaCompleta = await Receta.findOne({ 
-            title: new RegExp('^' + tituloSeguro + '$', 'i') 
+        const recetaCompleta = await Receta.findOne({
+            title: new RegExp('^' + tituloSeguro + '$', 'i')
         });
 
         if (!recetaCompleta) {
@@ -92,7 +78,7 @@ router.get('/:titulo', async (req, res) => {
 
         console.log(`✅ Detalles enviados correctamente.`);
         res.json(recetaCompleta);
-        
+
     } catch (error) {
         console.error("❌ Error interno al buscar detalles:", error);
         res.status(500).json({ error: "Error interno del servidor" });

@@ -21,8 +21,8 @@ const ingredienteSchema = new mongoose.Schema({
  * Define la estructura de los datos almacenados en la colección 'recetas'.
  */
 const recetaSchema = new mongoose.Schema({
-    title: { 
-        type: String, 
+    title: {
+        type: String,
         required: true,
         trim: true
     },
@@ -47,8 +47,13 @@ const recetaSchema = new mongoose.Schema({
     ingredients: {
         type: [ingredienteSchema],
         required: true
+    },
+    isTest: {
+        type: Boolean,
+        default: false,
+        index: true // Opcional: ayuda a que el borrado sea más rápido
     }
-}, { 
+}, {
     collection: 'recetas', // Fuerza el nombre de la colección en la base de datos
     timestamps: true       // Añade campos createdAt y updatedAt automáticamente
 });
@@ -90,16 +95,23 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                                     in: {
                                         $let: {
                                             vars: {
-                                                // 1. Verificación de nombre: ¿El nombre del ingrediente de la nevera está contenido en el de la receta?
+                                                // SUSTITUYE TU VARIABLE nombreOk POR ESTA LÓGICA:
                                                 nombreOk: {
-                                                    $gte: [
+                                                    $or: [
+                                                        // 1. Caso Genérico -> Específico: Nevera "Arroz" está en Receta "Arroz Integral"
                                                         {
-                                                            $indexOfCP: [
-                                                                { $toLower: "$$recetaIng.nombre" },
-                                                                { $toLower: "$$neveraIng.nombre" }
+                                                            $gte: [
+                                                                { $indexOfCP: [{ $toLower: "$$recetaIng.nombre" }, { $toLower: "$$neveraIng.nombre" }] },
+                                                                0
                                                             ]
                                                         },
-                                                        0
+                                                        // 2. Caso Específico -> Genérico: Nevera "Arroz Integral" contiene la palabra "Arroz" de la receta
+                                                        {
+                                                            $gte: [
+                                                                { $indexOfCP: [{ $toLower: "$$neveraIng.nombre" }, { $toLower: "$$recetaIng.nombre" }] },
+                                                                0
+                                                            ]
+                                                        }
                                                     ]
                                                 },
                                                 // 2. Variables de estandarización para cantidades y unidades
@@ -185,11 +197,11 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                     $cond: {
                         // Previene errores de división por cero si una receta no tiene ingredientes
                         if: { $gt: ["$totalIngredientesReceta", 0] },
-                        then: { 
+                        then: {
                             $divide: [
-                                { $size: "$ingredientesCumplidos" }, 
+                                { $size: "$ingredientesCumplidos" },
                                 "$totalIngredientesReceta"
-                            ] 
+                            ]
                         },
                         else: 0
                     }
@@ -209,12 +221,12 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
         // 2º Por cantidad absoluta de ingredientes coincidentes (desempate).
         // 3º Por título alfabético (desempate final).
         // ---------------------------------------------------------------------
-        { 
-            $sort: { 
-                porcentajeCoincidencia: -1, 
-                cantidadCoincidencias: -1, 
-                title: 1 
-            } 
+        {
+            $sort: {
+                porcentajeCoincidencia: -1,
+                cantidadCoincidencias: -1,
+                title: 1
+            }
         },
 
         // ---------------------------------------------------------------------

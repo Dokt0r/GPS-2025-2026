@@ -72,6 +72,17 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
             expect(res.body[0]).toHaveProperty('coincidenciaTexto');
         });
 
+        test('Éxito: Devuelve un array vacío si no hay recetas que coincidan', async () => {
+            // Simulamos que la base de datos no encuentra nada (devuelve array vacío)
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+
+            const res = await request(app).get('/api/recetas?ingredientes=IngredienteRaro|1|ud|');
+
+            expect(res.status).toBe(200); // Sigue siendo un éxito técnico (200 OK)
+            expect(res.body).toEqual([]); // Pero el cuerpo debe ser un array vacío
+            expect(res.body).toHaveLength(0);
+        });
+
         test('Manejo de error 500 en búsqueda de recetas', async () => {
             Receta.buscarPorIngredientesYCantidades.mockRejectedValue(new Error('DB error'));
             const res = await request(app).get('/api/recetas?ingredientes=Tomate|1|ud|');
@@ -112,6 +123,21 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
             const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
             expect(llamada[0].unidad).toBe('ud');
             expect(llamada[1].unidad).toBe('ud');
+        });
+
+        test('Desestructuración: Extrae correctamente nombre, cantidad, unidad y equivalencia usando el separador |', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+
+            // Enviamos una cadena con los 4 campos claramente diferenciados
+            await request(app).get('/api/recetas?ingredientes=Pasta|500|g|1.2');
+
+            const llamada = Receta.buscarPorIngredientesYCantidades.mock.calls[0][0];
+
+            // Verificamos que cada trozo del split terminó en su variable correspondiente
+            expect(llamada[0].nombre).toBe('Pasta');
+            expect(llamada[0].cantidad).toBe(500);
+            expect(llamada[0].unidad).toBe('g');
+            expect(llamada[0].equivalencia_g_ml).toBe(1.2);
         });
     });
 
