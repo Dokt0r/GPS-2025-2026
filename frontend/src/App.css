@@ -472,23 +472,43 @@ ul#mi-nevera li:hover {
 }
 
 .receta-coincidentes {
-    position: absolute;
-    bottom: 12px;
-    right: 12px;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    color: var(--text-main);
-    padding: 6px 14px;
-    border-radius: 20px; /* Más redondo para que sea estilo píldora */
-    font-size: 0.8rem;
-    font-weight: 800;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    z-index: 2; /* Para que quede por encima del degradado */
+  position: absolute;
+  bottom: 10px; /* Posicionada abajo */
+  right: 10px; /* Posicionada a la derecha */
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  backdrop-filter: blur(10px); /* Sutil desenfoque para legibilidad */
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid transparent; /* Borde base transparente */
+  transition: all 0.3s ease;
+  z-index: 2;
+  text-shadow: 0 0 4px rgba(0,0,0,0.8); /* Sombra para resaltar texto sobre imágenes */
+}
+
+/* Clases de estado dinámicas (solo color y borde) */
+.match-verde {
+  color: #2ecc71; /* Color verde para el texto */
+  border-color: #2ecc71; /* Color verde para el borde */
+  background-color: rgba(46, 204, 113, 0.2);
+}
+
+.match-amarillo {
+  color: #f1c40f; /* Color amarillo para el texto */
+  border-color: #f1c40f; /* Color amarillo para el borde */
+  background-color: rgba(241, 196, 15, 0.2);
+}
+
+.match-rojo {
+  color: #e74c3c; /* Color rojo para el texto */
+  border-color: #e74c3c; /* Color rojo para el borde */
+  background-color: rgba(231, 76, 60, 0.2);
+}
+
+.match-neutral {
+  color: rgba(255,255,255,0.6); /* Color neutral si falla */
+  border-color: rgba(255,255,255,0.6); /* Borde neutral si falla */
 }
 
 .receta-info {
@@ -625,11 +645,272 @@ background: rgba(255, 255, 255, 0.05);
     border-color: rgba(46, 204, 113, 0.4);
 }
 
+/* ==========================================================================
+   NUEVA VISTA DETALLE DE RECETA (ESTRUCTURA ROBUSTA)
+   ========================================================================== */
+
+/* Contenedor principal: Ocupa toda la pantalla y maneja el scroll */
+.receta-view-wrapper {
+  position: fixed;
+  inset: 0;
+  background-color: #0f172a;
+  
+  z-index: 9999;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: #f8fafc;
+  scroll-behavior: smooth;
+}
+
+/* El botón flotante se queda fijo respecto al contenedor */
+.btn-flotante-volver {
+  position: sticky;
+  top: 24px;
+  left: 24px;
+  float: left; /* Permite que se posicione sobre la imagen */
+  margin-bottom: -60px; /* Evita que empuje el contenido hacia abajo */
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 100px;
+  cursor: pointer;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-flotante-volver:hover {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: #4ade80;
+  color: #4ade80;
+  transform: translateY(-2px);
+}
+
+/* --- SECCIÓN PARALLAX (LA IMAGEN) --- */
+.receta-hero-parallax {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 70vh; /* Altura controlada */
+  min-height: 300px;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.receta-hero-parallax img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.receta-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom, 
+    rgba(15, 23, 42, 0.2) 0%, 
+    rgba(15, 23, 42, 0.5) 60%, 
+    #0f172a 100%
+  );
+  pointer-events: none;
+}
+
+/* --- TARJETA DE CONTENIDO QUE SOLAPA --- */
+.receta-content-card {
+  position: relative;
+  z-index: 2;
+  
+  /* --- EFECTO CRISTAL --- */
+  /* 1. Fondo semi-transparente (tu azul oscuro con 70% de opacidad) */
+  background: rgba(25, 40, 75, 0.1);
+  
+  /* 2. El desenfoque del fondo (la magia) */
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px); /* Soporte para Safari */
+  
+  /* 3. Borde sutil superior y lateral para dar volumen al cristal */
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  /* ---------------------- */
+
+  /* Tus ajustes de posicionamiento */
+  margin-top: -400px; 
+  margin-inline: auto; /* Centrado perfecto */
+  
+  border-radius: 40px 40px 0 0;
+  padding: 50px 40px 100px;
+  min-height: 100vh; 
+  max-width: 60%;
+  box-shadow: 0 -15px 40px rgba(0,0,0,0.5);
+}
+.receta-header {
+  max-width: 1100px;
+  margin: 0 auto 40px;
+  text-align: left;
+}
+
+.receta-titulo-principal {
+  margin: 0;
+  font-size: 3.5rem;
+  color: #4ade80;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+/* Grid layout interno */
+.receta-grid-layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 35% 1fr; /* 35% Ingredientes / 65% Preparación */
+  gap: 60px;
+  align-items: start;
+}
+
+.receta-seccion-titulo {
+  font-size: 1.5rem;
+  color: #fff;
+  margin-top: 0;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 12px;
+}
+
+/* Ingredientes */
+.receta-lista-ing {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.receta-ing-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  padding: 14px 18px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.receta-ing-badge {
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+
+  min-width: 50px;
+  text-align: center; 
+  flex-shrink: 0; /* Evita que la píldora se haga pequeña si el nombre del ingrediente es muy largo */
+}
+
+.receta-ing-nombre {
+  color: #e2e8f0;
+  font-size: 1.05rem;
+}
+
+/* Preparación (Timeline) */
+.receta-timeline {
+  position: relative;
+  padding-left: 10px;
+}
+
+.receta-timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 0;
+  left: 30px;
+  width: 2px;
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.receta-step {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  margin-bottom: 35px;
+}
+
+.receta-step-number {
+  width: 42px;
+  height: 42px;
+  background: #0f172a;
+  border: 2px solid #4ade80;
+  color: #4ade80;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  z-index: 2;
+  
+}
+
+.receta-step-text {
+  padding-top: 8px;
+}
+
+.receta-step-text p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.receta-texto-vacio {
+  color: #64748b;
+  font-style: italic;
+}
+
 /* =========================================
-   RESPONSIVO GENERAL
+   RESPONSIVO MÓVIL VISTA DETALLE
    ========================================= */
 @media (max-width: 900px) {
-    .split-layout {
-        grid-template-columns: 1fr;
-    }
+  .receta-hero-parallax {
+    height: 40vh; /* Imagen más pequeña en móvil */
+  }
+
+  .receta-content-card {
+    padding: 30px 20px 60px;
+    border-radius: 30px 30px 0 0;
+    margin-top: -40px; /* Menor solape en móvil */
+  }
+
+  .receta-titulo-principal {
+    font-size: 2.2rem;
+  }
+
+  .receta-grid-layout {
+    grid-template-columns: 1fr; /* Todo a una columna */
+    gap: 40px;
+  }
+
+  .btn-flotante-volver {
+    top: 16px;
+    left: 16px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
 }

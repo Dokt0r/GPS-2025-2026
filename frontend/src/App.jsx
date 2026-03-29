@@ -4,6 +4,7 @@ import Buscador from './components/Buscador';
 import ListaNevera from './components/ListaNevera';
 import BotonAccion from './components/BotonAccion';
 import VistaRecetas from './VistaRecetas';
+import VistaDetalles from './VistaDetalles';
 import './App.css';
 
 /**
@@ -155,6 +156,8 @@ function App() {
           {/* RUTA 2: RESULTADOS DE BÚSQUEDA (RECETAS) */}
           <Route path="/recetas" element={<VistaRecetas />} />
 
+          {/* RUTA 3: DETALLES DE RECETA (DINÁMICA) */}
+          <Route path="/receta/:titulo" element={<VistaDetalles />} />
         </Routes>
       </main>
     </>
