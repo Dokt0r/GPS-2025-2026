@@ -47,6 +47,10 @@ const recetaSchema = new mongoose.Schema({
     ingredients: {
         type: [ingredienteSchema],
         required: true
+    },
+    isCompleted: {
+        type: Boolean,
+        default: false
     }
 }, { 
     collection: 'recetas', // Fuerza el nombre de la colección en la base de datos
@@ -243,23 +247,24 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
 };
 
 
-// Lógica de negocio e integración de comprobación
+// =========================================================================
+// LÓGICA DE NEGOCIO (Validaciones antes de guardar)
+// =========================================================================
 
-recetaSchema.pre('save', function(next) {
+recetaSchema.pre('save', function() {
     // Si la receta tiene ingredientes, comprobamos que las cantidades sean lógicas
     if (this.ingredients && this.ingredients.length > 0) {
         const tieneErrores = this.ingredients.some(ing => ing.cantidad <= 0);
         if (tieneErrores) {
-            return next(new Error('Lógica de Negocio: No se pueden guardar ingredientes con cantidad 0 o negativa.'));
+            // USAMOS THROW para que la petición asíncrona lo detecte como error 400
+            throw new Error('Lógica de Negocio: No se pueden guardar ingredientes con cantidad 0 o negativa.');
         }
     }
     
     // Comprobamos que tenga al menos un paso de preparación
     if (!this.steps || this.steps.length === 0) {
-        return next(new Error('Lógica de Negocio: Una receta debe tener al menos un paso para estar completada.'));
+        throw new Error('Lógica de Negocio: Una receta debe tener al menos un paso para estar completada.');
     }
-    
-    next();
 });
 
 module.exports = mongoose.model('Receta', recetaSchema);
