@@ -5,14 +5,9 @@ import ListaNevera from './components/ListaNevera';
 import BotonAccion from './components/BotonAccion';
 import VistaRecetas from './VistaRecetas';
 import VistaDetalles from './VistaDetalles';
+import { NeveraContext } from './NeveraContext';
 import './App.css';
 
-/**
- * Componente principal de la aplicación LazyChef.
- * Gestiona el estado global del inventario del usuario (la nevera), la conexión
- * inicial con la base de datos para obtener los ingredientes disponibles, 
- * y el sistema global de notificaciones (toast).
- */
 function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
@@ -21,90 +16,101 @@ function App() {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-  /**
-   * Muestra una notificación temporal (toast) en la interfaz de usuario.
-   * Útil para dar feedback visual de éxito o error en las operaciones.
-   * La notificación desaparece automáticamente tras 3 segundos.
-   */
   const mostrarMensaje = (mensaje, tipo) => {
     setToast({ visible: true, mensaje, tipo });
     setTimeout(() => setToast({ visible: false, mensaje: '', tipo: '' }), 3000);
   };
 
-  /**
-   * Hook de inicialización. Se ejecuta una única vez al montar el componente.
-   * Realiza una petición GET al backend para cargar el catálogo completo de 
-   * ingredientes. Maneja estados de error y de base de datos vacía.
-   */
   useEffect(() => {
     fetch(`${API_URL}/api/ingredientes`)
       .then(res => {
-        if (!res.ok) {
-          throw new Error('Error al conectar con el servidor');
-        }
+        if (!res.ok) throw new Error('Error al conectar con el servidor');
         return res.json();
       })
       .then(data => {
         if (data && data.length > 0) {
           setIngredientesBase(data);
         } else {
-          // El servidor responde correctamente, pero la colección está vacía
           setIngredientesBase([]);
           mostrarMensaje('⚠️ La base de datos de ingredientes está vacía.', 'error');
         }
       })
       .catch((error) => {
-        // Fallo de red o servidor caído
         console.error("Error cargando ingredientes:", error);
         setIngredientesBase([]);
         mostrarMensaje('❌ No se pudo conectar con el servidor para cargar los ingredientes.', 'error');
       });
   }, []);
 
-  /**
-   * Añade un ingrediente al inventario del usuario.
-   * Si el ingrediente ya existe en la nevera, suma la nueva cantidad a la existente.
-   * Si es nuevo, lo inserta en el array manteniendo sus propiedades originales (unidad, equivalencia).
-   */
   const añadirAInventario = (ingrediente, cantidadAñadida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
     let nuevaLista;
     if (index !== -1) {
-      // Clona el array y suma la cantidad al elemento existente
       nuevaLista = [...ingredientesNevera];
       nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
     } else {
-      // Añade el nuevo objeto ingrediente al final del array
       nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica }];
     }
 
     setIngredientesNevera(nuevaLista);
     mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
-  
-  /**
-   * Elimina completamente un ingrediente del inventario del usuario
-   * utilizando su nombre como identificador único.
-   */
+
   const eliminarDeInventario = (nombre) => {
     const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
     setIngredientesNevera(nuevaLista);
   };
 
   /**
-   * Procesa los ingredientes actuales de la nevera y redirige al usuario a la vista de recetas.
-   * Transforma el array de objetos en un string formateado (nombre|cantidad|unidad|equivalencia)
-   * que se envía de forma segura a través de los parámetros de la URL (Query Params).
+   * Resta los ingredientes usados en una receta de la nevera.
+   * Si la cantidad resultante es <= 0 elimina el item directamente.
+   * Maneja conversiones de unidades (g/ml <-> ud) igual que el backend.
    */
+  const restarIngredientesReceta = (ingredientesReceta) => {
+    setIngredientesNevera(prev => {
+      const nuevaLista = prev.map(neveraIng => ({ ...neveraIng }));
+
+      for (const recetaIng of ingredientesReceta) {
+        const unidadR = (recetaIng.unidad || '').toLowerCase().trim();
+
+        const idx = nuevaLista.findIndex(n =>
+          recetaIng.nombre.toLowerCase().includes(n.nombre.toLowerCase())
+        );
+        if (idx === -1) continue;
+
+        const neveraIng = nuevaLista[idx];
+        const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
+        const factor = neveraIng.equivalencia_g_ml || 0;
+
+        let nuevaCantidad = neveraIng.cantidad;
+
+        if (unidadN === unidadR) {
+          // Misma unidad: resta directa
+          nuevaCantidad = neveraIng.cantidad - recetaIng.cantidad;
+        } else if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0) {
+          // Nevera en g/ml, receta en ud -> convertir ud a g/ml
+          nuevaCantidad = neveraIng.cantidad - (recetaIng.cantidad * factor);
+        } else if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
+          // Nevera en ud, receta en g/ml -> convertir g/ml a ud
+          nuevaCantidad = neveraIng.cantidad - (recetaIng.cantidad / factor);
+        }
+
+        nuevaLista[idx].cantidad = Math.max(0, parseFloat(nuevaCantidad.toFixed(2)));
+      }
+
+      // Eliminar los que hayan quedado en 0
+      return nuevaLista.filter(i => i.cantidad > 0);
+    });
+  };
+
   const buscarRecetas = () => {
     if (ingredientesNevera.length === 0) {
       mostrarMensaje('❌ Tu nevera está vacía. Añade algo primero.', 'error');
       return;
     }
 
-    // Formatear los datos para enviarlos por URL
     const partes = ingredientesNevera.map(ing => {
       const unidad = (ing.unidad ?? '').trim();
       const equivalencia = ing.equivalencia_g_ml ?? '';
@@ -117,7 +123,7 @@ function App() {
   };
 
   return (
-    <>
+    <NeveraContext.Provider value={{ ingredientesNevera, restarIngredientesReceta }}>
       <div className="bg-gradient"></div>
       <main className="app-container">
         <header>
@@ -127,7 +133,6 @@ function App() {
         </header>
 
         <Routes>
-          {/* RUTA 1: VISTA PRINCIPAL (LA NEVERA) */}
           <Route path="/" element={
             <section className="split-layout">
               <div className="left-panel">
@@ -153,14 +158,11 @@ function App() {
             </section>
           } />
 
-          {/* RUTA 2: RESULTADOS DE BÚSQUEDA (RECETAS) */}
           <Route path="/recetas" element={<VistaRecetas />} />
-
-          {/* RUTA 3: DETALLES DE RECETA (DINÁMICA) */}
           <Route path="/receta/:titulo" element={<VistaDetalles />} />
         </Routes>
       </main>
-    </>
+    </NeveraContext.Provider>
   );
 }
 
