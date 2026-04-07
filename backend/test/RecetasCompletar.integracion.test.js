@@ -38,23 +38,23 @@ beforeAll(async () => {
         await mongoose.connect(process.env.MONGODB_URI);
     }
     // Limpieza inicial de datos de test previos
-    await Receta.deleteMany({ isTest: true });
+    /* await Receta.deleteMany({ isTest: true }); */
     // Insertamos las recetas necesarias para los tests
     await Receta.insertMany(recetasTest);
 });
 
 afterEach(async () => {
     // Limpiamos recetas creadas durante los tests, manteniendo las de la base
-    await Receta.deleteMany({
-        isTest: true,
-        title: { $nin: Array.from(titulosBase) }
-    });
+    /* await Receta.deleteMany({
+         isTest: true,
+         title: { $nin: Array.from(titulosBase) }
+     });*/
 });
 
 afterAll(async () => {
     try {
         // Limpieza final absoluta
-        const resultado = await Receta.deleteMany({ isTest: true });
+        // const resultado = await Receta.deleteMany({ isTest: true });
         console.log(`Limpieza final: ${resultado.deletedCount} recetas de test eliminadas.`);
     } catch (error) {
         console.error("Error limpiando la base de datos tras los tests:", error);
@@ -84,7 +84,7 @@ describe('Integración Recetas - Completar y Eliminar ingredientes (Base de Dato
             expect(res.body.title).toBe("TEST_Tortilla para Completar");
             expect(res.body.steps).toEqual(nuevosPasos);
             expect(res.body.ingredients[0].cantidad).toBe(3);
-            
+
             // Verificamos que realmente se guardó en la BD real
             const recetaEnBD = await Receta.findOne({ title: "TEST_Tortilla para Completar" });
             expect(recetaEnBD.isCompleted).toBe(true);
@@ -129,7 +129,7 @@ describe('Integración Recetas - Completar y Eliminar ingredientes (Base de Dato
                 });
 
             expect(res.status).toBe(200);
-            
+
             // El array de ingredientes solo debería tener 1 elemento ahora (la Lechuga)
             expect(res.body.ingredients.length).toBe(1);
             expect(res.body.ingredients[0].nombre).toBe("Lechuga");
