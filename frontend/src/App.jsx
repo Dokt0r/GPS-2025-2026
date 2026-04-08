@@ -6,7 +6,7 @@ import BotonAccion from './components/BotonAccion';
 import VistaRecetas from './VistaRecetas';
 import VistaDetalles from './VistaDetalles';
 import { NeveraContext } from './NeveraContext';
-import './App.css';
+import './App.css'; 
 
 function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
