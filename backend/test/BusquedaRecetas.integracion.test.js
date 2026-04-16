@@ -12,30 +12,35 @@ const recetasTest = [
             { nombre: "Arroz", cantidad: 100, unidad: "g" },
             { nombre: "Leche", cantidad: 200, unidad: "ml" }
         ],
+        steps: ["Paso 1: Mezclar todo"], // <--- AÑADIDO
         image_url: "https://via.placeholder.com/150",
         isTest: true
     },
     {
         title: "TEST_Batido de Proteina",
         ingredients: [{ nombre: "Leche", cantidad: 250, unidad: "ml" }],
+        steps: ["Paso 1: Batir"], // <--- AÑADIDO
         image_url: "https://via.placeholder.com/150",
         isTest: true
     },
     {
         title: "TEST_Pimiento Verde Relleno",
         ingredients: [{ nombre: "Pimiento verde", cantidad: 1, unidad: "ud" }],
+        steps: ["Paso 1: Rellenar"], // <--- AÑADIDO
         image_url: "https://via.placeholder.com/150",
         isTest: true
     },
     {
         title: "TEST_Zumo de Tomate",
         ingredients: [{ nombre: "Tomate", cantidad: 150, unidad: "g" }],
+        steps: ["Paso 1: Exprimir"], // <--- AÑADIDO
         image_url: "https://via.placeholder.com/150",
         isTest: true
     },
     {
         title: "TEST_Harina de Trigo",
         ingredients: [{ nombre: "Harina", cantidad: 500, unidad: "g" }],
+        steps: ["Paso 1: Tamizar"], // <--- AÑADIDO
         image_url: "https://via.placeholder.com/150",
         isTest: true
     }
@@ -92,6 +97,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Receta_Exacta",
             ingredients: [{ nombre: "Cuscús", cantidad: 225, unidad: "g" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -106,6 +112,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Receta_Mucha_Harina",
             ingredients: [{ nombre: "Harina", cantidad: 1000, unidad: "g" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -120,6 +127,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Bowl Saludable",
             ingredients: [{ nombre: "Arroz integral", cantidad: 100, unidad: "g" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -134,6 +142,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Paella Valenciana",
             ingredients: [{ nombre: "Arroz bomba", cantidad: 400, unidad: "g" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -148,6 +157,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Arroz Blanco Basico",
             ingredients: [{ nombre: "Arroz", cantidad: 200, unidad: "g" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -162,6 +172,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Receta_Solida",
             ingredients: [{ nombre: "Harina", cantidad: 200, unidad: "g" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -176,6 +187,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Receta_Liquida",
             ingredients: [{ nombre: "Leche", cantidad: 200, unidad: "ml" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -210,6 +222,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Receta_Conversion",
             ingredients: [{ nombre: "Huevo", cantidad: 120, unidad: "g" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -231,6 +244,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
                 { nombre: "Patata", cantidad: 300, unidad: "g" },
                 { nombre: "Aceite", cantidad: 50, unidad: "ml" }
             ],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -249,6 +263,7 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
         await Receta.create({
             title: "TEST_Receta_Case_Unidad",
             ingredients: [{ nombre: "Leche", cantidad: 100, unidad: "ml" }],
+            steps: ["Paso de prueba"], // <--- AÑADIDO
             image_url: "https://via.placeholder.com/150",
             isTest: true
         });
@@ -280,12 +295,14 @@ describe('GET /api/recetas - Integración con datos controlados', () => {
             {
                 title: "TEST_B_Receta",
                 ingredients: [{ nombre: "Sal", cantidad: 1, unidad: "g" }],
+                steps: ["Paso de prueba"], // <--- AÑADIDO
                 image_url: "https://via.placeholder.com/150",
                 isTest: true
             },
             {
                 title: "TEST_A_Receta",
                 ingredients: [{ nombre: "Sal", cantidad: 1, unidad: "g" }],
+                steps: ["Paso de prueba"], // <--- AÑADIDO
                 image_url: "https://via.placeholder.com/150",
                 isTest: true
             }

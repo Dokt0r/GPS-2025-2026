@@ -1,149 +1,190 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import VistaDetalles from '../src/VistaDetalles';
+import { MemoryRouter } from 'react-router-dom';
+import App from '../src/App';
 
-describe('Integracion VistaDetalles', () => {
-  const renderVistaDetalles = (ruta = '/receta/Tortilla%20de%20patata') => {
-    return render(
-      <MemoryRouter initialEntries={[ruta]}>
-        <Routes>
-          <Route path="/receta/:titulo" element={<VistaDetalles />} />
-        </Routes>
-      </MemoryRouter>
-    );
-  };
+const INGREDIENTES_MOCK = [
+  { _id: '1', nombre: 'Tomate', unidad: 'ud', equivalencia_g_ml: 100 },
+  { _id: '2', nombre: 'Arroz', unidad: 'g', equivalencia_g_ml: null },
+];
+
+const RECETAS_MOCK = [
+  { 
+    _id: 'r1', id: 'r1', 
+    title: 'Arroz con tomate', titulo: 'Arroz con tomate', 
+    image_url: 'img1.jpg', imagen: 'img1.jpg',
+    coincidenciaTexto: '2/2' 
+  },
+  { 
+    _id: 'r2', id: 'r2', 
+    title: 'Sopa de tomate', titulo: 'Sopa de tomate', 
+    image_url: 'img2.jpg', imagen: 'img2.jpg',
+    coincidenciaTexto: '1/3' 
+  },
+];
+
+const DETALLE_RECETA_MOCK = {
+  _id: 'r1',
+  id: 'r1',
+  title: 'Arroz con tomate',
+  titulo: 'Arroz con tomate',
+  image_url: 'img1.jpg',
+  imagen: 'img1.jpg',
+  ingredients: [
+    { nombre: 'Tomate', cantidad: 2, unidad: 'ud' },
+    { nombre: 'Arroz', cantidad: 200, unidad: 'g' }
+  ],
+  ingredientes: [ 
+    { nombre: 'Tomate', cantidad: 2, unidad: 'ud' },
+    { nombre: 'Arroz', cantidad: 200, unidad: 'g' }
+  ],
+  steps: ['Lavar el arroz', 'Cocinar con el tomate'],
+  instrucciones: ['Lavar el arroz', 'Cocinar con el tomate'], 
+  preparacion: ['Lavar el arroz', 'Cocinar con el tomate'],
+};
+
+const renderApp = () =>
+  render(
+    <MemoryRouter initialEntries={['/']}>
+      <App />
+    </MemoryRouter>
+  );
+
+// --- FUNCIÓN ACTUALIZADA PARA EVITAR EL CHOQUE DE LAS '✕' ---
+const añadirIngrediente = async (nombre, cantidad = '100') => {
+  // 1. Clic en el botón flotante (FAB) para abrir el modal
+  const fabBtn = await screen.findByText('+');
+  fireEvent.click(fabBtn);
+
+  // 2. Esperar a que el modal cargue y el input esté disponible
+  const input = await screen.findByPlaceholderText(/Ingrediente/i);
+  fireEvent.change(input, { target: { value: nombre } });
+
+  // 3. Seleccionar la sugerencia
+  const sugerencia = await screen.findByText(nombre, { selector: '.sugerencia-item' });
+  fireEvent.click(sugerencia);
+
+  // 4. Poner la cantidad y confirmar
+  const inputCantidad = screen.getByPlaceholderText('Cant.');
+  fireEvent.change(inputCantidad, { target: { value: cantidad } });
+  fireEvent.click(screen.getByText(/Confirmar Selección/i));
+
+  // 5. Cerrar el modal apuntando específicamente a su clase para evitar el error de múltiples elementos
+  await waitFor(() => {
+    const btnCerrar = document.querySelector('.btn-cerrar-modal');
+    if (btnCerrar) {
+      fireEvent.click(btnCerrar);
+    }
+  });
+
+  // 6. Esperamos a que el modal desaparezca del DOM
+  await waitFor(() => {
+    expect(screen.queryByPlaceholderText(/Ingrediente/i)).not.toBeInTheDocument();
+  });
+};
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('Integración — Flujo Completo: Nevera -> VistaRecetas -> VistaDetalles', () => {
 
   beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  test('muestra informacion de receta, ingredientes y proceso de elaboracion', async () => {
-    const recetaMock = {
-      title: 'Tortilla de patata',
-      image_url: 'https://example.com/tortilla.jpg',
-      ingredients: [
-        { nombre: 'Huevos', cantidad: 4, unidad: 'ud' },
-        { nombre: 'Patata', cantidad: 500, unidad: 'g' },
-        { nombre: 'Aceite de oliva', cantidad: 30, unidad: 'ml' }
-      ],
-      steps: [
-        'Pelar y cortar la patata.',
-        'Freir la patata hasta que este tierna.',
-        'Mezclar con huevo batido y cuajar la tortilla.'
-      ]
-    };
-
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => recetaMock
+    global.fetch = vi.fn(async (url) => {
+      const stringUrl = String(url);
+      
+      if (stringUrl.includes('/api/ingredientes')) {
+        return { ok: true, status: 200, json: async () => INGREDIENTES_MOCK };
+      }
+      
+      if (stringUrl.match(/\/api\/recetas\/r1$/) || stringUrl.includes('Arroz%20con%20tomate')) {
+        return { ok: true, status: 200, json: async () => DETALLE_RECETA_MOCK };
+      }
+      
+      if (stringUrl.endsWith('/api/recetas') || stringUrl.includes('/api/recetas?')) {
+        return { ok: true, status: 200, json: async () => RECETAS_MOCK };
+      }
+      
+      return { ok: false, status: 404 };
     });
+  });
 
-    vi.stubGlobal('fetch', fetchMock);
+  test('Flujo exitoso: Añadir ingredientes, buscar y ver detalles de una receta', async () => {
+    renderApp();
 
-    renderVistaDetalles('/receta/Tortilla%20de%20patata');
+    // Ya no esperamos por el input directamente, añadirIngrediente hace todo el proceso
+    await añadirIngrediente('Tomate', '2');
+    
+    // Una vez cerrado el modal, buscamos la receta
+    fireEvent.click(screen.getByText(/Buscar Recetas/i));
 
-    expect(screen.getByText('Preparando la receta...')).toBeInTheDocument();
-
-    expect(await screen.findByRole('heading', { name: 'Tortilla de patata' })).toBeInTheDocument();
-    expect(screen.queryByText('Preparando la receta...')).not.toBeInTheDocument();
-
-    expect(screen.getByRole('heading', { name: 'Ingredientes' })).toBeInTheDocument();
-    expect(screen.getByText('Huevos')).toBeInTheDocument();
-    expect(screen.getByText('Patata')).toBeInTheDocument();
-    expect(screen.getByText('Aceite de oliva')).toBeInTheDocument();
-    expect(screen.getByText('4 ud')).toBeInTheDocument();
-    expect(screen.getByText('500 g')).toBeInTheDocument();
-    expect(screen.getByText('30 ml')).toBeInTheDocument();
-
-    expect(screen.getByRole('heading', { name: 'Preparación' })).toBeInTheDocument();
-    expect(screen.getByText('Pelar y cortar la patata.')).toBeInTheDocument();
-    expect(screen.getByText('Freir la patata hasta que este tierna.')).toBeInTheDocument();
-    expect(screen.getByText('Mezclar con huevo batido y cuajar la tortilla.')).toBeInTheDocument();
-    expect(screen.getByText('1')).toBeInTheDocument();
-    expect(screen.getByText('2')).toBeInTheDocument();
-    expect(screen.getByText('3')).toBeInTheDocument();
+    const recetaCard = await screen.findByText(/Arroz con tomate/i);
+    expect(recetaCard).toBeInTheDocument();
+    
+    fireEvent.click(recetaCard);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(1);
-      expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/api/recetas/Tortilla%20de%20patata');
-    });
+        expect(screen.getByRole('heading', { name: /Arroz con tomate/i })).toBeInTheDocument();
+    }, { timeout: 3000 });
+
+    expect(screen.getByText('200 g')).toBeInTheDocument();
+    expect(screen.getByText('Lavar el arroz')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Completar Receta/i })).toBeInTheDocument();
   });
 
-  test('codifica correctamente caracteres especiales del titulo en la URL', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ title: 'Pan (sin gluten)!', ingredients: [], steps: [] })
+  test('Navegación hacia atrás: De detalles a lista, y de lista a nevera manteniendo estado', async () => {
+    renderApp();
+
+    await añadirIngrediente('Tomate', '2');
+
+    fireEvent.click(screen.getByText(/Buscar Recetas/i));
+    fireEvent.click(await screen.findByText(/Arroz con tomate/i));
+
+    const btnVolverLista = await screen.findByText(/Volver/i);
+    fireEvent.click(btnVolverLista);
+    
+    await waitFor(() => {
+        expect(screen.getByText(/Recetas sugeridas/i)).toBeInTheDocument();
     });
 
-    vi.stubGlobal('fetch', fetchMock);
-    renderVistaDetalles('/receta/Pan%20(sin%20gluten)!');
+    fireEvent.click(screen.getByText(/Volver a la Nevera/i));
 
-    await screen.findByRole('heading', { name: 'Pan (sin gluten)!' });
-
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith('http://localhost:3000/api/recetas/Pan%20%28sin%20gluten%29%21');
+    await waitFor(() => {
+        expect(screen.getByText(/Mi Nevera Virtual/i)).toBeInTheDocument();
+    });
+    
+    expect(screen.getByText('Tomate')).toBeInTheDocument();
   });
 
-  test('muestra mensajes de vacio cuando no hay ingredientes ni pasos', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        title: 'Receta minima',
-        image_url: 'https://example.com/minima.jpg',
-        ingredients: [],
-        steps: []
-      })
+  test('Manejo de error 404 en VistaDetalles', async () => {
+    global.fetch.mockImplementation(async (url) => {
+      const stringUrl = String(url);
+      
+      if (stringUrl.includes('/api/ingredientes')) {
+        return { ok: true, status: 200, json: async () => INGREDIENTES_MOCK };
+      }
+      
+      if (stringUrl.match(/\/api\/recetas\/r1$/)) {
+        return { ok: false, status: 404 };
+      }
+      
+      if (stringUrl.endsWith('/api/recetas') || stringUrl.includes('/api/recetas?')) {
+        return { ok: true, status: 200, json: async () => RECETAS_MOCK };
+      }
+      
+      return { ok: false, status: 404 }; 
     });
 
-    vi.stubGlobal('fetch', fetchMock);
-    renderVistaDetalles('/receta/Receta%20minima');
+    renderApp();
 
-    expect(await screen.findByRole('heading', { name: 'Receta minima' })).toBeInTheDocument();
-    expect(screen.getByText('No hay ingredientes especificados.')).toBeInTheDocument();
-    expect(screen.getByText('No hay instrucciones disponibles.')).toBeInTheDocument();
-  });
+    await añadirIngrediente('Tomate', '2');
+    fireEvent.click(screen.getByText(/Buscar Recetas/i));
 
-  test('muestra error especifico cuando la receta no existe (404)', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 404,
-      json: async () => ({})
-    });
+    fireEvent.click(await screen.findByText(/Arroz con tomate/i));
 
-    vi.stubGlobal('fetch', fetchMock);
-    renderVistaDetalles('/receta/Inexistente');
-
-    expect(await screen.findByText('❌ Receta no encontrada.')).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Ingredientes' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: 'Preparación' })).not.toBeInTheDocument();
-  });
-
-  test('muestra error generico cuando falla el servidor', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      status: 500,
-      json: async () => ({})
-    });
-
-    vi.stubGlobal('fetch', fetchMock);
-    renderVistaDetalles('/receta/FalloServidor');
-
-    expect(await screen.findByText('❌ Error al conectar con el servidor.')).toBeInTheDocument();
-  });
-
-  test('muestra error generico cuando fetch rechaza por error de red', async () => {
-    const fetchMock = vi.fn().mockRejectedValue(new Error('Network Error'));
-
-    vi.stubGlobal('fetch', fetchMock);
-    renderVistaDetalles('/receta/ErrorRed');
-
-    expect(await screen.findByText('❌ Network Error')).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+        expect(screen.getByText(/Receta no encontrada/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
   });
 });

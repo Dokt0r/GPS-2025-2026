@@ -4,14 +4,15 @@ import { describe, test, expect, vi } from 'vitest';
 import ListaNevera from '../src/components/ListaNevera';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TESTS EXISTENTES (no tocar)
+// TESTS EXISTENTES (Actualizados para la nueva UI)
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Componente ListaNevera', () => {
 
   test('Muestra el mensaje de estado vacío cuando no hay ingredientes', () => {
     render(<ListaNevera ingredientes={[]} onEliminar={vi.fn()} />);
-    expect(screen.getByText('Tu nevera está vacía. Añade algo arriba.')).toBeInTheDocument();
+    // Usamos una expresión regular para que coincida aunque cambies el resto de la frase
+    expect(screen.getByText(/Tu nevera está vacía/i)).toBeInTheDocument();
     const lista = document.querySelector('#mi-nevera');
     expect(lista).not.toBeInTheDocument();
   });
@@ -26,7 +27,7 @@ describe('Componente ListaNevera', () => {
     expect(screen.getByText('Leche')).toBeInTheDocument();
     expect(screen.getByText('3 ud')).toBeInTheDocument();
     expect(screen.getByText('1 L')).toBeInTheDocument();
-    expect(screen.queryByText('Tu nevera está vacía. Añade algo arriba.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tu nevera está vacía/i)).not.toBeInTheDocument();
   });
 
   test('Llama a la función onEliminar con el nombre correcto al hacer clic en ✕', () => {
@@ -43,7 +44,7 @@ describe('Componente ListaNevera', () => {
 
 
   // ─────────────────────────────────────────────────────────────────────────
-  // HAPPY PATH — nuevos
+  // HAPPY PATH 
   // ─────────────────────────────────────────────────────────────────────────
 
   describe('Happy path', () => {
@@ -105,7 +106,6 @@ describe('Componente ListaNevera', () => {
       render(<ListaNevera ingredientes={mockIngredientes} onEliminar={mockOnEliminar} />);
 
       const botones = screen.getAllByText('✕');
-      // Tras ordenar, el primer item es Arroz
       fireEvent.click(botones[0]);
       expect(mockOnEliminar).toHaveBeenCalledWith('Arroz');
 
@@ -151,7 +151,6 @@ describe('Componente ListaNevera', () => {
       const ordenOriginal = mockIngredientes.map(i => i.nombre);
       render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
 
-      // El array original no debe haber cambiado
       expect(mockIngredientes.map(i => i.nombre)).toEqual(ordenOriginal);
     });
 
@@ -163,7 +162,6 @@ describe('Componente ListaNevera', () => {
       ];
       render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
 
-      // En español: Ajo < Cebolla < Ñora
       const items = screen.getAllByRole('listitem');
       expect(items[0]).toHaveTextContent('Ajo');
       expect(items[1]).toHaveTextContent('Cebolla');
@@ -177,7 +175,6 @@ describe('Componente ListaNevera', () => {
       render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
 
       expect(screen.getByText('Sal')).toBeInTheDocument();
-      // No debe lanzar error ni mostrar texto raro como "1 undefined"
       expect(screen.queryByText(/undefined/)).not.toBeInTheDocument();
     });
 

@@ -1,6 +1,10 @@
 import React from 'react';
 
 const ListaNevera = ({ ingredientes, onEliminar }) => {
+  const ingredientesOrdenados = [...ingredientes].sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+  );
+
   return (
     <section className="card inventory-section">
       <div className="section-header">
@@ -15,17 +19,14 @@ const ListaNevera = ({ ingredientes, onEliminar }) => {
           </div>
         ) : (
           <ul id="mi-nevera">
-            {ingredientes.map((ing, index) => (
+            {ingredientesOrdenados.map((ing, index) => (
               <li key={index} className="ingrediente-item">
-                
-                {/* Contenedor para el nombre y el recuadro verde */}
                 <div className="item-info">
                   <span className="item-nombre">{ing.nombre}</span>
                   <span className="badge-cantidad">
                     {ing.cantidad} {ing.unidad}
                   </span>
                 </div>
-
                 <button onClick={() => onEliminar(ing.nombre)} className="btn-delete">✕</button>
               </li>
             ))}
