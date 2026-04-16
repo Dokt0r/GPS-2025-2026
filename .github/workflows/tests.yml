@@ -29,6 +29,15 @@ jobs:
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
+      - name: upload report
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.TEST_REPORTS }}
+          external_repository: Dokt0r/GPS-2025-2026_test_report
+          publish_dir: Aplicacion/back/
+          destination_dir: back/${{ github.ref_name }}
+
   # 2. JOB DE TESTS UNITARIOS FRONTEND
   frontend-tests:
     runs-on: ubuntu-latest
@@ -48,7 +57,15 @@ jobs:
       - name: Ejecutar Tests del Frontend (Vitest)
         working-directory: ./frontend
         run: npm test -- --run
-
+        
+      - name: upload report
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          personal_token: ${{ secrets.TEST_REPORTS}}
+          external_repository: Dokt0r/GPS-2025-2026_test_report
+          publish_dir: Aplicacion/front/
+          destination_dir: front/${{ github.ref_name }}
   # 4. DESPLIEGUE
   # IMPORTANTE si se incluye finalmente el job de e2e-tests, el job de despliegue debería depender de él para asegurarnos que solo se despliega si todo ha pasado correctamente
   # en ese caso el job de despliegue quedaría así:  needs: [backend-tests, frontend-tests, e2e-tests]
