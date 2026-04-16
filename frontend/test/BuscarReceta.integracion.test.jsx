@@ -32,6 +32,7 @@ const añadirIngrediente = async (nombre, cantidad = '100') => {
     const input = screen.getByPlaceholderText(/Ingrediente/i);
     fireEvent.change(input, { target: { value: nombre } });
 
+    // findByText es vital aquí porque el buscador dispara un fetch asíncrono
     const sugerencia = await screen.findByText(nombre, { selector: '.sugerencia-item' });
     fireEvent.click(sugerencia);
 
@@ -45,7 +46,6 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-
 // ==========================================
 // BLOQUE: FLUJO NEVERA → BUSCAR → VISTARECETAS
 // ==========================================
@@ -53,11 +53,16 @@ afterEach(() => {
 describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     beforeEach(() => {
-        // Primera llamada: carga ingredientes base
-        // Segunda llamada: fetch de recetas en VistaRecetas
-        global.fetch = vi.fn()
-            .mockResolvedValueOnce({ ok: true, json: async () => INGREDIENTES_MOCK })
-            .mockResolvedValueOnce({ ok: true, json: async () => RECETAS_MOCK });
+        // Mock robusto: responde según la URL solicitada para evitar colisiones entre el Buscador y las Recetas
+        global.fetch = vi.fn(async (url) => {
+            if (url.includes('/api/ingredientes')) {
+                return { ok: true, json: async () => INGREDIENTES_MOCK };
+            }
+            if (url.includes('/api/recetas')) {
+                return { ok: true, json: async () => RECETAS_MOCK };
+            }
+            return { ok: false, status: 404 };
+        });
     });
 
     test('Al buscar recetas con ingredientes en la nevera, VistaRecetas muestra los resultados', async () => {
@@ -67,10 +72,8 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
-        // Comprobamos que estamos en VistaRecetas
         expect(await screen.findByText('Recetas sugeridas')).toBeInTheDocument();
 
-        // Comprobamos que las recetas mockeadas aparecen
         expect(await screen.findByText('Arroz con tomate')).toBeInTheDocument();
         expect(screen.getByText('Sopa de tomate')).toBeInTheDocument();
         expect(screen.getByText('Risotto')).toBeInTheDocument();
@@ -97,16 +100,19 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
         await screen.findByText('Recetas sugeridas');
 
-        // Verificamos que la segunda llamada al fetch incluye el ingrediente en la URL
-        const segundaLlamada = global.fetch.mock.calls[1][0];
-        expect(segundaLlamada).toContain('/api/recetas');
-        expect(segundaLlamada).toContain('tomate');
+        // Buscamos específicamente la llamada a la API de recetas
+        const llamadaRecetas = global.fetch.mock.calls.find(call => call[0].includes('/api/recetas'));
+        expect(llamadaRecetas[0]).toContain('tomate');
     });
 
     test('Si el servidor de recetas falla, VistaRecetas muestra el mensaje de error', async () => {
-        global.fetch = vi.fn()
-            .mockResolvedValueOnce({ ok: true, json: async () => INGREDIENTES_MOCK })
-            .mockRejectedValueOnce(new Error('Network error'));
+        // Sobreescribimos el mock para forzar el error en este test
+        global.fetch.mockImplementation(async (url) => {
+            if (url.includes('/api/ingredientes')) {
+                return { ok: true, json: async () => INGREDIENTES_MOCK };
+            }
+            return Promise.reject(new Error('Network error'));
+        });
 
         renderApp();
         await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
@@ -118,9 +124,15 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
     });
 
     test('Si el servidor devuelve recetas vacías, VistaRecetas muestra el mensaje correspondiente', async () => {
-        global.fetch = vi.fn()
-            .mockResolvedValueOnce({ ok: true, json: async () => INGREDIENTES_MOCK })
-            .mockResolvedValueOnce({ ok: true, json: async () => [] });
+        // Sobreescribimos para que las recetas devuelvan un array vacío
+        global.fetch.mockImplementation(async (url) => {
+            if (url.includes('/api/ingredientes')) {
+                return { ok: true, json: async () => INGREDIENTES_MOCK };
+            }
+            if (url.includes('/api/recetas')) {
+                return { ok: true, json: async () => [] };
+            }
+        });
 
         renderApp();
         await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
@@ -141,7 +153,6 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
         await screen.findByText('Recetas sugeridas');
         fireEvent.click(screen.getByText(/Volver a la Nevera/i));
 
-        // Volvemos a ver la nevera con el ingrediente que teníamos
         expect(await screen.findByText('Mi Nevera Virtual')).toBeInTheDocument();
         expect(screen.getByText('Tomate')).toBeInTheDocument();
     });

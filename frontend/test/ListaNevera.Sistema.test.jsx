@@ -4,9 +4,9 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App';
 
-// SETUP GLOBAL
-// Mockeamos fetch globalmente para que ningún test dependa del servidor real.
-// Cada test puede sobreescribir este mock con su propio comportamiento.
+// ==========================================
+// SETUP GLOBAL Y DATOS MOCK
+// ==========================================
 const INGREDIENTES_MOCK = [
   { _id: '1', nombre: 'Tomate',  unidad: 'ud', equivalencia_g_ml: null },
   { _id: '2', nombre: 'Arroz',   unidad: 'g',  equivalencia_g_ml: null },
@@ -15,7 +15,6 @@ const INGREDIENTES_MOCK = [
   { _id: '5', nombre: 'Aceite',  unidad: 'ml', equivalencia_g_ml: null },
 ];
 
-// Helper para renderizar la App completa con router propio
 const renderApp = () =>
   render(
     <MemoryRouter initialEntries={['/']}>
@@ -23,13 +22,10 @@ const renderApp = () =>
     </MemoryRouter>
   );
 
-// Helper para simular que el usuario añade un ingrediente
 const añadirIngrediente = async (nombre, cantidad = '100') => {
   const input = screen.getByPlaceholderText(/Ingrediente/i);
   fireEvent.change(input, { target: { value: nombre } });
 
-  // Selector CSS limita la búsqueda al desplegable,
-  // evitando conflicto con el mismo nombre ya en la lista de la nevera
   const sugerencia = await screen.findByText(nombre, { selector: '.sugerencia-item' });
   fireEvent.click(sugerencia);
 
@@ -40,9 +36,12 @@ const añadirIngrediente = async (nombre, cantidad = '100') => {
 };
 
 beforeEach(() => {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => INGREDIENTES_MOCK,
+  // Mock base por defecto para pruebas de añadir/eliminar
+  global.fetch = vi.fn(async (url) => {
+    if (url.includes('/api/ingredientes')) {
+      return { ok: true, json: async () => INGREDIENTES_MOCK };
+    }
+    return { ok: false, status: 404 };
   });
 });
 
@@ -50,11 +49,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-
+// ==========================================
 // BLOQUE 1: AÑADIR INGREDIENTES A LA NEVERA
-
+// ==========================================
 describe('Sistema — Añadir ingredientes a la nevera', () => {
-
   test('Al añadir un ingrediente aparece en la lista de la nevera', async () => {
     renderApp();
     await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
@@ -72,7 +70,6 @@ describe('Sistema — Añadir ingredientes a la nevera', () => {
     await añadirIngrediente('Tomate', '2');
     await añadirIngrediente('Tomate', '3');
 
-    // Debe mostrar 5, no dos entradas separadas de 2 y 3
     expect(screen.getByText('5 ud')).toBeInTheDocument();
     expect(screen.getAllByText('Tomate')).toHaveLength(1);
   });
@@ -104,7 +101,6 @@ describe('Sistema — Añadir ingredientes a la nevera', () => {
     renderApp();
     await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
 
-    // No rellenamos el campo de cantidad
     const input = screen.getByPlaceholderText(/Ingrediente/i);
     fireEvent.change(input, { target: { value: 'Tomate' } });
     const sugerencia = await screen.findByText('Tomate');
@@ -145,16 +141,14 @@ describe('Sistema — Añadir ingredientes a la nevera', () => {
     fireEvent.change(input, { target: { value: 'IngredienteInventado' } });
     fireEvent.click(screen.getByText('Confirmar Selección'));
 
-    // La nevera debe seguir vacía
     expect(screen.getByText('Tu nevera está vacía. Añade algo arriba.')).toBeInTheDocument();
   });
-
 });
 
+// ==========================================
 // BLOQUE 2: ELIMINAR INGREDIENTES DE LA NEVERA
-
+// ==========================================
 describe('Sistema — Eliminar ingredientes de la nevera', () => {
-
   test('Eliminar el único ingrediente muestra el mensaje de nevera vacía', async () => {
     renderApp();
     await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
@@ -176,7 +170,6 @@ describe('Sistema — Eliminar ingredientes de la nevera', () => {
     await añadirIngrediente('Leche',  '500');
     await añadirIngrediente('Tomate', '2');
 
-    // El primero en la lista ordenada es Arroz, lo eliminamos
     const botones = screen.getAllByText('✕');
     fireEvent.click(botones[0]); // Arroz
 
@@ -192,37 +185,34 @@ describe('Sistema — Eliminar ingredientes de la nevera', () => {
     await añadirIngrediente('Arroz',  '200');
     await añadirIngrediente('Leche',  '500');
 
-    // Eliminar primero
     fireEvent.click(screen.getAllByText('✕')[0]);
     expect(screen.getAllByRole('listitem')).toHaveLength(1);
 
-    // Eliminar segundo
     fireEvent.click(screen.getByText('✕'));
     expect(screen.getByText('Tu nevera está vacía. Añade algo arriba.')).toBeInTheDocument();
   });
-
 });
 
-
+// ==========================================
 // BLOQUE 3: FLUJO DE BÚSQUEDA DE RECETAS
-
+// ==========================================
 describe('Sistema — Flujo de búsqueda de recetas', () => {
-
   test('Intentar buscar recetas con la nevera vacía muestra un mensaje de error', async () => {
     renderApp();
     await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
 
     fireEvent.click(screen.getByText('Buscar Recetas'));
 
-    // El toast tiene un texto distinto al del estado vacío de la nevera
     expect(await screen.findByText(/Tu nevera está vacía. Añade algo primero/i)).toBeInTheDocument();
   });
 
   test('Con ingredientes en la nevera, el botón Buscar Recetas navega a /recetas', async () => {
-    // Mock adicional para la llamada a /api/recetas
-    global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => INGREDIENTES_MOCK })
-      .mockResolvedValueOnce({ ok: true, json: async () => [] });
+    // Mock inteligente para este test específico
+    global.fetch = vi.fn(async (url) => {
+      if (url.includes('/api/ingredientes')) return { ok: true, json: async () => INGREDIENTES_MOCK };
+      if (url.includes('/api/recetas')) return { ok: true, json: async () => [] };
+      return { ok: false, status: 404 };
+    });
 
     renderApp();
     await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
@@ -230,17 +220,14 @@ describe('Sistema — Flujo de búsqueda de recetas', () => {
     await añadirIngrediente('Tomate', '2');
     fireEvent.click(screen.getByText('Buscar Recetas'));
 
-    // Debe aparecer el header de la vista de recetas
     expect(await screen.findByText('Recetas sugeridas')).toBeInTheDocument();
   });
-
 });
 
-
+// ==========================================
 // BLOQUE 4: ESTADO DE CONEXIÓN CON EL SERVIDOR
-
+// ==========================================
 describe('Sistema — Estado de conexión con el servidor', () => {
-
   test('Si el servidor falla, el input de búsqueda queda deshabilitado', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
@@ -269,6 +256,4 @@ describe('Sistema — Estado de conexión con el servidor', () => {
 
     expect(await screen.findByText(/base de datos de ingredientes está vacía/i)).toBeInTheDocument();
   });
-
 });
-
