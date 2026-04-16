@@ -59,7 +59,6 @@ describe('Buscador', () => {
         render(<Buscador ingredientesBase={ingredientesMock} onAñadir={vi.fn()} />);
         fireEvent.click(screen.getByText(/Confirmar Selección/i));
         
-        // CORRECCIÓN: Usar findByText para esperar el renderizado del error
         const mensaje = await screen.findByText(/Por favor, selecciona un ingrediente válido/i);
         expect(mensaje).toBeInTheDocument();
         expect(mensaje).toHaveClass('mensaje-local', 'error');
@@ -70,14 +69,13 @@ describe('Buscador', () => {
         
         const input = screen.getByPlaceholderText(/Ingrediente/i);
         fireEvent.change(input, { target: { value: 'ace' } });
-        fireEvent.click(await screen.findByText('Aceite')); // Asegurar que damos click tras aparecer
+        fireEvent.click(await screen.findByText('Aceite')); 
 
         const inputCantidad = screen.getByPlaceholderText('Cant.');
         fireEvent.change(inputCantidad, { target: { value: '0' } });
 
         fireEvent.click(screen.getByText(/Confirmar Selección/i));
         
-        // CORRECCIÓN: Usar findByText para esperar el renderizado del error
         const mensaje = await screen.findByText(/La cantidad debe ser mayor que 0/i);
         expect(mensaje).toBeInTheDocument();
         expect(mensaje).toHaveClass('mensaje-local', 'error');
@@ -88,23 +86,20 @@ describe('Buscador', () => {
         render(<Buscador ingredientesBase={ingredientesMock} onAñadir={mockAñadir} />);
         
         const input = screen.getByPlaceholderText(/Ingrediente/i);
-        fireEvent.change(input, { target: { value: 'tomate' } });
+        // CAMBIO: Buscamos 'ace' porque es lo que está en el mock global del fetch
+        fireEvent.change(input, { target: { value: 'ace' } });
         
-        // Esperamos a que la sugerencia exista en el DOM del test antes de hacer click
-        // *Nota: Si tomate no estaba en el mock de tu fetch, el componente usa ingredientesBase. 
-        // Si usa el fetch, asegúrate de que el mock del beforeEach devuelva 'Tomate' también si lo buscas.
-        fireEvent.click(await screen.findByText('Tomate'));
+        fireEvent.click(await screen.findByText('Aceite'));
 
         const inputCantidad = screen.getByPlaceholderText('Cant.');
         fireEvent.change(inputCantidad, { target: { value: '3' } });
 
         fireEvent.click(screen.getByText(/Confirmar Selección/i));
 
-        // CORRECCIÓN: Usar una regex más permisiva para evitar fallos por espacios o saltos de línea
-        const mensaje = await screen.findByText(/Añadido:\s*Tomate/i);
+        const mensaje = await screen.findByText(/Añadido:\s*Aceite/i);
         expect(mensaje).toBeInTheDocument();
         expect(mensaje).toHaveClass('mensaje-local', 'success');
         
-        expect(mockAñadir).toHaveBeenCalledWith(expect.objectContaining({ nombre: 'Tomate', unidad: 'ud' }), 3);
+        expect(mockAñadir).toHaveBeenCalledWith(expect.objectContaining({ nombre: 'Aceite', unidad: 'ml' }), 3);
     });
 });
