@@ -10,6 +10,9 @@ jobs:
   # 1. JOB DE TESTS UNITARIOS BACKEND
   backend-tests:
     runs-on: ubuntu-latest
+    concurrency:
+      group: reports-${{ github.ref_name }}
+      cancel-in-progress: false
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
@@ -41,6 +44,9 @@ jobs:
   # 2. JOB DE TESTS UNITARIOS FRONTEND
   frontend-tests:
     runs-on: ubuntu-latest
+    concurrency:
+      group: reports-${{ github.ref_name }}
+      cancel-in-progress: false
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
