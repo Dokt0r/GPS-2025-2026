@@ -83,7 +83,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
   };
 
   return (
-    <section className="card add-section">
+    <section className="buscador-container">
       <div className="section-header">
         <h2>Añadir a la Nevera</h2>
       </div>

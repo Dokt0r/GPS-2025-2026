@@ -12,6 +12,9 @@ function App() {
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
+  
+  // NUEVO ESTADO: Controla si el modal del buscador está abierto
+  const [isBuscadorOpen, setIsBuscadorOpen] = useState(false);
 
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -55,6 +58,8 @@ function App() {
     }
 
     setIngredientesNevera(nuevaLista);
+    // Opcional: puedes descomentar la siguiente línea si quieres que el modal se cierre automáticamente tras añadir
+    // setIsBuscadorOpen(false); 
   };
 
   const eliminarDeInventario = (nombre) => {
@@ -124,29 +129,59 @@ function App() {
 
         <Routes>
           <Route path="/" element={
-            <section className="split-layout">
-              <div className="left-panel">
-                <Buscador
-                  ingredientesBase={ingredientesBase}
-                  onAñadir={añadirAInventario}
-                />
-                
-                {/* Estilos en línea eliminados, ahora usa solo className */}
-                <div className="actions-nevera">
+            <section className="vista-principal-unica">
+              
+              {/* --- 1. CONTENIDO PRINCIPAL: LA NEVERA --- */}
+
+              <div className="actions-nevera">
                   <BotonAccion texto="Buscar Recetas" alHacerClic={buscarRecetas} />
                 </div>
+
+              <div className="nevera-container">
+                <ListaNevera ingredientes={ingredientesNevera} onEliminar={eliminarDeInventario} />
                 
-                <div className="messages-under-add">
-                  {toast.visible && (
-                    <div className={`toast-notification ${toast.tipo}`}>
+                {/* Fluye debajo de la lista y no requiere "position: fixed" */}
+                {toast.visible && !isBuscadorOpen && (
+                  <div className={`toast-notification ${toast.tipo}`} style={{ marginTop: '15px', textAlign: 'center' }}>
+                    {toast.mensaje}
+                  </div>
+                )}
+
+              </div>
+
+              {/* --- 2. BOTÓN FLOTANTE ESTILO GOOGLE DRIVE --- */}
+              <button 
+                className="fab-añadir" 
+                onClick={() => setIsBuscadorOpen(true)}
+                aria-label="Añadir ingrediente"
+              >
+                +
+              </button>
+
+              {/* --- 3. MODAL DEL BUSCADOR --- */}
+             {isBuscadorOpen && (
+                <div className="modal-overlay" onClick={() => setIsBuscadorOpen(false)}>
+                  <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    
+                    {/* NUEVO CONTENEDOR ENVOLVENTE */}
+                    <div className="buscador-normalizer">
+                      <button className="btn-cerrar-modal" onClick={() => setIsBuscadorOpen(false)}>✕</button>
+                      
+                      <Buscador
+                        ingredientesBase={ingredientesBase}
+                        onAñadir={añadirAInventario}
+                      />
+                    </div>
+
+                    {toast.visible && !isBuscadorOpen && (
+                    <div className={`toast-notification ${toast.tipo}`} style={{ marginTop: '15px', textAlign: 'center' }}>
                       {toast.mensaje}
                     </div>
-                  )}
+                )}
+                  </div>
                 </div>
-              </div>
-              <div className="right-panel">
-                <ListaNevera ingredientes={ingredientesNevera} onEliminar={eliminarDeInventario} />
-              </div>
+              )}
+              
             </section>
           } />
 

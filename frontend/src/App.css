@@ -87,10 +87,217 @@ header p {
     font-size: 1.5rem;
     color: var(--accent);
 }
+/* =========================================
+   FAB (Floating Action Button) - Parte de Buscador y Añadir Ingrediente
+========================================= */
+.fab-añadir {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background-color: #4CAF50; /* Cambia esto por el color de tu tema */
+  color: white;
+  border-radius: 50%;
+  font-size: 36px;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  z-index: 999;
+}
+
+.fab-añadir:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  background-color: #45a049;
+}
+
+.fab-añadir:active {
+  transform: scale(0.95);
+}
 
 /* =========================================
-   BUSCADOR E INPUTS
+   MODAL OVERLAY Y CONTENIDO
+========================================= */
+
+.modal-content {
+  background-color: none; /* Sin fondo para que el buscador maneje su propio fondo */
+  backdrop-filter: blur(5px);
+  
+  /* Hacemos que ocupe todo el contenedor/pantalla */
+  width: 100vw;
+  height: 100vh;
+  
+  /* CERO PADDING para que el buscador llene hasta los bordes */
+  padding: 0; 
+  margin: 0;
+  
+  box-shadow: none;
+  border: none;
+
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  /* Flexbox para que el Buscador interno pueda ocupar el 100% del alto */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Evitamos scroll doble. El scroll debería manejarlo el propio Buscador si es necesario */
+  z-index: 1000;
+  
+  
+}
+
+/* Ajustamos el botón de cerrar para que tenga su propio espacio visual sin empujar al buscador */
+.btn-cerrar-modal {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.8); /* Fondo semi-transparente por si se solapa con el buscador */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s, transform 0.2s;
+  z-index: 10; /* Asegura que siempre esté por encima del buscador */
+}
+
+.btn-cerrar-modal:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
+}
+
+.buscador-normalizer {
+  position: relative; /* Clave para que el botón absolute se ancle aquí */
+  width: 90%; 
+  max-width: 600px; /* Controla el ancho máximo de tu buscador aquí */
+  animation: fabToFullScreen 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Animación: Vuela desde el botón y se expande a pantalla completa */
+@keyframes fabToFullScreen {
+  0% {
+    opacity: 0;
+    top: calc(100vh - 60px);
+    left: calc(100vw - 60px);
+    transform: translate(-50%, -50%) scale(0);
+    border-radius: 50%; /* Nace con forma circular como el FAB */
+  }
+  100% {
+    opacity: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    border-radius: 0; /* Termina totalmente cuadrado para cubrir la pantalla */
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  /* El overlay ahora tiene su propia animación independiente */
+  animation: fadeInBlur 0.3s ease-out forwards;
+}
+
+/* Animación: De transparente a oscuro con blur progresivo */
+@keyframes smoothFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* =========================================
+   ENVOLTORIO DEL BUSCADOR (Movimiento y Centrado)
    ========================================= */
+.buscador-normalizer {
+  position: fixed; /* Usamos fixed para poder animarlo por toda la pantalla */
+  width: 90%; 
+  max-width: 600px; /* Tamaño del componente en pantalla */
+  
+  /* Ya no necesita margin/padding de centrado extra, la animación se encarga */
+  
+  /* Animación del componente independiente del blur */
+  animation: flyToCenter 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Animación: Vuela desde el botón inferior derecho hasta quedar fijo en el centro */
+@keyframes flyToCenter {
+  0% {
+    opacity: 0;
+    /* Empieza en las coordenadas del botón flotante */
+    top: calc(100vh - 60px);
+    left: calc(100vw - 60px);
+    transform: translate(-50%, -50%) scale(0.2); /* Empieza chiquito */
+  }
+  100% {
+    opacity: 1;
+    /* Termina exactamente en el centro de la pantalla */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1); /* Tamaño real y centrado perfecto */
+  }
+}
+
+/* =========================================
+   BUSCADOR (Sin cambios, adaptado al wrapper)
+   ========================================= */
+.buscador-container {
+  background: rgba(30, 41, 59, 1);
+  border: 1px solid var(--glass-border);
+  padding: 32px;
+  border-radius: var(--radius);
+  box-sizing: border-box;
+  min-height: 200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================
+   BOTÓN DE CERRAR (Esquina interior superior)
+   ========================================= */
+.btn-cerrar-modal {
+  position: absolute;
+  top: 15px; 
+  right: 15px; 
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s, transform 0.2s;
+  z-index: 10; 
+}
+
+.btn-cerrar-modal:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
+}
+
 .inputs-row {
     display: flex;
     flex-wrap: wrap;
@@ -228,12 +435,13 @@ header p {
 }
 
 .btn-secundario {
-    background: transparent;
+    background: none;
     color: var(--accent);
-    border: 1px solid var(--accent);
+    border: 2px solid var(--accent);
     padding: 12px 24px;
     border-radius: 16px;
-    font-weight: 600;
+    font-weight: 800;
+    font-size: large;
     cursor: pointer;
     transition: all 0.3s;
 }
@@ -267,7 +475,7 @@ header p {
 }
 
 .actions-nevera {
-    margin-top: 20px;
+    margin-bottom: 20px;
     text-align: center;
 }
 

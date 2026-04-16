@@ -27,19 +27,39 @@ const renderApp = () =>
         </MemoryRouter>
     );
 
-// Helper: añade un ingrediente a la nevera
+// ==========================================
+// HELPER ACTUALIZADO: FLUJO CON MODAL
+// ==========================================
 const añadirIngrediente = async (nombre, cantidad = '100') => {
-    const input = screen.getByPlaceholderText(/Ingrediente/i);
+    // 1. Abrir el modal con el FAB
+    const fabBtn = await screen.findByText('+');
+    fireEvent.click(fabBtn);
+
+    // 2. Esperar a que el input aparezca
+    const input = await screen.findByPlaceholderText(/Ingrediente/i);
     fireEvent.change(input, { target: { value: nombre } });
 
-    // findByText es vital aquí porque el buscador dispara un fetch asíncrono
+    // 3. Seleccionar sugerencia
     const sugerencia = await screen.findByText(nombre, { selector: '.sugerencia-item' });
     fireEvent.click(sugerencia);
 
+    // 4. Cambiar cantidad y confirmar
     const inputCantidad = screen.getByPlaceholderText('Cant.');
     fireEvent.change(inputCantidad, { target: { value: cantidad } });
+    fireEvent.click(screen.getByText(/Confirmar Selección/i));
 
-    fireEvent.click(screen.getByText('Confirmar Selección'));
+    // 5. Cerrar el modal evitando colisión de '✕'
+    await waitFor(() => {
+        const btnCerrar = document.querySelector('.btn-cerrar-modal');
+        if (btnCerrar) {
+            fireEvent.click(btnCerrar);
+        }
+    });
+
+    // 6. Esperar a que el modal se cierre
+    await waitFor(() => {
+        expect(screen.queryByPlaceholderText(/Ingrediente/i)).not.toBeInTheDocument();
+    });
 };
 
 afterEach(() => {
@@ -67,8 +87,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('Al buscar recetas con ingredientes en la nevera, VistaRecetas muestra los resultados', async () => {
         renderApp();
-        await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
+        
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
@@ -81,8 +100,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('Las recetas muestran su badge de coincidencia correctamente', async () => {
         renderApp();
-        await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
+        
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
@@ -93,8 +111,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('El fetch de recetas recibe los ingredientes de la nevera correctamente formateados', async () => {
         renderApp();
-        await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
+        
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
@@ -115,8 +132,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
         });
 
         renderApp();
-        await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
+        
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
@@ -135,8 +151,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
         });
 
         renderApp();
-        await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
+        
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
@@ -145,8 +160,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('Desde VistaRecetas, el botón Volver a la Nevera regresa a la vista principal', async () => {
         renderApp();
-        await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
+        
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
@@ -159,8 +173,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('Los ingredientes de la nevera se mantienen al volver desde VistaRecetas', async () => {
         renderApp();
-        await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
+        
         await añadirIngrediente('Tomate', '2');
         await añadirIngrediente('Arroz', '200');
 
