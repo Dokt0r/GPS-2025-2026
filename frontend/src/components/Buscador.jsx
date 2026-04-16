@@ -11,27 +11,37 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
   const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null);
   const [sugerencias, setSugerencias] = useState([]);
 
+
+  // --- CORRECCIÓN 1: Definir API_URL ---
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
   /**
-   * Maneja los cambios de texto en el input de búsqueda.
-   * Filtra dinámicamente el catálogo de ingredientes (`ingredientesBase`) 
-   * mostrando solo aquellos que coincidan con el texto introducido.
-   */
-  const manejarInput = (e) => {
+     * Maneja la búsqueda de ingredientes consultando la API en tiempo real.
+     * Optimizado para catálogos grandes: solicita solo las coincidencias más relevantes
+     * para evitar sobrecargar la memoria del cliente.
+     */
+  const manejarInput = async (e) => {
     const valor = e.target.value;
     setBusqueda(valor);
-    setIngredienteSeleccionado(null); // Resetea la selección si el usuario vuelve a escribir
-    
-    // Evita la búsqueda si no hay datos cargados del servidor
-    if (valor.trim() !== '' && ingredientesBase.length > 0) {
-      const filtrados = ingredientesBase.filter(ing =>
-        ing.nombre.toLowerCase().includes(valor.toLowerCase())
-      );
-      setSugerencias(filtrados);
+    setIngredienteSeleccionado(null);
+
+    // Solo buscamos si hay al menos 2 caracteres para no saturar la API
+    if (valor.trim().length >= 2) {
+      try {
+        const res = await fetch(`${API_URL}/api/ingredientes?nombre=${encodeURIComponent(valor)}`);
+        if (!res.ok) throw new Error('Error en búsqueda');
+        const data = await res.json();
+
+        // El backend ya nos los devuelve filtrados y ordenados
+        setSugerencias(data);
+      } catch (error) {
+        console.error("Error buscando sugerencias:", error);
+        setSugerencias([]);
+      }
     } else {
       setSugerencias([]);
     }
   };
-
   /**
    * Actualiza el estado cuando el usuario hace clic en una de las sugerencias
    * del menú desplegable. Fija el texto en el input y guarda el objeto completo.
@@ -50,8 +60,8 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
   const handleConfirmar = () => {
     // Protección contra fallos del servidor
     if (ingredientesBase.length === 0) {
-        onError?.('❌ No se pueden buscar ingredientes porque no hay conexión con la base de datos.');
-        return;
+      onError?.('❌ No se pueden buscar ingredientes porque no hay conexión con la base de datos.');
+      return;
     }
 
     // Validación de selección correcta
