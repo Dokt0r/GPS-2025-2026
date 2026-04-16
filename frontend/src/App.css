@@ -150,6 +150,12 @@ header p {
     color: white;
 }
 
+.info-cantidad {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+}
+
 /* =========================================
    SUGERENCIAS (Autocomplete)
    ========================================= */
@@ -252,13 +258,17 @@ header p {
     transform: scale(1.2);
 }
 
-/* Estilo para ajustar el botón de volver de las recetas */
 .btn-back {
     width: fit-content;
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+}
+
+.actions-nevera {
+    margin-top: 20px;
+    text-align: center;
 }
 
 /* =========================================
@@ -311,15 +321,25 @@ ul#mi-nevera li:hover {
 }
 
 /* =========================================
-   NOTIFICACIONES (Toasts)
+   NOTIFICACIONES (Toasts y Mensajes)
    ========================================= */
+
+.info-cantidad {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+    margin-top: 5px;
+}
+
 .messages-under-add {
     min-height: 58px;
     display: flex;
     align-items: flex-end;
 }
 
-.toast-notification {
+/* Estilo unificado para notificaciones de fuera (toast) y de dentro (local) */
+.toast-notification,
+.mensajeLocal {
     width: 100%;
     border-radius: 12px;
     padding: 12px 14px;
@@ -330,14 +350,31 @@ ul#mi-nevera li:hover {
     animation: slideUp 0.3s ease forwards;
 }
 
-.toast-notification.success {
-    border-color: rgba(46, 204, 113, 0.5);
-    color: #9ef3bf;
+/* Ajuste específico para el local (margen inferior) */
+.mensaje-local {
+    width: 100%;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    animation: slideUp 0.3s ease forwards;
+    backdrop-filter: blur(8px); /* Efecto cristal */
+    -webkit-backdrop-filter: blur(8px);
 }
 
-.toast-notification.error {
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #fca5a5;
+/* Verde semitransparente para éxito */
+.mensaje-local.success {
+    background: rgba(46, 204, 113, 0.15); /* Fondo verde semitransparente */
+    border: 1px solid rgba(46, 204, 113, 0.5); /* Borde verde */
+    color: #4ade80; /* Texto verde brillante */
+}
+
+/* Rojo semitransparente para error */
+.mensaje-local.error {
+    background: rgba(239, 68, 68, 0.15); /* Fondo rojo semitransparente */
+    border: 1px solid rgba(239, 68, 68, 0.5); /* Borde rojo */
+    color: #f87171; /* Texto rojo brillante */
 }
 
 @keyframes slideUp {

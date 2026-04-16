@@ -55,7 +55,6 @@ function App() {
     }
 
     setIngredientesNevera(nuevaLista);
-    mostrarMensaje(`Añadido: ${ingrediente.nombre}`, 'success');
   };
 
   const eliminarDeInventario = (nombre) => {
@@ -63,11 +62,6 @@ function App() {
     setIngredientesNevera(nuevaLista);
   };
 
-  /**
-   * Resta los ingredientes usados en una receta de la nevera.
-   * Si la cantidad resultante es <= 0 elimina el item directamente.
-   * Maneja conversiones de unidades (g/ml <-> ud) igual que el backend.
-   */
   const restarIngredientesReceta = (ingredientesReceta) => {
     setIngredientesNevera(prev => {
       const nuevaLista = prev.map(neveraIng => ({ ...neveraIng }));
@@ -87,20 +81,16 @@ function App() {
         let nuevaCantidad = neveraIng.cantidad;
 
         if (unidadN === unidadR) {
-          // Misma unidad: resta directa
           nuevaCantidad = neveraIng.cantidad - recetaIng.cantidad;
         } else if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0) {
-          // Nevera en g/ml, receta en ud -> convertir ud a g/ml
           nuevaCantidad = neveraIng.cantidad - (recetaIng.cantidad * factor);
         } else if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
-          // Nevera en ud, receta en g/ml -> convertir g/ml a ud
           nuevaCantidad = neveraIng.cantidad - (recetaIng.cantidad / factor);
         }
 
         nuevaLista[idx].cantidad = Math.max(0, parseFloat(nuevaCantidad.toFixed(2)));
       }
 
-      // Eliminar los que hayan quedado en 0
       return nuevaLista.filter(i => i.cantidad > 0);
     });
   };
@@ -139,11 +129,13 @@ function App() {
                 <Buscador
                   ingredientesBase={ingredientesBase}
                   onAñadir={añadirAInventario}
-                  onError={(msg) => mostrarMensaje(msg, 'error')}
                 />
-                <div className="actions-nevera" style={{ marginTop: '20px', textAlign: 'center' }}>
+                
+                {/* Estilos en línea eliminados, ahora usa solo className */}
+                <div className="actions-nevera">
                   <BotonAccion texto="Buscar Recetas" alHacerClic={buscarRecetas} />
                 </div>
+                
                 <div className="messages-under-add">
                   {toast.visible && (
                     <div className={`toast-notification ${toast.tipo}`}>
