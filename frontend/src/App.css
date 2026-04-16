@@ -152,8 +152,7 @@ header p {
   overflow: hidden; /* Evitamos scroll doble. El scroll debería manejarlo el propio Buscador si es necesario */
   z-index: 1000;
   
-  will-change: opacity;
-  animation: smoothFadeIn 0.3s ease-out forwards;
+  
 }
 
 /* Ajustamos el botón de cerrar para que tenga su propio espacio visual sin empujar al buscador */
@@ -436,12 +435,13 @@ header p {
 }
 
 .btn-secundario {
-    background: transparent;
+    background: none;
     color: var(--accent);
-    border: 1px solid var(--accent);
+    border: 2px solid var(--accent);
     padding: 12px 24px;
     border-radius: 16px;
-    font-weight: 600;
+    font-weight: 800;
+    font-size: large;
     cursor: pointer;
     transition: all 0.3s;
 }
@@ -475,7 +475,7 @@ header p {
 }
 
 .actions-nevera {
-    margin-top: 20px;
+    margin-bottom: 20px;
     text-align: center;
 }
 

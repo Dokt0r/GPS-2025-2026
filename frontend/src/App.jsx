@@ -132,20 +132,22 @@ function App() {
             <section className="vista-principal-unica">
               
               {/* --- 1. CONTENIDO PRINCIPAL: LA NEVERA --- */}
+
+              <div className="actions-nevera">
+                  <BotonAccion texto="Buscar Recetas" alHacerClic={buscarRecetas} />
+                </div>
+
               <div className="nevera-container">
                 <ListaNevera ingredientes={ingredientesNevera} onEliminar={eliminarDeInventario} />
                 
-                <div className="actions-nevera" style={{ marginTop: '20px', textAlign: 'center' }}>
-                  <BotonAccion texto="Buscar Recetas" alHacerClic={buscarRecetas} />
-                </div>
-              </div>
+                {/* Fluye debajo de la lista y no requiere "position: fixed" */}
+                {toast.visible && !isBuscadorOpen && (
+                  <div className={`toast-notification ${toast.tipo}`} style={{ marginTop: '15px', textAlign: 'center' }}>
+                    {toast.mensaje}
+                  </div>
+                )}
 
-              {/* Toast de error en la pantalla principal si intentas buscar con nevera vacía */}
-              {toast.visible && !isBuscadorOpen && (
-                <div className={`toast-notification ${toast.tipo}`} style={{ position: 'fixed', bottom: '100px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000 }}>
-                  {toast.mensaje}
-                </div>
-              )}
+              </div>
 
               {/* --- 2. BOTÓN FLOTANTE ESTILO GOOGLE DRIVE --- */}
               <button 
@@ -171,11 +173,11 @@ function App() {
                       />
                     </div>
 
-                    {toast.visible && (
-                      <div className={`toast-notification ${toast.tipo}`} style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1001 }}>
-                        {toast.mensaje}
-                      </div>
-                    )}
+                    {toast.visible && !isBuscadorOpen && (
+                    <div className={`toast-notification ${toast.tipo}`} style={{ marginTop: '15px', textAlign: 'center' }}>
+                      {toast.mensaje}
+                    </div>
+                )}
                   </div>
                 </div>
               )}
