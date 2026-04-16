@@ -1,31 +1,16 @@
 const request = require('supertest');
-
-// --- MOCKS ---
-jest.mock('mongoose', () => {
-    class MockSchema {
-        constructor() { this.statics = {}; this.methods = {}; }
-        index() { } pre() { } post() { }
-    }
-    return {
-        connect: jest.fn().mockResolvedValue(true),
-        disconnect: jest.fn().mockResolvedValue(true),
-        Schema: MockSchema,
-        model: jest.fn()
-    };
-});
-
-jest.mock('../src/models/recetas', () => ({
-    buscarPorIngredientesYCantidades: jest.fn(),
-    findOne: jest.fn()
-}));
-
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
 describe('API de Recetas - Tests Unitarios Completos', () => {
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.spyOn(Receta, 'buscarPorIngredientesYCantidades').mockResolvedValue([]);
+        vi.spyOn(Receta, 'findOne').mockResolvedValue(null);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     // ==========================================

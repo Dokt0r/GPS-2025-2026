@@ -6,7 +6,6 @@ const Receta = require('../src/models/recetas');
 
 const tituloBase = `Receta Integracion Detalle ${Date.now()}`;
 
-jest.setTimeout(30000);
 
 const esperarConexionMongo = async (timeoutMs = 10000) => {
   const inicio = Date.now();

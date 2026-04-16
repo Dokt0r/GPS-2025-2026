@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
-jest.setTimeout(30000);
 
 const recetasTest = [
     {

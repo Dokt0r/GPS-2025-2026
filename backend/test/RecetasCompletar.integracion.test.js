@@ -3,8 +3,6 @@ const mongoose = require('mongoose');
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
-// Aumentamos el timeout para dar tiempo a la base de datos real
-jest.setTimeout(30000);
 
 // Datos base para las pruebas de completar y eliminar
 const recetasTest = [

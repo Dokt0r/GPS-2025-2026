@@ -1,35 +1,17 @@
 const request = require('supertest');
-
-// --- MOCKS ---
-jest.mock('mongoose', () => {
-    class MockSchema {
-        constructor() { this.statics = {}; this.methods = {}; }
-        index() { }
-        pre() { }
-        post() { }
-    }
-
-    return {
-        connect: jest.fn().mockResolvedValue(true),
-        disconnect: jest.fn().mockResolvedValue(true),
-        Schema: MockSchema,
-        model: jest.fn()
-    };
-});
-
-jest.mock('../src/models/recetas', () => ({
-    buscarPorIngredientesYCantidades: jest.fn(),
-    findOne: jest.fn(),
-    findOneAndUpdate: jest.fn()
-}));
-
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
 describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes', () => {
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.spyOn(Receta, 'buscarPorIngredientesYCantidades').mockResolvedValue([]);
+        vi.spyOn(Receta, 'findOne').mockResolvedValue(null);
+        vi.spyOn(Receta, 'findOneAndUpdate').mockResolvedValue(null);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     // ==========================================
@@ -38,7 +20,7 @@ describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes'
     describe('PUT /api/recetas/completar', () => {
 
         test('debería actualizar steps, ingredients y marcar la receta como completada', async () => {
-            const saveMock = jest.fn().mockResolvedValue({
+            const saveMock = vi.fn().mockResolvedValue({
                 title: 'Tortilla',
                 steps: ['Batir', 'Cocinar'],
                 ingredients: [{ nombre: 'Huevo', cantidad: 3, unidad: 'ud' }],
@@ -89,8 +71,7 @@ describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes'
         });
 
         test('debería devolver 400 si la lógica de negocio falla al guardar', async () => {
-            const saveMock = jest
-                .fn()
+            const saveMock = vi.fn()
                 .mockRejectedValue(new Error('Lógica de Negocio: No se pueden guardar ingredientes con cantidad 0 o negativa.'));
 
             Receta.findOne.mockResolvedValue({
