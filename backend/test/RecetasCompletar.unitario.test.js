@@ -204,4 +204,71 @@ describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes'
             expect(res.body).toHaveProperty('error', 'Error al eliminar ingrediente');
         });
     });
+
+    // ==========================================
+    // TDD LC-170: Lógica de restar ingredientes
+    // ==========================================
+    describe('LC-170: Lógica de restar ingredientes al completar receta', () => {
+
+        
+        // IMPORTANTE: BORRAR esta función mock cuando este hecha  la función real de la tarea.
+        const restarIngredientes = (nevera, ingredientesUsados) => {
+            throw new Error("Falta implementar por RB en la tarea LC-166"); 
+        };
+
+        test('Resta correctamente la cantidad si el usuario tiene de sobra', () => {
+            const neveraInicial = [{ nombre: 'Huevo', cantidad: 6, unidad: 'ud' }];
+            const ingredientesUsados = [{ nombre: 'Huevo', cantidad: 2, unidad: 'ud' }];
+
+            const neveraFinal = restarIngredientes(neveraInicial, ingredientesUsados);
+
+            // Esperamos que siga teniendo huevos, pero solo 4
+            expect(neveraFinal).toHaveLength(1);
+            expect(neveraFinal[0].nombre).toBe('Huevo');
+            expect(neveraFinal[0].cantidad).toBe(4);
+        });
+
+        test('El ingrediente se queda a 0 (o se elimina) si gasta la cantidad exacta', () => {
+            const neveraInicial = [{ nombre: 'Leche', cantidad: 1, unidad: 'L' }];
+            const ingredientesUsados = [{ nombre: 'Leche', cantidad: 1, unidad: 'L' }];
+
+            const neveraFinal = restarIngredientes(neveraInicial, ingredientesUsados);
+
+            // Esperamos o bien que el array esté vacío, o que la leche esté a cantidad 0
+            const leche = neveraFinal.find(i => i.nombre === 'Leche');
+            if (leche) {
+                expect(leche.cantidad).toBe(0);
+            } else {
+                expect(neveraFinal).toHaveLength(0);
+            }
+        });
+
+        test('LC-166 CLAVE: Ignora los ingredientes que la receta pide pero el usuario NO tiene', () => {
+            const neveraInicial = [{ nombre: 'Tomate', cantidad: 3, unidad: 'ud' }];
+            const ingredientesUsados = [
+                { nombre: 'Tomate', cantidad: 1, unidad: 'ud' },
+                { nombre: 'Cebolla', cantidad: 1, unidad: 'ud' } // El usuario NO tiene cebolla
+            ];
+
+            // NO debe lanzar error ("incluye eliminar el mensaje"), solo restar lo que pueda
+            expect(() => restarIngredientes(neveraInicial, ingredientesUsados)).not.toThrow();
+
+            const neveraFinal = restarIngredientes(neveraInicial, ingredientesUsados);
+
+            // La nevera debe tener 2 tomates y NINGÚN error por la cebolla
+            expect(neveraFinal).toHaveLength(1);
+            expect(neveraFinal[0].nombre).toBe('Tomate');
+            expect(neveraFinal[0].cantidad).toBe(2);
+        });
+
+        test('LC-166 CLAVE: Elimina el mensaje (no devuelve error) si falta cantidad', () => {
+            const neveraInicial = [{ nombre: 'Arroz', cantidad: 100, unidad: 'g' }];
+            const ingredientesUsados = [{ nombre: 'Arroz', cantidad: 500, unidad: 'g' }];
+
+            // Según el enunciado, se ignora lo que no se tiene y se elimina el mensaje de error.
+            // Si pide 500g y solo tenemos 100g, no debe explotar.
+            expect(() => restarIngredientes(neveraInicial, ingredientesUsados)).not.toThrow();
+        });
+    });
+
 });
