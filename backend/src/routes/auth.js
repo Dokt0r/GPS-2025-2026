@@ -5,26 +5,45 @@ const Usuario = require('../models/usuario');
 
 const router = express.Router();
 
+const credencialValida = (valor) => {
+    if (typeof valor !== 'string') return false;
+    if (valor.length < 3 || valor.length > 15) return false;
+    if (/\s/.test(valor)) return false;
+    return true;
+};
+
 // POST /api/usuarios/registro
 router.post('/registro', async (req, res) => {
     try {
-        const { nombre, email, password } = req.body;
+        const { username, password } = req.body;
+        const usernameNormalizado = (username || '').trim();
 
-        if (!nombre || !email || !password) {
+        if (!usernameNormalizado || !password) {
             return res.status(400).json({ error: 'Por favor, rellena todos los campos obligatorios.' });
         }
 
-        let usuario = await Usuario.findOne({ email });
+        if (!credencialValida(usernameNormalizado)) {
+            return res.status(400).json({
+                error: 'El nombre de usuario debe tener entre 3 y 15 caracteres y no contener espacios.'
+            });
+        }
+
+        if (!credencialValida(password)) {
+            return res.status(400).json({
+                error: 'La contrasena debe tener entre 3 y 15 caracteres y no contener espacios.'
+            });
+        }
+
+        let usuario = await Usuario.findOne({ nombre: usernameNormalizado });
         if (usuario) {
-            return res.status(400).json({ error: 'Este correo electrónico ya está en uso.' });
+            return res.status(409).json({ error: 'El nombre de usuario no esta disponible.' });
         }
 
         const salt = await bcrypt.genSalt(10);
         const passwordHasheada = await bcrypt.hash(password, salt);
 
         usuario = new Usuario({
-            nombre,
-            email,
+            nombre: usernameNormalizado,
             password: passwordHasheada
         });
 
@@ -61,8 +80,7 @@ router.post('/registro', async (req, res) => {
             accessToken, // React guardará esto en memoria o localStorage temporal
             usuario: {
                 id: usuario.id,
-                nombre: usuario.nombre,
-                email: usuario.email
+                username: usuario.nombre
             }
         });
 

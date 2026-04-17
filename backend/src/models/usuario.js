@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const ingredienteSchema = new mongoose.Schema({
+const usuarioSchema = new mongoose.Schema({
     nombre: {
         type: String,
         required: true,
@@ -9,8 +9,9 @@ const ingredienteSchema = new mongoose.Schema({
     },
     email: {
         type: String,
-        required: true,
+        required: false,
         unique: true,
+        sparse: true,
         lowercase: true,
         trim: true,
     },
