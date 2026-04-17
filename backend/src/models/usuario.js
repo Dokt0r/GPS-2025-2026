@@ -18,6 +18,10 @@ const ingredienteSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    refreshToken: {
+        type: String,
+        default: null
+    },
     nevera: [{
         ingrediente: {
             type: mongoose.Schema.Types.ObjectId,
