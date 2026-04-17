@@ -4,6 +4,38 @@ const jwt = require('jsonwebtoken');
 const Usuario = require('../models/usuario'); 
 
 const router = express.Router();
+const COOKIE_REFRESH = 'jwt_refresh';
+
+const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'Strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000
+};
+
+const construirPayload = (usuarioId) => ({
+    usuario: { id: usuarioId }
+});
+
+const generarAccessToken = (payload) => {
+    const accessSecret = process.env.JWT_ACCESS_SECRET;
+    return jwt.sign(payload, accessSecret, { expiresIn: '15m' });
+};
+
+const generarRefreshToken = (payload) => {
+    const refreshSecret = process.env.JWT_REFRESH_SECRET;
+    return jwt.sign(payload, refreshSecret, { expiresIn: '7d' });
+};
+
+const leerCookie = (cookieHeader, cookieName) => {
+    if (!cookieHeader) return null;
+
+    const cookies = cookieHeader.split(';').map((item) => item.trim());
+    const cookieBuscada = cookies.find((item) => item.startsWith(`${cookieName}=`));
+    if (!cookieBuscada) return null;
+
+    return decodeURIComponent(cookieBuscada.slice(cookieName.length + 1));
+};
 
 const credencialValida = (valor) => {
     if (typeof valor !== 'string') return false;
@@ -47,19 +79,9 @@ router.post('/registro', async (req, res) => {
             password: passwordHasheada
         });
 
-        const payload = {
-            usuario: {
-                id: usuario.id
-            }
-        };
-
-        // Crear el Access Token (Corta duración)
-        const accessSecret = process.env.JWT_ACCESS_SECRET;
-        const accessToken = jwt.sign(payload, accessSecret, { expiresIn: '15m' });
-
-        // Crear el Refresh Token (Larga duración)
-        const refreshSecret = process.env.JWT_REFRESH_SECRET;
-        const refreshToken = jwt.sign(payload, refreshSecret, { expiresIn: '7d' });
+        const payload = construirPayload(usuario.id);
+        const accessToken = generarAccessToken(payload);
+        const refreshToken = generarRefreshToken(payload);
 
         // Guardar el Refresh Token en la base de datos para este usuario
         usuario.refreshToken = refreshToken;
@@ -67,12 +89,7 @@ router.post('/registro', async (req, res) => {
 
         // Enviar el Refresh Token como una Cookie HttpOnly (Máxima seguridad)
         // Esto evita ataques XSS porque JavaScript en el frontend no puede leer esta cookie.
-        res.cookie('jwt_refresh', refreshToken, {
-            httpOnly: true, // No accesible desde JavaScript (React)
-            secure: process.env.NODE_ENV === 'production', // Solo HTTPS en producción
-            sameSite: 'Strict', // Protege contra ataques CSRF
-            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días en milisegundos
-        });
+        res.cookie(COOKIE_REFRESH, refreshToken, cookieOptions);
 
         //Devolver el Access Token y los datos del usuario en el JSON
         res.status(201).json({
@@ -87,6 +104,61 @@ router.post('/registro', async (req, res) => {
     } catch (error) {
         console.error('Error en el registro:', error.message);
         res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// POST /api/auth/refresh
+router.post('/refresh', async (req, res) => {
+    try {
+        const refreshToken = leerCookie(req.headers.cookie, COOKIE_REFRESH);
+        if (!refreshToken) {
+            return res.status(401).json({ error: 'Refresh token no proporcionado.' });
+        }
+
+        const refreshSecret = process.env.JWT_REFRESH_SECRET;
+        const decoded = jwt.verify(refreshToken, refreshSecret);
+
+        const usuario = await Usuario.findById(decoded?.usuario?.id);
+        if (!usuario || usuario.refreshToken !== refreshToken) {
+            return res.status(401).json({ error: 'Refresh token invalido.' });
+        }
+
+        const payload = construirPayload(usuario.id);
+        const nuevoAccessToken = generarAccessToken(payload);
+        const nuevoRefreshToken = generarRefreshToken(payload);
+
+        usuario.refreshToken = nuevoRefreshToken;
+        await usuario.save();
+
+        res.cookie(COOKIE_REFRESH, nuevoRefreshToken, cookieOptions);
+
+        return res.status(200).json({ accessToken: nuevoAccessToken });
+    } catch (error) {
+        return res.status(401).json({ error: 'No se pudo renovar la sesion.' });
+    }
+});
+
+// POST /api/auth/logout
+router.post('/logout', async (req, res) => {
+    try {
+        const refreshToken = leerCookie(req.headers.cookie, COOKIE_REFRESH);
+
+        if (refreshToken) {
+            await Usuario.findOneAndUpdate(
+                { refreshToken },
+                { $set: { refreshToken: null } }
+            );
+        }
+
+        res.clearCookie(COOKIE_REFRESH, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'Strict'
+        });
+
+        return res.status(200).json({ mensaje: 'Sesion cerrada correctamente.' });
+    } catch (error) {
+        return res.status(500).json({ error: 'Error al cerrar sesion.' });
     }
 });
 
