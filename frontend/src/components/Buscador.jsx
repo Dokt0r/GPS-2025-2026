@@ -5,7 +5,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
   const [cantidad, setCantidad] = useState('');
   const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null);
   const [sugerencias, setSugerencias] = useState([]);
-  
+
   // Estado general para manejar mensajes de éxito y error dentro de este componente
   const [mensajeLocal, setMensajeLocal] = useState({ texto: '', tipo: '' });
 
@@ -25,7 +25,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
     const valor = e.target.value;
     setBusqueda(valor);
     setIngredienteSeleccionado(null);
-    
+
     // Limpiamos los errores si el usuario empieza a escribir para corregir
     if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
 
@@ -47,7 +47,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
   const seleccionarSugerencia = (ing) => {
     setBusqueda(ing.nombre);
     setIngredienteSeleccionado(ing);
-    setSugerencias([]); 
+    setSugerencias([]);
     if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
   };
 
@@ -71,7 +71,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
 
     // Si todo va bien:
     onAñadir(ingredienteSeleccionado, cantidadFinal);
-    
+
     // Mostramos el éxito aquí mismo (Sin emojis)
     mostrarMensaje(`Añadido: ${ingredienteSeleccionado.nombre} (${cantidadFinal} ${ingredienteSeleccionado.unidad})`, 'success');
 
