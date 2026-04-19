@@ -124,11 +124,6 @@ function App() {
     <NeveraContext.Provider value={{ ingredientesNevera, restarIngredientesReceta }}>
       <div className="bg-gradient"></div>
       <main className="app-container">
-        <header>
-          <div className="logo-placeholder"></div>
-          <h1>LazyChef</h1>
-          <p>Gestiona tus alimentos con inteligencia</p>
-        </header>
 
         <Routes>
           <Route path="/" element={
@@ -136,6 +131,12 @@ function App() {
             <section className="vista-principal-unica">
               
               {/* --- 1. CONTENIDO PRINCIPAL: LA NEVERA --- */}
+
+              <header>
+                <div className="logo-placeholder"></div>
+                <h1>LazyChef</h1>
+                <p>Gestiona tus alimentos con inteligencia</p>
+              </header>
 
               <div className="actions-nevera">
                   <BotonAccion texto="Buscar Recetas" alHacerClic={buscarRecetas} />
