@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../context/AuthContext'; // NUEVO: importamos useAuth para acceder a register()
+import { useAuth } from '../AuthContext'; // NUEVO: importamos useAuth para acceder a register()
 
 // CAMBIADO: eliminamos el prop onRegistrar, ya no hace falta porque usamos el contexto
 function Registro({ cargando = false }) {

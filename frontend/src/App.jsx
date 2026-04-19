@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import Buscador from './components/Buscador';
 import ListaNevera from './components/ListaNevera';
 import BotonAccion from './components/BotonAccion';
+import Registro from './components/Registro';
 import VistaRecetas from './VistaRecetas';
 import VistaDetalles from './VistaDetalles';
 import { NeveraContext } from './NeveraContext';
@@ -187,6 +188,7 @@ function App() {
 
           <Route path="/recetas" element={<VistaRecetas />} />
           <Route path="/receta/:titulo" element={<VistaDetalles />} />
+          <Route path="/registro" element={<Registro />} />
         </Routes>
       </main>
     </NeveraContext.Provider>
