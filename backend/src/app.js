@@ -8,7 +8,11 @@ const ingredientesRoutes = require('./routes/ingredientes');
 const inventarioRoutes = require('./routes/inventario');
 const recetasRoutes = require('./routes/recetas.js');
 
-app.use(cors());
+// Esto hay que cambiarlo en un futuro en produccion
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
