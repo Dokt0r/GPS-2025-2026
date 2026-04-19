@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext'; // NUEVO: importamos useAuth para acceder a register()
+import fondo from '../assets/fondo.avif';
 
 // CAMBIADO: eliminamos el prop onRegistrar, ya no hace falta porque usamos el contexto
 function Registro({ cargando = false }) {
@@ -75,59 +76,67 @@ function Registro({ cargando = false }) {
 
   // SIN CAMBIOS: el JSX se queda exactamente igual
   return (
-    <section className="card" aria-label="Formulario de registro">
-      <div className="section-header">
-        <h2>Crear cuenta</h2>
-      </div>
+    <div className="registro-wrapper">
+      <section className="card registro-card" aria-label="Formulario de registro">
+        <div className="section-header">
+          <h2>Crear cuenta</h2>
+        </div>
 
-      <form onSubmit={manejarSubmit} className="registro-form">
-        <label htmlFor="username">Username</label>
-        <input
-          id="username"
-          name="username"
-          type="text"
-          value={form.username}
-          onChange={manejarCambio}
-          autoComplete="username"
-          placeholder="tu_usuario"
-          minLength={3}
-          maxLength={15}
-        />
+        <form onSubmit={manejarSubmit} className="registro-form">
+          <div className="input-group">
+            <label htmlFor="username">Usuario</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              value={form.username}
+              onChange={manejarCambio}
+              autoComplete="username"
+              placeholder="Tu usuario"
+              minLength={3}
+              maxLength={15}
+            />
+          </div>
 
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          value={form.password}
-          onChange={manejarCambio}
-          autoComplete="new-password"
-          placeholder="********"
-          minLength={3}
-          maxLength={15}
-        />
+          <div className="input-group">
+            <label htmlFor="password">Contraseña</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={form.password}
+              onChange={manejarCambio}
+              autoComplete="new-password"
+              placeholder="········"
+              minLength={3}
+              maxLength={15}
+            />
+          </div>
 
-        <label htmlFor="confirmPassword">Confirmar password</label>
-        <input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          value={form.confirmPassword}
-          onChange={manejarCambio}
-          autoComplete="new-password"
-          placeholder="********"
-          minLength={3}
-          maxLength={15}
-        />
+          <div className="input-group">
+            <label htmlFor="confirmPassword">Confirmar contraseña</label>
+            <input
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              value={form.confirmPassword}
+              onChange={manejarCambio}
+              autoComplete="new-password"
+              placeholder="········"
+              minLength={3}
+              maxLength={15}
+            />
+          </div>
 
-        {error && <p role="alert" className="registro-error">{error}</p>}
-        {exito && <p role="status" className="registro-exito">{exito}</p>}
+          {error && <p role="alert" className="registro-error">{error}</p>}
+          {exito && <p role="status" className="registro-exito">{exito}</p>}
 
-        <button type="submit" disabled={cargando}>
-          {cargando ? 'Registrando...' : 'Registrarse'}
-        </button>
-      </form>
-    </section>
+          <button type="submit" className="btn-registro" disabled={cargando}>
+            {cargando ? 'Registrando...' : 'Registrarse'}
+          </button>
+        </form>
+      </section>
+    </div>
   );
 }
 
