@@ -10,7 +10,7 @@ const recetasRoutes = require('./routes/recetas.js');
 
 // Esto hay que cambiarlo en un futuro en produccion
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: process.env.FRONTEND_URL,
     credentials: true
 }));
 app.use(express.json());
