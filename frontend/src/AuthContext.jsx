@@ -10,7 +10,10 @@ export function AuthProvider({ children }) {
 
   // 1. Nuevo estado para guardar los datos del usuario (id, username)
   // Antes solo existía el token, que solo dice "hay alguien logueado" pero no quién
-  const [usuario, setUsuario] = useState(null);
+  const [usuario, setUsuario] = useState(() => {
+  const saved = localStorage.getItem('usuario');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   const guardarToken = (nuevoToken) => {
     const tokenNormalizado = (nuevoToken || '').trim();
@@ -45,6 +48,7 @@ export function AuthProvider({ children }) {
     // El servidor devuelve { accessToken, usuario: { id, username } }
     guardarToken(data.accessToken);   // Guarda el token en localStorage
     setUsuario(data.usuario);         // 1: Guarda quién es el usuario
+    localStorage.setItem('usuario', JSON.stringify(data.usuario)); // 2: Guarda los datos del usuario en localStorage para persistencia
 
     return data;
   };
@@ -53,6 +57,7 @@ export function AuthProvider({ children }) {
     setToken('');
     setUsuario(null); // TAREA 1: Al cerrar sesión, limpiamos también los datos del usuario
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('usuario'); // 👈 AQUÍ
   };
 
   const value = useMemo(
