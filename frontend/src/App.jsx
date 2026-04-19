@@ -11,7 +11,7 @@ import { useAuth } from './AuthContext';
 import './App.css';
 
 function App() {
-  const { user } = useAuth();
+  const { usuario } = useAuth();
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
@@ -132,7 +132,7 @@ function App() {
 
         <Routes>
           <Route path="/" element={
-            user ? (
+            usuario ? (
             <section className="vista-principal-unica">
               
               {/* --- 1. CONTENIDO PRINCIPAL: LA NEVERA --- */}
@@ -194,7 +194,7 @@ function App() {
 
           <Route path="/recetas" element={<VistaRecetas />} />
           <Route path="/receta/:titulo" element={<VistaDetalles />} />
-          <Route path="/registro" element={user ? <Navigate to="/" /> : <Registro />} />
+          <Route path="/registro" element={usuario ? <Navigate to="/" /> : <Registro />} />
         </Routes>
       </main>
     </NeveraContext.Provider>
