@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Buscador from './components/Buscador';
 import ListaNevera from './components/ListaNevera';
 import BotonAccion from './components/BotonAccion';
@@ -7,9 +7,11 @@ import Registro from './components/Registro';
 import VistaRecetas from './VistaRecetas';
 import VistaDetalles from './VistaDetalles';
 import { NeveraContext } from './NeveraContext';
+import { useAuth } from './AuthContext';
 import './App.css';
 
 function App() {
+  const { user } = useAuth();
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
@@ -130,6 +132,7 @@ function App() {
 
         <Routes>
           <Route path="/" element={
+            user ? (
             <section className="vista-principal-unica">
               
               {/* --- 1. CONTENIDO PRINCIPAL: LA NEVERA --- */}
@@ -184,11 +187,14 @@ function App() {
               )}
               
             </section>
+            ) : (
+              <Registro />
+            )
           } />
 
           <Route path="/recetas" element={<VistaRecetas />} />
           <Route path="/receta/:titulo" element={<VistaDetalles />} />
-          <Route path="/registro" element={<Registro />} />
+          <Route path="/registro" element={user ? <Navigate to="/" /> : <Registro />} />
         </Routes>
       </main>
     </NeveraContext.Provider>
