@@ -1,15 +1,16 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Usuario = require('../models/usuario'); 
+const Usuario = require('../models/usuario');
 
 const router = express.Router();
 const COOKIE_REFRESH = 'jwt_refresh';
 
+// DESPUÉS
 const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'Strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax',
     maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
@@ -85,7 +86,7 @@ router.post('/registro', async (req, res) => {
 
         // Guardar el Refresh Token en la base de datos para este usuario
         usuario.refreshToken = refreshToken;
-        await usuario.save(); 
+        await usuario.save();
 
         // Enviar el Refresh Token como una Cookie HttpOnly (Máxima seguridad)
         // Esto evita ataques XSS porque JavaScript en el frontend no puede leer esta cookie.
@@ -132,7 +133,14 @@ router.post('/refresh', async (req, res) => {
 
         res.cookie(COOKIE_REFRESH, nuevoRefreshToken, cookieOptions);
 
-        return res.status(200).json({ accessToken: nuevoAccessToken });
+        // DESPUÉS
+        return res.status(200).json({
+            accessToken: nuevoAccessToken,
+            usuario: {
+                id: usuario.id,
+                username: usuario.nombre
+            }
+        });
     } catch (error) {
         return res.status(401).json({ error: 'No se pudo renovar la sesion.' });
     }
@@ -150,10 +158,11 @@ router.post('/logout', async (req, res) => {
             );
         }
 
+        // DESPUÉS
         res.clearCookie(COOKIE_REFRESH, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'Strict'
+            sameSite: process.env.NODE_ENV === 'production' ? 'Strict' : 'Lax'
         });
 
         return res.status(200).json({ mensaje: 'Sesion cerrada correctamente.' });

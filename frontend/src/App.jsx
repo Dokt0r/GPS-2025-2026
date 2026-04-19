@@ -21,7 +21,8 @@ const ProtectedRoute = ({ children }) => {
 };
 
 function App() {
-  const { usuario } = useAuth();
+  // DESPUÉS
+  const { usuario, cargando, fetchConAuth } = useAuth();
   const [ingredientesNevera, setIngredientesNevera] = useState([]);
   const [ingredientesBase, setIngredientesBase] = useState([]);
   const [toast, setToast] = useState({ visible: false, mensaje: '', tipo: '' });
@@ -35,8 +36,11 @@ function App() {
     setTimeout(() => setToast({ visible: false, mensaje: '', tipo: '' }), 3000);
   };
 
+  // DESPUÉS
   useEffect(() => {
-    fetch(`${API_URL}/api/ingredientes`)
+    if (!usuario) return;
+
+    fetchConAuth(`${API_URL}/api/ingredientes`)
       .then(res => {
         if (!res.ok) throw new Error('Error al conectar con el servidor');
         return res.json();
@@ -54,7 +58,7 @@ function App() {
         setIngredientesBase([]);
         mostrarMensaje('❌ No se pudo conectar con el servidor.', 'error');
       });
-  }, [API_URL]);
+  }, [API_URL, usuario]);
 
   const añadirAInventario = (ingrediente, cantidadAñadida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
@@ -104,6 +108,8 @@ function App() {
     );
     navigate(`/recetas?ingredientes=${encodeURIComponent(partes.join(','))}`);
   };
+
+  if (cargando) return null;
 
   return (
     <NeveraContext.Provider value={{ ingredientesNevera, restarIngredientesReceta }}>

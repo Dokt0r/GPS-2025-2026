@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNevera } from './NeveraContext';
+import { useAuth } from './AuthContext';
 
 // ─────────────────────────────────────────────
 // HELPERS DE UNIDADES (espejo del backend)
@@ -56,6 +57,7 @@ const calcularFaltantes = (ingredientesReceta, ingredientesNevera) => {
 // ─────────────────────────────────────────────
 
 const VistaDetalles = () => {
+  const { fetchConAuth } = useAuth();
   const { titulo } = useParams();
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
@@ -74,7 +76,7 @@ const VistaDetalles = () => {
       try {
         setCargando(true);
         setError(null);
-        const response = await fetch(`${API_URL}/api/recetas/${codificarTitulo(titulo)}`);
+        const response = await fetchConAuth(`${API_URL}/api/recetas/${codificarTitulo(titulo)}`);
 
         if (!response.ok) {
           if (response.status === 404) throw new Error('Receta no encontrada.');
@@ -127,7 +129,7 @@ const VistaDetalles = () => {
     return (
       <main className="receta-view-wrapper">
         <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
           Volver
         </button>
         <div className="error-container centrado-vertical">
@@ -141,7 +143,7 @@ const VistaDetalles = () => {
     <main className="receta-view-wrapper">
 
       <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
         <span>Volver</span>
       </button>
 
@@ -206,7 +208,7 @@ const VistaDetalles = () => {
                       <button className="btn-completar-receta" onClick={handleCompletarReceta}>
                         <span>Completar Receta</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12"/>
+                          <polyline points="20 6 9 17 4 12" />
                         </svg>
                       </button>
                     )}
