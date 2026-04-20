@@ -1,17 +1,15 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'; // Con fallback hardcodeado para evitar errores de configuración
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState('');
-
-  // 1. Nuevo estado para guardar los datos del usuario (id, username)
-  // Antes solo existía el token, que solo dice "hay alguien logueado" pero no quién
   const [usuario, setUsuario] = useState(null);
-  // AÑADIR esto justo debajo:
   const [cargando, setCargando] = useState(true);
+  const tokenRef = useRef(''); // fix del closure
+
   useEffect(() => {
     const recuperarSesion = async () => {
       try {
@@ -19,10 +17,7 @@ export function AuthProvider({ children }) {
           method: 'POST',
           credentials: 'include',
         });
-        if (!res.ok) {
-          setCargando(false);
-          return;
-        }
+        if (!res.ok) return;
         const data = await res.json();
         guardarToken(data.accessToken);
         setUsuario(data.usuario);
@@ -36,38 +31,48 @@ export function AuthProvider({ children }) {
     recuperarSesion();
   }, []);
 
-  // DESPUÉS
   const guardarToken = (nuevoToken) => {
     const tokenNormalizado = (nuevoToken || '').trim();
     setToken(tokenNormalizado);
+    tokenRef.current = tokenNormalizado; // siempre actualizado
   };
 
-  // 2. Función register() centralizada
-  // Ahora la lógica vive aquí y cualquier componente puede registrar con useAuth()
   const register = async ({ username, password }) => {
     const respuesta = await fetch(`${API_URL}/api/auth/registro`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // credentials: 'include' es necesario para que el navegador acepte
-      // la cookie HttpOnly del refresh token que manda el servidor
-      // Sin esto, la cookie se ignora y el sistema de renovación de sesión no funciona
       credentials: 'include',
       body: JSON.stringify({ username, password }),
     });
 
     const data = await respuesta.json().catch(() => ({}));
-
     if (!respuesta.ok) {
       throw new Error(data.error || 'No se pudo completar el registro.');
     }
 
-    // El servidor devuelve { accessToken, usuario: { id, username } }
-    guardarToken(data.accessToken);   // Guarda el token en localStorage
-    setUsuario(data.usuario);         // 1: Guarda quién es el usuario
-
-
+    guardarToken(data.accessToken);
+    setUsuario(data.usuario);
     return data;
   };
+
+  const login = async ({ username, password }) => {
+    const respuesta = await fetch(`${API_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) {
+      throw new Error(data.error || 'Credenciales incorrectas.');
+    }
+
+    guardarToken(data.accessToken);
+    setUsuario(data.usuario);
+    return data;
+  };
+
   const cerrarSesion = async () => {
     try {
       await fetch(`${API_URL}/api/auth/logout`, {
@@ -75,27 +80,24 @@ export function AuthProvider({ children }) {
         credentials: 'include',
       });
     } catch (_) {
-      // Si falla la llamada, cerramos sesión igualmente en el cliente
+      // Si falla, cerramos sesión igualmente en el cliente
     } finally {
-      setToken('');
+      guardarToken('');
       setUsuario(null);
     }
   };
 
   const fetchConAuth = async (url, opciones = {}) => {
-    // 1. Hacemos la petición normal con el token actual en la cabecera
     const respuesta = await fetch(url, {
       ...opciones,
       headers: {
         ...opciones.headers,
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${tokenRef.current}`, // usa ref, nunca desactualizado
       },
     });
 
-    // 2. Si no es 401, devolvemos la respuesta tal cual (bien o mal)
     if (respuesta.status !== 401) return respuesta;
 
-    // 3. Si es 401, intentamos renovar el token
     try {
       const refresh = await fetch(`${API_URL}/api/auth/refresh`, {
         method: 'POST',
@@ -103,29 +105,28 @@ export function AuthProvider({ children }) {
       });
 
       if (!refresh.ok) {
-        cerrarSesion();
+        await cerrarSesion();
         throw new Error('Sesión expirada. Por favor, inicia sesión de nuevo.');
       }
 
       const data = await refresh.json();
-      const nuevoToken = data.accessToken;
-      guardarToken(nuevoToken);
+      guardarToken(data.accessToken);
       setUsuario(data.usuario);
 
-      // 4. Reintentamos la petición original con el nuevo token
       return fetch(url, {
         ...opciones,
         headers: {
           ...opciones.headers,
-          Authorization: `Bearer ${nuevoToken}`,
+          Authorization: `Bearer ${tokenRef.current}`,
         },
       });
 
     } catch (err) {
-      cerrarSesion();
+      await cerrarSesion();
       throw err;
     }
   };
+
   const value = useMemo(
     () => ({
       token,
@@ -133,23 +134,20 @@ export function AuthProvider({ children }) {
       cargando,
       isAutenticado: Boolean(token),
       register,
-      guardarToken,
+      login,
       cerrarSesion,
       fetchConAuth,
     }),
     [token, usuario, cargando]
   );
 
-
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-
   if (!context) {
     throw new Error('useAuth debe usarse dentro de AuthProvider');
   }
-
   return context;
 }
