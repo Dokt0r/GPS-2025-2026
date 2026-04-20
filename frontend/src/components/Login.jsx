@@ -1,16 +1,14 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext'; 
-import { useNavigate } from 'react-router-dom'; // Añadido
-import fondo from '../assets/fondo.avif';
+import { useNavigate } from 'react-router-dom'; // Añadido para navegar
 
-function Registro({ cargando = false }) {
-  const { register } = useAuth(); 
+function Login({ cargando = false }) {
+  const { login } = useAuth();
   const navigate = useNavigate(); // Inicializamos navigate
 
   const [form, setForm] = useState({
     username: '',
-    password: '',
-    confirmPassword: ''
+    password: ''
   });
 
   const [error, setError] = useState('');
@@ -35,39 +33,34 @@ function Registro({ cargando = false }) {
 
     const usernameLimpio = form.username.trim();
 
-    if (!usernameLimpio || !form.password.trim() || !form.confirmPassword.trim()) {
+    if (!usernameLimpio || !form.password.trim()) {
       setError('Completa todos los campos.');
       return;
     }
 
     if (!credencialValida(usernameLimpio) || !credencialValida(form.password)) {
-      setError('Usuario y contraseña deben tener entre 3 y 15 caracteres sin espacios.');
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setError('Las contraseñas no coinciden.');
+      setError('Las credenciales deben tener entre 3 y 15 caracteres y no contener espacios.');
       return;
     }
 
     try {
-      const resultado = await register({
+      const resultado = await login({
         username: usernameLimpio,
         password: form.password
       });
 
-      setExito(resultado?.mensaje || 'Registro realizado correctamente.');
-      setForm({ username: '', password: '', confirmPassword: '' });
+      setExito(resultado?.mensaje || 'Inicio de sesión exitoso.');
+      setForm({ username: '', password: '' });
     } catch (err) {
-      setError(err?.message || 'No se pudo completar el registro.');
+      setError(err?.message || 'Credenciales inválidas o error en el servidor.');
     }
   };
 
   return (
     <div className="registro-wrapper">
-      <section className="card registro-card" aria-label="Formulario de registro">
+      <section className="card registro-card" aria-label="Formulario de inicio de sesión">
         <div className="section-header">
-          <h2>Crear cuenta</h2>
+          <h2>Iniciar sesión</h2>
         </div>
 
         <form onSubmit={manejarSubmit} className="registro-form">
@@ -94,22 +87,7 @@ function Registro({ cargando = false }) {
               type="password"
               value={form.password}
               onChange={manejarCambio}
-              autoComplete="new-password"
-              placeholder="········"
-              minLength={3}
-              maxLength={15}
-            />
-          </div>
-
-          <div className="input-group">
-            <label htmlFor="confirmPassword">Confirmar contraseña</label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              value={form.confirmPassword}
-              onChange={manejarCambio}
-              autoComplete="new-password"
+              autoComplete="current-password"
               placeholder="········"
               minLength={3}
               maxLength={15}
@@ -120,19 +98,19 @@ function Registro({ cargando = false }) {
           {exito && <p role="status" className="registro-exito">{exito}</p>}
 
           <button type="submit" className="btn-registro" disabled={cargando}>
-            {cargando ? 'Registrando...' : 'Registrarse'}
+            {cargando ? 'Iniciando...' : 'Entrar'}
           </button>
         </form>
 
         {/* NUEVA SECCIÓN DE CAMBIO DE VISTA */}
         <div className="auth-toggle-inline">
-          <p>¿Ya tienes una cuenta?</p>
+          <p>¿Aún no tienes una cuenta?</p>
           <button 
             type="button" 
             className="auth-toggle-btn" 
-            onClick={() => navigate('/login')}
+            onClick={() => navigate('/registro')}
           >
-            Inicia sesión
+            Regístrate aquí
           </button>
         </div>
 
@@ -141,4 +119,4 @@ function Registro({ cargando = false }) {
   );
 }
 
-export default Registro;
+export default Login;
