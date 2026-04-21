@@ -59,7 +59,16 @@ function App() {
       });
   }, [API_URL, usuario, fetchConAuth]);
 
-  const añadirAInventario = (ingrediente, cantidadAñadida) => {
+  useEffect(() => {
+  if (!usuario) return;
+
+  fetchConAuth(`${API_URL}/api/inventario`)
+    .then(res => res.json())
+    .then(data => setIngredientesNevera(data))
+    .catch(err => console.error("Error cargando inventario:", err));
+}, [usuario]);
+
+  const añadirAInventario = async (ingrediente, cantidadAñadida) => {
     const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
     const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
 
@@ -71,10 +80,43 @@ function App() {
       nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica }];
     }
     setIngredientesNevera(nuevaLista);
+
+    // GUARDAR EN BACKEND
+    try {
+      await fetchConAuth(`${API_URL}/api/inventario`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: nuevaLista
+        })
+      });
+      await recargarInventario();
+    } catch (error) {
+      console.error("Error guardando (añadiendo) inventario:", error);
+    }
   };
 
-  const eliminarDeInventario = (nombre) => {
-    setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre));
+  const eliminarDeInventario = async (nombre) => {
+
+    const nuevaLista = ingredientesNevera.filter(i => i.nombre !== nombre);
+    setIngredientesNevera(nuevaLista);
+
+    try {
+      await fetchConAuth(`${API_URL}/api/inventario`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          items: nuevaLista
+        })
+      });
+      await recargarInventario();
+    } catch (error) {
+      console.error("Error guardando (eliminando) inventario:", error);
+    }
   };
 
   const restarIngredientesReceta = (ingredientesReceta) => {
@@ -91,8 +133,38 @@ function App() {
 
         nuevaLista[idx].cantidad = Math.max(0, parseFloat(nuevaCantidad.toFixed(2)));
       }
-      return nuevaLista.filter(i => i.cantidad > 0);
+
+      const filtrada = nuevaLista.filter(i => i.cantidad > 0);
+
+      guardarInventario(filtrada);
+      recargarInventario();
+
+      return filtrada;
     });
+  };
+
+  const guardarInventario = async (nuevoInventario) => {
+    try {
+      await fetchConAuth(`${API_URL}/api/inventario`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ items: nuevoInventario })
+      });
+    } catch (err) {
+      console.error("Error guardando inventario:", err);
+    }
+  };
+
+  const recargarInventario = async () => {
+    try {
+      const res = await fetchConAuth(`${API_URL}/api/inventario`);
+      const data = await res.json();
+      setIngredientesNevera(data);
+    } catch (err) {
+      console.error("Error recargando inventario:", err);
+    }
   };
 
   const buscarRecetas = () => {
