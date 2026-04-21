@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Receta = require('../models/recetas');
-
+const Usuario = require('../models/usuario');
+const requireAuth = require('../middleware/auth');
 // Función para estandarizar lo que viene del frontend a g, ml o ud de forma SEGURA
 const estandarizarNevera = (queryStr) => {
     if (!queryStr) return [];
@@ -76,30 +77,64 @@ router.get('/:titulo', async (req, res) => {
     }
 });
 
-// ENDPOINT 3: Completar una receta (Actualizar pasos e ingredientes)
-router.put('/completar', async (req, res) => {
+// ENDPOINT 3: Completar una receta y RESTAR ingredientes de la nevera del USUARIO
+
+router.put('/completar', requireAuth, async (req, res) => {
     try {
         const { titulo, steps, ingredients } = req.body;
         const tituloSeguro = escaparRegex(titulo);
 
-        // 1. Buscamos la receta
+        // 1. Buscamos al usuario logueado y "populamos" las referencias de su nevera
+        // para poder comparar por nombre fácilmente.
+        const usuario = await Usuario.findById(req.usuario.id).populate('nevera.ingrediente');
+        
+        if (!usuario) {
+            return res.status(401).json({ error: "Usuario no autenticado correctamente." });
+        }
+
+        // 2. Buscamos la receta que se va a completar
         const receta = await Receta.findOne({ 
             title: new RegExp('^' + tituloSeguro + '$', 'i') 
         });
 
-        if (!receta) return res.status(404).json({ error: "Receta no encontrada" });
+        if (!receta) return res.status(404).json({ error: "Receta no encontrada." });
 
-        // 2. Actualizamos los datos
+        
+        // Recorremos los ingredientes que el frontend nos dice que se han usado
+        for (const ingUsado of ingredients) {
+            
+            // Buscamos si ese ingrediente existe en la nevera del usuario
+            // Usamos una comparación segura (escaparRegex y toLowerCase)
+            const itemEnNevera = usuario.nevera.find(item => 
+                escaparRegex(item.ingrediente.nombre.toLowerCase()) === escaparRegex(ingUsado.nombre.toLowerCase()) &&
+                item.unidad.toLowerCase() === ingUsado.unidad.toLowerCase()
+            );
+
+            // "Resta los que tenga, ignora los que no tenga"
+            if (itemEnNevera) {
+                // Restamos la cantidad asegurándonos de que no baje de 0
+                itemEnNevera.cantidad = Math.max(0, itemEnNevera.cantidad - ingUsado.cantidad);
+                
+               
+            }
+            // Si itemEnNevera es null, el código simplemente sigue (ignora)
+        }
+
+       
+        await usuario.save();
+
+        // 4. Actualizamos los datos de la receta
         receta.steps = steps;
         receta.ingredients = ingredients;
         receta.isCompleted = true;
 
-        // 3. Guardamos (Esto activa tu lógica de negocio LC-49)
-        const recetaActualizada = await receta.save();
+        await receta.save();
 
-        res.json(recetaActualizada);
+        res.status(200).json({ success: true, mensaje: "Receta completada e ingredientes restados de tu nevera." }); 
+
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error("Error al completar receta y restar ingredientes:", error);
+        res.status(500).json({ error: "Error interno del servidor al procesar la operación." });
     }
 });
 
