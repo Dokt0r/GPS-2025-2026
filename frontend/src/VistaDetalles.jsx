@@ -97,7 +97,7 @@ const VistaDetalles = () => {
   }, [titulo, API_URL]);
 
   // ── LÓGICA PRINCIPAL: COMPLETAR RECETA ──────
-  const handleCompletarReceta = () => {
+  const handleCompletarReceta = async () => {
     if (!receta?.ingredients) return;
 
     const faltantes = calcularFaltantes(receta.ingredients, ingredientesNevera);
@@ -107,10 +107,30 @@ const VistaDetalles = () => {
       return;
     }
 
-    restarIngredientesReceta(receta.ingredients);
-    setErrorCompletar(null);
-    setRecetaCompletada(true);
-    setTimeout(() => navigate('/'), 3500);
+    try {
+      const response = await fetchConAuth(`${API_URL}/api/recetas/completar`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          titulo: receta.title,
+          steps: receta.steps,
+          ingredients: receta.ingredients,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setErrorCompletar([{ nombre: data.error || 'Error al completar la receta.', motivo: '' }]);
+        return;
+      }
+
+      restarIngredientesReceta(receta.ingredients);
+      setErrorCompletar(null);
+      setRecetaCompletada(true);
+      setTimeout(() => navigate('/'), 3500);
+    } catch {
+      setErrorCompletar([{ nombre: 'No se pudo conectar con el servidor.', motivo: '' }]);
+    }
   };
 
   // ── RENDERS DE ESTADO ───────────────────────
