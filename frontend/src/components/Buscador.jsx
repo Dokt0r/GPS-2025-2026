@@ -51,7 +51,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
     if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
   };
 
-  const handleConfirmar = () => {
+  const handleConfirmar = async () => {
     if (ingredientesBase.length === 0) {
       mostrarMensaje('No se pueden buscar ingredientes porque no hay conexión.', 'error');
       return;
@@ -69,17 +69,20 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
       return;
     }
 
-    // Si todo va bien:
-    onAñadir(ingredienteSeleccionado, cantidadFinal);
+    try {
+      await onAñadir(ingredienteSeleccionado, cantidadFinal);
 
-    // Mostramos el éxito aquí mismo (Sin emojis)
-    mostrarMensaje(`Añadido: ${ingredienteSeleccionado.nombre} (${cantidadFinal} ${ingredienteSeleccionado.unidad})`, 'success');
+      // Mostramos el éxito aquí mismo (Sin emojis)
+      mostrarMensaje(`Añadido: ${ingredienteSeleccionado.nombre} (${cantidadFinal} ${ingredienteSeleccionado.unidad})`, 'success');
 
-    // Limpiamos los campos
-    setBusqueda('');
-    setCantidad('');
-    setIngredienteSeleccionado(null);
-    setSugerencias([]);
+      // Limpiamos los campos
+      setBusqueda('');
+      setCantidad('');
+      setIngredienteSeleccionado(null);
+      setSugerencias([]);
+    } catch (error) {
+      mostrarMensaje(error.message || 'No se pudo guardar el ingrediente.', 'error');
+    }
   };
 
   return (

@@ -31,6 +31,13 @@ function App() {
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
+  const mapNeveraServidor = (nevera = []) => nevera.map((item) => ({
+    nombre: item.nombre,
+    cantidad: item.cantidad,
+    unidad: item.unidad,
+    equivalencia_g_ml: item.equivalencia_g_ml
+  }));
+
   const mostrarMensaje = (mensaje, tipo) => {
     setToast({ visible: true, mensaje, tipo });
     setTimeout(() => setToast({ visible: false, mensaje: '', tipo: '' }), 3000);
@@ -59,18 +66,47 @@ function App() {
       });
   }, [API_URL, usuario, fetchConAuth]);
 
-  const añadirAInventario = (ingrediente, cantidadAñadida) => {
-    const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
-    const index = ingredientesNevera.findIndex(i => i.nombre === ingrediente.nombre);
-
-    let nuevaLista;
-    if (index !== -1) {
-      nuevaLista = [...ingredientesNevera];
-      nuevaLista[index].cantidad = (nuevaLista[index].cantidad || 0) + cantidadNumerica;
-    } else {
-      nuevaLista = [...ingredientesNevera, { ...ingrediente, cantidad: cantidadNumerica }];
+  useEffect(() => {
+    if (!usuario) {
+      setIngredientesNevera([]);
+      return;
     }
-    setIngredientesNevera(nuevaLista);
+
+    fetchConAuth(`${API_URL}/api/ingredientes/nevera`)
+      .then(res => {
+        if (!res.ok) throw new Error('No se pudo cargar la nevera.');
+        return res.json();
+      })
+      .then(data => {
+        setIngredientesNevera(mapNeveraServidor(data.nevera));
+      })
+      .catch((error) => {
+        console.error('Error cargando nevera del usuario:', error);
+        setIngredientesNevera([]);
+        mostrarMensaje('❌ No se pudo cargar tu nevera guardada.', 'error');
+      });
+  }, [API_URL, usuario, fetchConAuth]);
+
+  const añadirAInventario = async (ingrediente, cantidadAñadida) => {
+    const cantidadNumerica = parseFloat(cantidadAñadida) || 1;
+
+    const respuesta = await fetchConAuth(`${API_URL}/api/ingredientes/nevera`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        nombre: ingrediente.nombre,
+        cantidad: cantidadNumerica,
+        unidad: ingrediente.unidad,
+        equivalencia_g_ml: ingrediente.equivalencia_g_ml
+      })
+    });
+
+    const data = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) {
+      throw new Error(data.error || 'No se pudo guardar el ingrediente en la BBDD.');
+    }
+
+    setIngredientesNevera(mapNeveraServidor(data.nevera));
   };
 
   const eliminarDeInventario = (nombre) => {
