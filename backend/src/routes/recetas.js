@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Receta = require('../models/recetas');
 const Usuario = require('../models/usuario');
 const requireAuth = require('../middleware/auth');
@@ -30,17 +31,60 @@ const escaparRegex = (texto) => {
     return texto.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
 };
 
+const obtenerUsuarioIdDesdeBearer = (req) => {
+    const authHeader = req.header('Authorization') || '';
+    const token = authHeader.startsWith('Bearer ')
+        ? authHeader.slice(7).trim()
+        : null;
+
+    if (!token) return null;
+
+    const secret = process.env.JWT_ACCESS_SECRET;
+    if (!secret) return null;
+
+    try {
+        const decoded = jwt.verify(token, secret);
+        return decoded?.usuario?.id || null;
+    } catch {
+        return null;
+    }
+};
+
+const mapNeveraUsuario = (nevera = []) => nevera
+    .map((item) => ({
+        nombre: item?.ingrediente?.nombre?.trim() || '',
+        cantidad: Number(item?.cantidad) || 0,
+        unidad: (item?.unidad || '').toLowerCase().trim(),
+        equivalencia_g_ml: Number(item?.ingrediente?.equivalencia_g_ml) || null
+    }))
+    .filter((item) => item.nombre && item.cantidad > 0);
+
+const obtenerIngredientesDeNeveraUsuario = async (req) => {
+    const usuarioId = obtenerUsuarioIdDesdeBearer(req);
+    if (!usuarioId) return [];
+
+    const usuario = await Usuario.findById(usuarioId).populate('nevera.ingrediente');
+    if (!usuario) return [];
+
+    return mapNeveraUsuario(usuario.nevera);
+};
+
 router.get('/', async (req, res) => {
     try {
-        const queryStr = req.query.ingredientes;
+        const queryStr = typeof req.query.ingredientes === 'string'
+            ? req.query.ingredientes.trim()
+            : '';
 
-        if (!queryStr) {
+        const ingredientesNeveraEstandar = queryStr
+            ? estandarizarNevera(queryStr)
+            : await obtenerIngredientesDeNeveraUsuario(req);
+
+        if (!ingredientesNeveraEstandar.length) {
             console.log("❌ Error: Faltan ingredientes en la petición.");
             console.log("=======================================\n");
             return res.status(400).json({ error: "Faltan ingredientes" });
         }
 
-        const ingredientesNeveraEstandar = estandarizarNevera(queryStr);
         // 2. Pasamos el array completo al Modelo
         const recetasSugeridas = await Receta.buscarPorIngredientesYCantidades(ingredientesNeveraEstandar);
 

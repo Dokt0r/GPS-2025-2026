@@ -36,6 +36,40 @@ const construirPayload = (usuarioId) => ({
     usuario: { id: usuarioId }
 });
 
+const normalizarCredenciales = (body = {}) => {
+    const usernameNormalizado = (body.username || '').trim();
+    const password = body.password || '';
+
+    return { usernameNormalizado, password };
+};
+
+const construirUsuarioRespuesta = (usuario) => ({
+    id: usuario.id,
+    username: usuario.nombre
+});
+
+const emitirSesion = async (res, usuario, { statusCode = 200, mensaje } = {}) => {
+    const payload = construirPayload(usuario.id);
+    const accessToken = generarAccessToken(payload);
+    const refreshToken = generarRefreshToken(payload);
+
+    usuario.refreshToken = refreshToken;
+    await usuario.save();
+
+    res.cookie(COOKIE_REFRESH, refreshToken, cookieOptions);
+
+    const respuesta = {
+        accessToken,
+        usuario: construirUsuarioRespuesta(usuario)
+    };
+
+    if (mensaje) {
+        respuesta.mensaje = mensaje;
+    }
+
+    return res.status(statusCode).json(respuesta);
+};
+
 /**
  * Genera un Access Token de corta duración.
  * @param {object} payload - Datos a encriptar en el token.
@@ -92,8 +126,7 @@ const credencialValida = (valor) => {
  */
 router.post('/registro', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        const usernameNormalizado = (username || '').trim();
+        const { usernameNormalizado, password } = normalizarCredenciales(req.body);
 
         if (!usernameNormalizado || !password) {
             return res.status(400).json({ error: 'Por favor, rellena todos los campos obligatorios.' });
@@ -123,25 +156,9 @@ router.post('/registro', async (req, res) => {
             nombre: usernameNormalizado,
             password: passwordHasheada
         });
-
-        const payload = construirPayload(usuario.id);
-        const accessToken = generarAccessToken(payload);
-        const refreshToken = generarRefreshToken(payload);
-
-        // Guardar el Refresh Token en la base de datos asociado al usuario
-        usuario.refreshToken = refreshToken;
-        await usuario.save();
-
-        // Enviar el Refresh Token como una Cookie HttpOnly
-        res.cookie(COOKIE_REFRESH, refreshToken, cookieOptions);
-
-        res.status(201).json({
-            mensaje: 'Usuario registrado correctamente',
-            accessToken,
-            usuario: {
-                id: usuario.id,
-                username: usuario.nombre
-            }
+        return emitirSesion(res, usuario, {
+            statusCode: 201,
+            mensaje: 'Usuario registrado correctamente'
         });
 
     } catch (error) {
@@ -183,10 +200,7 @@ router.post('/refresh', async (req, res) => {
 
         return res.status(200).json({
             accessToken: nuevoAccessToken,
-            usuario: {
-                id: usuario.id,
-                username: usuario.nombre
-            }
+            usuario: construirUsuarioRespuesta(usuario)
         });
     } catch (error) {
         return res.status(401).json({ error: 'No se pudo renovar la sesion.' });
@@ -230,8 +244,7 @@ router.post('/logout', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
     try {
-        const { username, password } = req.body;
-        const usernameNormalizado = (username || '').trim();
+        const { usernameNormalizado, password } = normalizarCredenciales(req.body);
 
         if (!usernameNormalizado || !password) {
             return res.status(400).json({ error: 'Por favor, rellena todos los campos obligatorios.' });
@@ -244,31 +257,13 @@ router.post('/login', async (req, res) => {
             return res.status(401).json({ error: 'Credenciales invalidas.' });
         }
 
-        // Validar la contraseña contra el hash almacenado
-        const passwordValida = await bcrypt.compare(password, usuario.password);
-        if (!passwordValida) {
+        const passwordEsValida = await bcrypt.compare(password, usuario.password);
+        if (!passwordEsValida) {
             return res.status(401).json({ error: 'Credenciales invalidas.' });
         }
 
-        // Generar nuevos tokens
-        const payload = construirPayload(usuario.id);
-        const accessToken = generarAccessToken(payload);
-        const refreshToken = generarRefreshToken(payload);
-
-        // Almacenar el nuevo Refresh Token en la base de datos
-        usuario.refreshToken = refreshToken;
-        await usuario.save();
-
-        // Establecer la cookie de seguridad
-        res.cookie(COOKIE_REFRESH, refreshToken, cookieOptions);
-
-        return res.status(200).json({
-            mensaje: 'Inicio de sesion exitoso',
-            accessToken,
-            usuario: {
-                id: usuario.id,
-                username: usuario.nombre
-            }
+        return emitirSesion(res, usuario, {
+            mensaje: 'Inicio de sesion exitoso'
         });
     } catch (error) {
         console.error('Error en el inicio de sesion:', error.message);

@@ -71,6 +71,33 @@ export function AuthProvider({ children }) {
     tokenRef.current = tokenNormalizado; 
   };
 
+  const parsearJsonSeguro = async (respuesta) => {
+    try {
+      return await respuesta.json();
+    } catch {
+      return {};
+    }
+  };
+
+  const solicitarAuth = async ({ endpoint, username, password, errorPorDefecto }) => {
+    const respuesta = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username, password }),
+    });
+
+    const data = await parsearJsonSeguro(respuesta);
+
+    if (!respuesta.ok) {
+      throw new Error(data.error || errorPorDefecto);
+    }
+
+    guardarToken(data.accessToken);
+    setUsuario(data.usuario);
+    return data;
+  };
+
   /**
    * Registra un nuevo usuario en el sistema.
    * * @param {Object} credenciales - Objeto con los datos del usuario.
@@ -81,27 +108,12 @@ export function AuthProvider({ children }) {
    */
   const register = async ({ username, password }) => {
     try {
-      const respuesta = await fetch(`${API_URL}/api/auth/registro`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ username, password }),
+      return await solicitarAuth({
+        endpoint: '/api/auth/registro',
+        username,
+        password,
+        errorPorDefecto: 'No se pudo completar el registro. Verifica los datos.'
       });
-
-      let data = {};
-      try {
-        data = await respuesta.json();
-      } catch (parseError) {
-        // Control de fallos si la respuesta del servidor no es un JSON válido
-      }
-
-      if (!respuesta.ok) {
-        throw new Error(data.error || 'No se pudo completar el registro. Verifica los datos.');
-      }
-
-      guardarToken(data.accessToken);
-      setUsuario(data.usuario);
-      return data;
     } catch (error) {
       console.error('Error en el registro:', error);
       throw new Error(error.message === 'Failed to fetch' ? 'Error de conexión con el servidor.' : error.message);
@@ -118,27 +130,12 @@ export function AuthProvider({ children }) {
    */
   const login = async ({ username, password }) => {
     try {
-      const respuesta = await fetch(`${API_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ username, password }),
+      return await solicitarAuth({
+        endpoint: '/api/auth/login',
+        username,
+        password,
+        errorPorDefecto: 'Credenciales incorrectas o error en la validación.'
       });
-
-      let data = {};
-      try {
-        data = await respuesta.json();
-      } catch (parseError) {
-        // Control de fallos si la respuesta del servidor no es un JSON válido
-      }
-
-      if (!respuesta.ok) {
-        throw new Error(data.error || 'Credenciales incorrectas o error en la validación.');
-      }
-
-      guardarToken(data.accessToken);
-      setUsuario(data.usuario);
-      return data;
     } catch (error) {
       console.error('Error en el inicio de sesión:', error);
       if (error.name === 'TypeError' || error.message === 'Failed to fetch') {

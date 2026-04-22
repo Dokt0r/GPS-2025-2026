@@ -1,12 +1,22 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext'; 
-import { useNavigate } from 'react-router-dom'; // Añadido para navegar
+import { useNavigate } from 'react-router-dom';
 
 function Login({ cargando = false }) {
   const { login } = useAuth();
-  const navigate = useNavigate(); // Inicializamos navigate
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
+    username: '',
+    password: ''
+  });
+
+  const [touched, setTouched] = useState({
+    username: false,
+    password: false
+  });
+
+  const [erroresCampo, setErroresCampo] = useState({
     username: '',
     password: ''
   });
@@ -21,9 +31,67 @@ function Login({ cargando = false }) {
     return true;
   };
 
+  const validarCampo = (name, value) => {
+    const valorLimpio = (value || '').trim();
+
+    if (!valorLimpio) {
+      return name === 'username'
+        ? 'El usuario es obligatorio.'
+        : 'La contraseña es obligatoria.';
+    }
+
+    if (!credencialValida(value)) {
+      return 'Debe tener entre 3 y 15 caracteres y no contener espacios.';
+    }
+
+    return '';
+  };
+
+  const obtenerErroresFormulario = (formulario) => ({
+    username: validarCampo('username', formulario.username),
+    password: validarCampo('password', formulario.password)
+  });
+
+  const validarFormulario = ({ username, password }) => {
+    const usernameLimpio = username.trim();
+    const passwordLimpia = password.trim();
+
+    if (!usernameLimpio || !passwordLimpia) {
+      return 'Completa todos los campos.';
+    }
+
+    if (!credencialValida(usernameLimpio) || !credencialValida(password)) {
+      return 'Las credenciales deben tener entre 3 y 15 caracteres y no contener espacios.';
+    }
+
+    return '';
+  };
+
   const manejarCambio = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    setForm((prev) => {
+      const siguiente = { ...prev, [name]: value };
+      if (touched[name]) {
+        setErroresCampo((prevErrores) => ({
+          ...prevErrores,
+          [name]: validarCampo(name, value)
+        }));
+      }
+      return siguiente;
+    });
+
+    if (error) setError('');
+    if (exito) setExito('');
+  };
+
+  const manejarBlur = (e) => {
+    const { name, value } = e.target;
+
+    setTouched((prev) => ({ ...prev, [name]: true }));
+    setErroresCampo((prev) => ({
+      ...prev,
+      [name]: validarCampo(name, value)
+    }));
   };
 
   const manejarSubmit = async (e) => {
@@ -31,17 +99,23 @@ function Login({ cargando = false }) {
     setError('');
     setExito('');
 
+    setTouched({ username: true, password: true });
+
+    const errores = obtenerErroresFormulario(form);
+    setErroresCampo(errores);
+
+    if (errores.username || errores.password) {
+      setError('Revisa los campos del formulario.');
+      return;
+    }
+
+    const errorValidacion = validarFormulario(form);
+    if (errorValidacion) {
+      setError(errorValidacion);
+      return;
+    }
+
     const usernameLimpio = form.username.trim();
-
-    if (!usernameLimpio || !form.password.trim()) {
-      setError('Completa todos los campos.');
-      return;
-    }
-
-    if (!credencialValida(usernameLimpio) || !credencialValida(form.password)) {
-      setError('Las credenciales deben tener entre 3 y 15 caracteres y no contener espacios.');
-      return;
-    }
 
     try {
       const resultado = await login({
@@ -51,10 +125,15 @@ function Login({ cargando = false }) {
 
       setExito(resultado?.mensaje || 'Inicio de sesión exitoso.');
       setForm({ username: '', password: '' });
+      setTouched({ username: false, password: false });
+      setErroresCampo({ username: '', password: '' });
     } catch (err) {
       setError(err?.message || 'Credenciales inválidas o error en el servidor.');
     }
   };
+
+  const hayErroresEnTiempoReal = Boolean(erroresCampo.username || erroresCampo.password);
+  const formularioIncompleto = !form.username.trim() || !form.password.trim();
 
   return (
     <div className="registro-wrapper">
@@ -72,11 +151,16 @@ function Login({ cargando = false }) {
               type="text"
               value={form.username}
               onChange={manejarCambio}
+              onBlur={manejarBlur}
               autoComplete="username"
               placeholder="Tu usuario"
               minLength={3}
               maxLength={15}
+              aria-invalid={Boolean(touched.username && erroresCampo.username)}
             />
+            {touched.username && erroresCampo.username && (
+              <p role="alert" className="registro-error">{erroresCampo.username}</p>
+            )}
           </div>
 
           <div className="input-group">
@@ -87,22 +171,30 @@ function Login({ cargando = false }) {
               type="password"
               value={form.password}
               onChange={manejarCambio}
+              onBlur={manejarBlur}
               autoComplete="current-password"
               placeholder="········"
               minLength={3}
               maxLength={15}
+              aria-invalid={Boolean(touched.password && erroresCampo.password)}
             />
+            {touched.password && erroresCampo.password && (
+              <p role="alert" className="registro-error">{erroresCampo.password}</p>
+            )}
           </div>
 
           {error && <p role="alert" className="registro-error">{error}</p>}
           {exito && <p role="status" className="registro-exito">{exito}</p>}
 
-          <button type="submit" className="btn-registro" disabled={cargando}>
+          <button
+            type="submit"
+            className="btn-registro"
+            disabled={cargando || formularioIncompleto || hayErroresEnTiempoReal}
+          >
             {cargando ? 'Iniciando...' : 'Entrar'}
           </button>
         </form>
 
-        {/* NUEVA SECCIÓN DE CAMBIO DE VISTA */}
         <div className="auth-toggle-inline">
           <p>¿Aún no tienes una cuenta?</p>
           <button 
