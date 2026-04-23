@@ -1,93 +1,118 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
-const tituloBase = `Receta Integracion Detalle ${Date.now()}`;
+// ============================================================
+// CONFIGURACIÓN DE DATOS
+// ============================================================
 
-
-const esperarConexionMongo = async (timeoutMs = 10000) => {
-  const inicio = Date.now();
-
-  while (mongoose.connection.readyState !== 1 && Date.now() - inicio < timeoutMs) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-
-  if (mongoose.connection.readyState !== 1) {
-    throw new Error(
-      'No se pudo establecer conexion con MongoDB Atlas. Revisa MONGODB_URI y whitelist de IP.'
-    );
-  }
+const recetaDetalleBase = {
+  title: "TEST_Tarta de Queso",
+  ingredients: [
+    { nombre: "Queso Crema", cantidad: 500, unidad: "g" },
+    { nombre: "Huevos", cantidad: 4, unidad: "ud" }
+  ],
+  steps: ["Mezclar todo", "Hornear a 200 grados"],
+  image_url: "https://via.placeholder.com/150",
+  isTest: true
 };
 
-describe('API de Recetas - Integracion detalle (DB real)', () => {
-  beforeAll(async () => {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI no esta definida. Configura el .env para tests con DB real.');
-    }
+const titulosBase = new Set([recetaDetalleBase.title]);
 
-    if (mongoose.connection.readyState === 0) {
-      await mongoose
-        .connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
-        .catch(() => {});
-    }
+// ============================================================
+// SETUP / TEARDOWN
+// ============================================================
 
-    await esperarConexionMongo(10000);
+beforeAll(async () => {
+  if (mongoose.connection.readyState !== 1) {
+    await mongoose.connect(process.env.MONGODB_URI);
+  }
+  // Limpiamos solo lo que nos pertenece
+  await Receta.create(recetaDetalleBase);
+});
 
-    await Receta.findOneAndUpdate(
-      { title: tituloBase },
-      {
-        title: tituloBase,
-        steps: ['Paso de prueba 1', 'Paso de prueba 2'],
-        image_url: 'https://example.com/integracion-detalle.jpg',
-        ingredients: [
-          { nombre: 'Arroz', cantidad: 200, unidad: 'g' },
-          { nombre: 'Pollo', cantidad: 300, unidad: 'g' }
-        ],
-        nutritions: { calories: 100 },
-        tags: ['test']
-      },
-      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-    );
+afterEach(async () => {
+  /* Limpieza segura: no borramos la receta base del beforeAll
+  await Receta.deleteMany({
+    isTest: true,
+    title: { $nin: Array.from(titulosBase) }
+  });*/
+});
+
+afterAll(async () => {
+  await mongoose.connection.close();
+});
+
+// ============================================================
+// PRUEBAS DE INTEGRACIÓN: GET /api/recetas/:titulo
+// ============================================================
+
+describe('GET /api/recetas/:titulo — Detalle de receta', () => {
+
+  test('Debe obtener una receta correctamente por su título', async () => {
+    // Codificamos el título para simular comportamiento del navegador/frontend
+    const tituloUrl = encodeURIComponent("TEST_Tarta de Queso");
+
+    const res = await request(app).get(`/api/recetas/${tituloUrl}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe(recetaDetalleBase.title);
+    expect(res.body.steps).toEqual(expect.arrayContaining(recetaDetalleBase.steps));
+    expect(res.body).toHaveProperty('_id');
   });
 
-  afterAll(async () => {
-    if (mongoose.connection.readyState === 1) {
-      await Receta.deleteOne({ title: tituloBase });
-    }
+  test('Debe ser insensible a mayúsculas/minúsculas (Case Insensitive)', async () => {
+    // Buscamos en minúsculas aunque en la BBDD está capitalizado
+    const res = await request(app).get(`/api/recetas/test_tarta de queso`);
 
-    await mongoose.disconnect().catch(() => {});
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe("TEST_Tarta de Queso");
   });
 
-  describe('GET /api/recetas/:titulo', () => {
-    test('devuelve 404 cuando la receta no existe', async () => {
-      const res = await request(app).get('/api/recetas/Receta%20Inexistente%20XYZ');
-
-      expect(res.status).toBe(404);
-      expect(res.body).toHaveProperty('error', 'Receta no encontrada');
+  test('Debe manejar correctamente caracteres especiales y espacios (decodeURIComponent)', async () => {
+    const recetaEspecial = await Receta.create({
+      title: "TEST_Ensalada de Ñandú!",
+      ingredients: [{ nombre: "Lechuga", cantidad: 1, unidad: "ud" }],
+      steps: ["Paso 1"],
+      image_url: "https://via.placeholder.com/150", // <--- Añadido
+      isTest: true
     });
 
-    test('devuelve 200 y el detalle completo cuando existe', async () => {
-      const res = await request(app).get(`/api/recetas/${encodeURIComponent(tituloBase)}`);
+    const tituloUrl = encodeURIComponent(recetaEspecial.title);
+    const res = await request(app).get(`/api/recetas/${tituloUrl}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('title', tituloBase);
-      expect(Array.isArray(res.body.ingredients)).toBe(true);
-      expect(Array.isArray(res.body.steps)).toBe(true);
-      expect(res.body.steps.length).toBeGreaterThan(0);
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe("TEST_Ensalada de Ñandú!");
+  });
+
+  test('Debe devolver 404 si la receta no existe', async () => {
+    const res = await request(app).get('/api/recetas/Receta_Inexistente_123');
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error', 'Receta no encontrada');
+  });
+
+  test('Debe evitar inyecciones de Regex o búsquedas parciales incorrectas', async () => {
+    // Tu código usa ^ y $, por lo que "Tarta" no debería encontrar "TEST_Tarta de Queso"
+    const res = await request(app).get('/api/recetas/Tarta');
+
+    expect(res.status).toBe(404);
+  });
+
+  test('Debe funcionar con títulos que contienen puntos o paréntesis (escape de regex)', async () => {
+    const recetaPuntos = await Receta.create({
+      title: "TEST_Receta con (Paréntesis)...",
+      ingredients: [{ nombre: "Agua", cantidad: 1, unidad: "ml" }],
+      steps: ["Paso 1"],
+      image_url: "https://via.placeholder.com/150", // <--- Añadido
+      isTest: true
     });
 
-    test('encuentra la receta sin distinguir mayusculas/minusculas', async () => {
-      const tituloAlterado = tituloBase
-        .split(' ')
-        .map((p, i) => (i % 2 === 0 ? p.toUpperCase() : p.toLowerCase()))
-        .join(' ');
+    const tituloUrl = encodeURIComponent(recetaPuntos.title);
+    const res = await request(app).get(`/api/recetas/${tituloUrl}`);
 
-      const res = await request(app).get(`/api/recetas/${encodeURIComponent(tituloAlterado)}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('title', tituloBase);
-    });
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe(recetaPuntos.title);
   });
 });
