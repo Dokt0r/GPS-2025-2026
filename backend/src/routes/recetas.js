@@ -204,5 +204,60 @@ router.delete('/ingrediente', async (req, res) => {
         res.status(500).json({ error: "Error al eliminar ingrediente" });
     }
 });
+// =========================================================================
+// ENDPOINT: (Guardar receta como favorita)
+// =========================================================================
 
+router.post('/favoritos', requireAuth, async (req, res) => {
+    try {
+        // Asumimos que el frontend nos envía el ID de la receta en el body
+        const { recetaId } = req.body;
+
+        if (!recetaId) {
+            return res.status(400).json({ error: "Falta el ID de la receta." });
+        }
+
+      
+        const receta = await Receta.findById(recetaId);
+        if (!receta) {
+            return res.status(404).json({ error: "La receta no existe." });
+        }
+
+       
+        const usuario = await Usuario.findById(req.usuario.id);
+        if (!usuario) {
+            return res.status(401).json({ error: "Usuario no autorizado." });
+        }
+
+       
+        let listaFavoritos = usuario.listas.find(lista => lista.nombreLista.toLowerCase() === 'favoritos');
+
+        
+        if (!listaFavoritos) {
+            usuario.listas.push({ nombreLista: 'Favoritos', recetas: [] });
+            listaFavoritos = usuario.listas[usuario.listas.length - 1]; // Apuntamos a la recién creada
+        }
+
+        
+       
+        const recetaYaGuardada = listaFavoritos.recetas.some(idGuardado => idGuardado.toString() === recetaId.toString());
+        
+        if (recetaYaGuardada) {
+            return res.status(400).json({ error: "La receta ya está en tu lista de favoritos." });
+        }
+
+       
+        listaFavoritos.recetas.push(recetaId);
+        await usuario.save(); 
+
+        res.status(200).json({ 
+            success: true, 
+            mensaje: "Receta añadida a tu lista de favoritos correctamente." 
+        });
+
+    } catch (error) {
+        console.error("Error al guardar receta como favorita:", error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
 module.exports = router;
