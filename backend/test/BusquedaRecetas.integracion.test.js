@@ -85,22 +85,16 @@ beforeAll(async () => {
     if (mongoose.connection.readyState !== 1) {
         await mongoose.connect(process.env.MONGODB_URI);
     }
-    await Receta.deleteMany({ isTest: true });
     await Receta.insertMany(recetasBase);
 });
 
 afterEach(async () => {
     // Elimina solo las recetas creadas dentro de cada test individual,
     // preservando el set base definido en beforeAll.
-    await Receta.deleteMany({
-        isTest: true,
-        title: { $nin: Array.from(titulosBase) }
-    });
 });
 
 afterAll(async () => {
     try {
-        const resultado = await Receta.deleteMany({ isTest: true });
         console.log(`Limpieza final: ${resultado.deletedCount} recetas de test eliminadas.`);
     } catch (error) {
         console.error("Error limpiando la base de datos tras los tests:", error);
