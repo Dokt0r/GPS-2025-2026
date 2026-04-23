@@ -114,22 +114,29 @@ function App() {
   };
 
   const restarIngredientesReceta = (ingredientesReceta) => {
-    setIngredientesNevera(prev => {
-      const nuevaLista = prev.map(neveraIng => ({ ...neveraIng }));
-      for (const recetaIng of ingredientesReceta) {
-        const idx = nuevaLista.findIndex(n =>
-          recetaIng.nombre.toLowerCase().includes(n.nombre.toLowerCase())
-        );
-        if (idx === -1) continue;
+  setIngredientesNevera(prev => {
+    const nuevaLista = prev.map(neveraIng => ({ ...neveraIng }));
+    
+    for (const recetaIng of ingredientesReceta) {
+      // Mantenemos tu lógica original de .includes() que es muy útil
+      const idx = nuevaLista.findIndex(n =>
+        recetaIng.nombre.toLowerCase().includes(n.nombre.toLowerCase())
+      );
+      
+      if (idx === -1) continue;
 
-        const neveraIng = nuevaLista[idx];
-        let nuevaCantidad = neveraIng.cantidad - recetaIng.cantidad;
+      const neveraIng = nuevaLista[idx];
+      let nuevaCantidad = neveraIng.cantidad - recetaIng.cantidad;
 
-        nuevaLista[idx].cantidad = Math.max(0, parseFloat(nuevaCantidad.toFixed(2)));
-      }
-      return nuevaLista.filter(i => i.cantidad > 0);
-    });
-  };
+      // Quitamos el Math.max(0, ...). 
+      // Dejamos que dé negativo si hace falta, pero mantenemos tu corrección de decimales.
+      nuevaLista[idx].cantidad = parseFloat(nuevaCantidad.toFixed(2));
+    }
+    
+    // Al devolver la lista, filtramos y nos cargamos todos los que estén en 0 o menos
+    return nuevaLista.filter(i => i.cantidad > 0);
+  });
+};
 
   const buscarRecetas = () => {
     if (ingredientesNevera.length === 0) {

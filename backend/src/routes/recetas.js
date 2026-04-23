@@ -128,43 +128,43 @@ router.put('/completar', requireAuth, async (req, res) => {
         const { titulo, steps, ingredients } = req.body;
         const tituloSeguro = escaparRegex(titulo);
 
-        // 1. Buscamos al usuario logueado y "populamos" las referencias de su nevera
-        // para poder comparar por nombre fácilmente.
+        // 1. Buscamos al usuario logueado y populamos su nevera
         const usuario = await Usuario.findById(req.usuario.id).populate('nevera.ingrediente');
         
         if (!usuario) {
             return res.status(401).json({ error: "Usuario no autenticado correctamente." });
         }
 
-        // 2. Buscamos la receta que se va a completar
+        // 2. Buscamos la receta
         const receta = await Receta.findOne({ 
             title: new RegExp('^' + tituloSeguro + '$', 'i') 
         });
 
         if (!receta) return res.status(404).json({ error: "Receta no encontrada." });
 
-        
-        // Recorremos los ingredientes que el frontend nos dice que se han usado
+        // 3. Procesamos los ingredientes usados
         for (const ingUsado of ingredients) {
             
-            // Buscamos si ese ingrediente existe en la nevera del usuario
-            // Usamos una comparación segura (escaparRegex y toLowerCase)
+            // Buscamos si el ingrediente existe en la nevera
             const itemEnNevera = usuario.nevera.find(item => 
-                escaparRegex(item.ingrediente.nombre.toLowerCase()) === escaparRegex(ingUsado.nombre.toLowerCase()) &&
+                item.ingrediente.nombre.toLowerCase() === ingUsado.nombre.toLowerCase() &&
                 item.unidad.toLowerCase() === ingUsado.unidad.toLowerCase()
             );
 
-            // "Resta los que tenga, ignora los que no tenga"
+            // REQUISITO: "Resta los que tenga, ignora los que no tenga (sin dar error)"
+            // Al estar dentro de este if, si itemEnNevera es undefined (porque falta), 
+            // simplemente se salta la resta y continúa, permitiendo completar la receta.
             if (itemEnNevera) {
-                // Restamos la cantidad asegurándonos de que no baje de 0
-                itemEnNevera.cantidad = Math.max(0, itemEnNevera.cantidad - ingUsado.cantidad);
-                
-               
+                // Restamos la cantidad directamente (puede quedar en negativo temporalmente)
+                itemEnNevera.cantidad -= ingUsado.cantidad;
             }
-            // Si itemEnNevera es null, el código simplemente sigue (ignora)
         }
 
-       
+        // REQUISITO: "Los que darían por debajo de cero que se eliminen de la nevera"
+        // Filtramos la nevera para conservar ÚNICAMENTE los ingredientes con cantidad > 0.
+        // Esto elimina automáticamente los que quedaron a 0 o en números negativos.
+        usuario.nevera = usuario.nevera.filter(item => item.cantidad > 0);
+
         await usuario.save();
 
         // 4. Actualizamos los datos de la receta
@@ -174,7 +174,10 @@ router.put('/completar', requireAuth, async (req, res) => {
 
         await receta.save();
 
-        res.status(200).json({ success: true, mensaje: "Receta completada e ingredientes restados de tu nevera." }); 
+        res.status(200).json({ 
+            success: true, 
+            mensaje: "Receta completada e ingredientes actualizados en tu nevera." 
+        }); 
 
     } catch (error) {
         console.error("Error al completar receta y restar ingredientes:", error);

@@ -102,10 +102,10 @@ const VistaDetalles = () => {
 
     const faltantes = calcularFaltantes(receta.ingredients, ingredientesNevera);
 
-    if (faltantes.length > 0) {
+    /*if (faltantes.length > 0) {
       setErrorCompletar(faltantes);
       return;
-    }
+    } */
 
     try {
       const response = await fetchConAuth(`${API_URL}/api/recetas/completar`, {
