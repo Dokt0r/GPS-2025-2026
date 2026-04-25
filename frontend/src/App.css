@@ -1358,6 +1358,11 @@ background: rgba(255, 255, 255, 0.05);
   font-size: 1rem;
 }
 
+input.is-invalid {
+  border-color: #ff6b6b !important;
+  background-color: rgba(255, 107, 107, 0.05) !important;
+}
+
 /* 5. El botón integrado al final */
 .btn-toggle-password-embedded {
   background: none;

@@ -16,9 +16,11 @@ function Registro({ cargando = false }) {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
 
-  // NUEVO: Estados independientes para mostrar/ocultar cada contraseña
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmPassword, setMostrarConfirmPassword] = useState(false);
+  
+  // NUEVO: Estado para saber si el usuario ha intentado enviar el formulario
+  const [intentadoEnviar, setIntentadoEnviar] = useState(false);
 
   const credencialValida = (valor) => {
     if (typeof valor !== 'string') return false;
@@ -30,10 +32,13 @@ function Registro({ cargando = false }) {
   const manejarCambio = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    // Ocultar mensaje de error general al empezar a escribir de nuevo
+    if (error) setError('');
   };
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
+    setIntentadoEnviar(true); // Se activa la validación visual de vacíos
     setError('');
     setExito('');
 
@@ -62,6 +67,7 @@ function Registro({ cargando = false }) {
 
       setExito(resultado?.mensaje || 'Registro realizado correctamente.');
       setForm({ username: '', password: '', confirmPassword: '' });
+      setIntentadoEnviar(false); // Reseteamos al tener éxito
     } catch (err) {
       setError(err?.message || 'No se pudo completar el registro.');
     }
@@ -77,23 +83,24 @@ function Registro({ cargando = false }) {
         <form onSubmit={manejarSubmit} className="registro-form">
           <div className="input-group">
             <label htmlFor="username">Usuario</label>
-            <input
-              id="username"
-              name="username"
-              type="text"
-              value={form.username}
-              onChange={manejarCambio}
-              autoComplete="username"
-              placeholder="Tu usuario"
-              minLength={3}
-              maxLength={15}
-            />
+            <div className={`input-group-embedded ${intentadoEnviar && !form.username.trim() ? 'is-invalid' : ''}`}>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={form.username}
+                onChange={manejarCambio}
+                autoComplete="username"
+                placeholder="Tu usuario"
+                minLength={3}
+                maxLength={15}
+              />
+            </div>
           </div>
 
-          {/* CAMPO CONTRASEÑA INTEGRADO */}
           <div className="input-group">
             <label htmlFor="password">Contraseña</label>
-            <div className="input-group-embedded">
+            <div className={`input-group-embedded ${intentadoEnviar && !form.password.trim() ? 'is-invalid' : ''}`}>
               <input
                 id="password"
                 name="password"
@@ -126,10 +133,9 @@ function Registro({ cargando = false }) {
             </div>
           </div>
 
-          {/* CAMPO CONFIRMAR CONTRASEÑA INTEGRADO */}
           <div className="input-group">
             <label htmlFor="confirmPassword">Confirmar contraseña</label>
-            <div className="input-group-embedded">
+            <div className={`input-group-embedded ${intentadoEnviar && !form.confirmPassword.trim() ? 'is-invalid' : ''}`}>
               <input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -137,7 +143,7 @@ function Registro({ cargando = false }) {
                 value={form.confirmPassword}
                 onChange={manejarCambio}
                 autoComplete="new-password"
-                placeholder="Confirmar contraseña"
+                placeholder=""
                 minLength={3}
                 maxLength={15}
               />
