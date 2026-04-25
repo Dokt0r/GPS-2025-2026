@@ -30,7 +30,7 @@ const renderLogin = (props = {}) =>
 
 /** Rellena usuario y contraseña y hace clic en "Entrar". */
 const rellenarYEnviar = async (user, username, password) => {
-  await user.type(screen.getByLabelText('Usuario'),    username);
+  await user.type(screen.getByLabelText('Usuario'), username);
   await user.type(screen.getByLabelText('Contraseña'), password);
   await user.click(screen.getByRole('button', { name: 'Entrar' }));
 };
@@ -43,7 +43,9 @@ const botonEntrar = ()     => screen.getByRole('button', { name: 'Entrar' });
 
 const MSG = {
   usuarioObligatorio : 'El usuario es obligatorio.',
-  credencialInvalida : 'Debe tener entre 3 y 15 caracteres y no contener espacios.',
+  passwordObligatoria: 'La contraseña es obligatoria.',
+  // NUEVO: El mensaje de credencial inválida ya no menciona los espacios
+  credencialInvalida : 'Debe tener entre 3 y 15 caracteres.',
   fallbackError      : 'Credenciales inválidas o error en el servidor.',
 };
 
@@ -67,10 +69,16 @@ describe('Login – formulario de inicio de sesión', () => {
       expect(botonEntrar()).toBeInTheDocument();
     });
 
-    test('el botón "Entrar" está deshabilitado si los campos están vacíos', () => {
+    // NUEVO: Como ahora dejamos el botón activado para poder mostrar los errores visuales, comprobamos eso.
+    test('muestra errores en los campos si se intenta enviar el formulario vacío', async () => {
+      const user = userEvent.setup();
       renderLogin();
 
-      expect(botonEntrar()).toBeDisabled();
+      await user.click(botonEntrar());
+
+      expect(await screen.findByText(MSG.usuarioObligatorio)).toBeInTheDocument();
+      expect(await screen.findByText(MSG.passwordObligatoria)).toBeInTheDocument();
+      expect(mockLogin).not.toHaveBeenCalled();
     });
 
     test('estado cargando: muestra "Iniciando..." y deshabilita el botón', () => {
@@ -147,7 +155,7 @@ describe('Login – formulario de inicio de sesión', () => {
 
   });
 
-  // ── Validación en tiempo real (blur) ─────────────────────────────────────
+  // ── Validación en tiempo real (blur y onChange) ──────────────────────────
 
   describe('validaciones de campo', () => {
 
@@ -161,14 +169,16 @@ describe('Login – formulario de inicio de sesión', () => {
       expect(await screen.findByText(MSG.usuarioObligatorio)).toBeInTheDocument();
     });
 
-    test('muestra error cuando el usuario contiene espacios internos', async () => {
+    // NUEVO: Verificamos que nuestra nueva lógica de limpiar espacios funciona correctamente en lugar de dar error
+    test('elimina los espacios automáticamente al escribir (no permite espacios)', async () => {
       const user = userEvent.setup();
       renderLogin();
 
-      await user.type(campo('Usuario'), 'ana p');
-      await user.tab();
-
-      expect(await screen.findByText(MSG.credencialInvalida)).toBeInTheDocument();
+      const inputUsuario = campo('Usuario');
+      await user.type(inputUsuario, 'a n a p');
+      
+      expect(inputUsuario).toHaveValue('anap');
+      expect(screen.queryByText(MSG.credencialInvalida)).not.toBeInTheDocument();
     });
 
     test('muestra error cuando la contraseña es demasiado corta', async () => {
@@ -181,12 +191,14 @@ describe('Login – formulario de inicio de sesión', () => {
       expect(await screen.findByText(MSG.credencialInvalida)).toBeInTheDocument();
     });
 
-    test('el botón queda deshabilitado si el usuario tiene sólo espacios en los extremos', async () => {
+    // NUEVO: Adaptamos este test para asegurar que el botón se desactiva cuando hay un error explícito
+    test('el botón queda deshabilitado si hay errores visuales en tiempo real', async () => {
       const user = userEvent.setup();
       renderLogin();
 
-      await user.type(campo('Usuario'),    '   maria   ');
+      await user.type(campo('Usuario'), 'ab'); // Provocamos un error por longitud
       await user.type(campo('Contraseña'), 'secreta');
+      await user.tab();
 
       expect(await screen.findByText(MSG.credencialInvalida)).toBeInTheDocument();
       expect(botonEntrar()).toBeDisabled();

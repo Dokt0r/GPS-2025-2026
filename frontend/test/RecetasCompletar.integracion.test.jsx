@@ -4,6 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import VistaDetalles from '../src/VistaDetalles';
 import { NeveraContext } from '../src/NeveraContext';
+import { AuthProvider } from '../src/AuthContext'; // <-- Añadido el AuthProvider
 
 // Receta base reutilizable para no repetir datos en cada test.
 // Representa un caso "normal" de receta con ingredientes y pasos.
@@ -15,7 +16,7 @@ const recetaBase = {
 };
 
 // Helper de integración:
-// - Mockea la llamada fetch del detalle de receta.
+// - Mockea la llamada fetch del detalle de receta y autenticación.
 // - Monta VistaDetalles dentro de Router real (MemoryRouter) con rutas.
 // - Inyecta NeveraContext para simular estado de nevera y función de descuento.
 const renderVistaDetallesIntegracion = ({
@@ -23,25 +24,41 @@ const renderVistaDetallesIntegracion = ({
   restarIngredientesReceta = vi.fn(),
   receta = recetaBase,
 } = {}) => {
-  // Simulamos respuesta exitosa del backend con la receta recibida por parámetro.
-  global.fetch = vi.fn(() =>
-    Promise.resolve({
+  
+  // Mock inteligente: responde al Auth y a la Receta
+  global.fetch = vi.fn(async (input) => {
+    const url = typeof input === 'string' ? input : input.url;
+
+    // 1. Resolver la autenticación del AuthProvider
+    if (url.includes('/api/auth/refresh')) {
+      return { 
+        ok: true, 
+        status: 200, 
+        json: async () => ({ accessToken: 'fake-token', usuario: { id: 'u1' } }) 
+      };
+    }
+
+    // 2. Resolver la petición de la receta
+    return {
       ok: true,
-      json: () => Promise.resolve(receta),
-    })
-  );
+      status: 200,
+      json: async () => receta,
+    };
+  });
 
   // Ruta inicial: detalle de receta.
   // Ruta "/": pantalla de nevera simplificada para comprobar navegación tras completar.
   render(
-    <NeveraContext.Provider value={{ ingredientesNevera, restarIngredientesReceta }}>
-      <MemoryRouter initialEntries={['/receta/tortilla']}>
-        <Routes>
-          <Route path="/receta/:titulo" element={<VistaDetalles />} />
-          <Route path="/" element={<h1>Pantalla Nevera</h1>} />
-        </Routes>
-      </MemoryRouter>
-    </NeveraContext.Provider>
+    <AuthProvider>
+      <NeveraContext.Provider value={{ ingredientesNevera, restarIngredientesReceta }}>
+        <MemoryRouter initialEntries={['/receta/tortilla']}>
+          <Routes>
+            <Route path="/receta/:titulo" element={<VistaDetalles />} />
+            <Route path="/" element={<h1>Pantalla Nevera</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </NeveraContext.Provider>
+    </AuthProvider>
   );
 
   return { restarIngredientesReceta };

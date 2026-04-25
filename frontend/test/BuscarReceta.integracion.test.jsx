@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App';
+import { AuthProvider } from '../src/AuthContext';
 
 // ==========================================
 // DATOS MOCK
@@ -19,36 +20,32 @@ const RECETAS_MOCK = [
     { _id: 'r3', title: 'Risotto', image_url: 'img3.jpg', coincidenciaTexto: '1/5' },
 ];
 
-// Helper: renderiza la App completa con router
 const renderApp = () =>
     render(
-        <MemoryRouter initialEntries={['/']}>
-            <App />
-        </MemoryRouter>
+        <AuthProvider>
+            <MemoryRouter initialEntries={['/']}>
+                <App />
+            </MemoryRouter>
+        </AuthProvider>
     );
 
 // ==========================================
-// HELPER ACTUALIZADO: FLUJO CON MODAL
+// HELPER: FLUJO CON MODAL
 // ==========================================
 const añadirIngrediente = async (nombre, cantidad = '100') => {
-    // 1. Abrir el modal con el FAB
     const fabBtn = await screen.findByText('+');
     fireEvent.click(fabBtn);
 
-    // 2. Esperar a que el input aparezca
     const input = await screen.findByPlaceholderText(/Ingrediente/i);
     fireEvent.change(input, { target: { value: nombre } });
 
-    // 3. Seleccionar sugerencia
     const sugerencia = await screen.findByText(nombre, { selector: '.sugerencia-item' });
     fireEvent.click(sugerencia);
 
-    // 4. Cambiar cantidad y confirmar
     const inputCantidad = screen.getByPlaceholderText('Cant.');
     fireEvent.change(inputCantidad, { target: { value: cantidad } });
     fireEvent.click(screen.getByText(/Confirmar Selección/i));
 
-    // 5. Cerrar el modal evitando colisión de '✕'
     await waitFor(() => {
         const btnCerrar = document.querySelector('.btn-cerrar-modal');
         if (btnCerrar) {
@@ -56,7 +53,6 @@ const añadirIngrediente = async (nombre, cantidad = '100') => {
         }
     });
 
-    // 6. Esperar a que el modal se cierre
     await waitFor(() => {
         expect(screen.queryByPlaceholderText(/Ingrediente/i)).not.toBeInTheDocument();
     });
@@ -72,21 +68,63 @@ afterEach(() => {
 
 describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
+    let forzarErrorRecetas = false;
+    let forzarRecetasVacias = false;
+    let neveraMockState = []; // <-- ESTADO EN MEMORIA PARA EL MOCK
+
     beforeEach(() => {
-        // Mock robusto: responde según la URL solicitada para evitar colisiones entre el Buscador y las Recetas
-        global.fetch = vi.fn(async (url) => {
-            if (url.includes('/api/ingredientes')) {
-                return { ok: true, json: async () => INGREDIENTES_MOCK };
+        forzarErrorRecetas = false;
+        forzarRecetasVacias = false;
+        neveraMockState = []; // Limpiamos la nevera antes de cada test
+
+        global.fetch = vi.fn(async (input, options = {}) => {
+            const url = typeof input === 'string' ? input : input.url;
+
+            // 1. Simular sesión activa
+            if (url.includes('/api/auth/refresh')) {
+                return { ok: true, status: 200, json: async () => ({ accessToken: 'token', usuario: { id: 'u1' } }) };
             }
+
+            // 2. Diccionario de ingredientes (Importante: que no pise la ruta de la nevera)
+            if (url.includes('/api/ingredientes') && !url.includes('nevera')) {
+                return { ok: true, status: 200, json: async () => INGREDIENTES_MOCK };
+            }
+
+            // 3. API Nevera (ESTADO DINÁMICO)
+            if (url.includes('/api/ingredientes/nevera')) {
+                // Si el frontend añade un ingrediente, lo guardamos en nuestro estado mockeado
+                if (options.method === 'POST' || options.method === 'PUT') {
+                    if (options.body) {
+                        try {
+                            const bodyParseado = JSON.parse(options.body);
+                            // Soportar si el frontend envía toda la nevera o solo un item
+                            if (bodyParseado.nevera) {
+                                neveraMockState = bodyParseado.nevera;
+                            } else {
+                                neveraMockState.push(bodyParseado);
+                            }
+                        } catch (e) {}
+                    }
+                    return { ok: true, status: 200, json: async () => ({ nevera: neveraMockState }) };
+                }
+                // Las peticiones GET ahora devolverán lo que se haya añadido previamente
+                return { ok: true, status: 200, json: async () => ({ nevera: neveraMockState }) };
+            }
+
+            // 4. API Recetas
             if (url.includes('/api/recetas')) {
-                return { ok: true, json: async () => RECETAS_MOCK };
+                if (forzarErrorRecetas) return Promise.reject(new Error('Network error'));
+                if (forzarRecetasVacias) return { ok: true, status: 200, json: async () => [] };
+                return { ok: true, status: 200, json: async () => RECETAS_MOCK };
             }
+
             return { ok: false, status: 404 };
         });
     });
 
     test('Al buscar recetas con ingredientes en la nevera, VistaRecetas muestra los resultados', async () => {
         renderApp();
+        await screen.findByText('Mi Nevera Virtual');
         
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
@@ -100,6 +138,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('Las recetas muestran su badge de coincidencia correctamente', async () => {
         renderApp();
+        await screen.findByText('Mi Nevera Virtual');
         
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
@@ -111,46 +150,40 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('El fetch de recetas recibe los ingredientes de la nevera correctamente formateados', async () => {
         renderApp();
+        await screen.findByText('Mi Nevera Virtual');
         
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
         await screen.findByText('Recetas sugeridas');
 
-        // Buscamos específicamente la llamada a la API de recetas
-        const llamadaRecetas = global.fetch.mock.calls.find(call => call[0].includes('/api/recetas'));
-        expect(llamadaRecetas[0]).toContain('tomate');
+        const llamadaRecetas = global.fetch.mock.calls.find(call => {
+            const url = typeof call[0] === 'string' ? call[0] : call[0].url;
+            return url.includes('/api/recetas');
+        });
+        
+        const urlLlamada = typeof llamadaRecetas[0] === 'string' ? llamadaRecetas[0] : llamadaRecetas[0].url;
+        expect(urlLlamada.toLowerCase()).toContain('tomate');
     });
 
     test('Si el servidor de recetas falla, VistaRecetas muestra el mensaje de error', async () => {
-        // Sobreescribimos el mock para forzar el error en este test
-        global.fetch.mockImplementation(async (url) => {
-            if (url.includes('/api/ingredientes')) {
-                return { ok: true, json: async () => INGREDIENTES_MOCK };
-            }
-            return Promise.reject(new Error('Network error'));
-        });
+        forzarErrorRecetas = true;
 
         renderApp();
+        await screen.findByText('Mi Nevera Virtual');
         
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
 
+        // Nota: Asegúrate de que este texto coincida exactamente con lo que tienes en el componente frontend
         expect(await screen.findByText('Hubo un problema al buscar las recetas.')).toBeInTheDocument();
     });
 
     test('Si el servidor devuelve recetas vacías, VistaRecetas muestra el mensaje correspondiente', async () => {
-        // Sobreescribimos para que las recetas devuelvan un array vacío
-        global.fetch.mockImplementation(async (url) => {
-            if (url.includes('/api/ingredientes')) {
-                return { ok: true, json: async () => INGREDIENTES_MOCK };
-            }
-            if (url.includes('/api/recetas')) {
-                return { ok: true, json: async () => [] };
-            }
-        });
+        forzarRecetasVacias = true;
 
         renderApp();
+        await screen.findByText('Mi Nevera Virtual');
         
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
@@ -160,6 +193,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('Desde VistaRecetas, el botón Volver a la Nevera regresa a la vista principal', async () => {
         renderApp();
+        await screen.findByText('Mi Nevera Virtual');
         
         await añadirIngrediente('Tomate', '2');
         fireEvent.click(screen.getByText('Buscar Recetas'));
@@ -173,6 +207,7 @@ describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
 
     test('Los ingredientes de la nevera se mantienen al volver desde VistaRecetas', async () => {
         renderApp();
+        await screen.findByText('Mi Nevera Virtual');
         
         await añadirIngrediente('Tomate', '2');
         await añadirIngrediente('Arroz', '200');

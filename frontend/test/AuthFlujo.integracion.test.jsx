@@ -147,33 +147,8 @@ describe('Integracion autenticacion - flujo de login', () => {
     expect(screen.getByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
   });
 
-  // Verifica que el usuario se recorta antes de enviar el login.
-  test('login con usuario con espacios lo normaliza antes de enviar la peticion', async () => {
-    const user = userEvent.setup();
-    mockApi({ refreshOk: false, loginOk: true });
-
-    renderApp('/login');
-
-    await screen.findByRole('heading', { name: 'Iniciar sesión' });
-
-    await user.type(screen.getByLabelText('Usuario'), '   maria   ');
-    await user.type(screen.getByLabelText('Contraseña'), 'secreta');
-    await user.click(screen.getByRole('button', { name: 'Entrar' }));
-
-    expect(await screen.findByText('Bienvenido de nuevo')).toBeInTheDocument();
-
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/auth/login'),
-        expect.objectContaining({
-          body: JSON.stringify({ username: 'maria', password: 'secreta' }),
-        })
-      );
-    });
-  });
-
-  // Verifica que un usuario con espacios internos activa la validacion de campo y bloquea el envio.
-  test('muestra validacion de campo y deshabilita el boton si el usuario tiene espacios internos', async () => {
+  // NUEVO: verificamos que si, tras quitar espacios, es corto, salta el error y bloquea.
+  test('muestra validacion de campo y deshabilita el boton si la longitud no es válida', async () => {
     const user = userEvent.setup();
     mockApi({ refreshOk: false });
 
@@ -181,10 +156,11 @@ describe('Integracion autenticacion - flujo de login', () => {
 
     await screen.findByRole('heading', { name: 'Iniciar sesión' });
 
-    await user.type(screen.getByLabelText('Usuario'), 'ana p');
+    // Escribimos algo que, al quitar espacios, quede en menos de 3 caracteres
+    await user.type(screen.getByLabelText('Usuario'), 'a b');
     await user.tab();
 
-    expect(await screen.findByText('Debe tener entre 3 y 15 caracteres y no contener espacios.')).toBeInTheDocument();
+    expect(await screen.findByText('Debe tener entre 3 y 15 caracteres.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entrar' })).toBeDisabled();
     expect(global.fetch).not.toHaveBeenCalledWith(
       expect.stringContaining('/api/auth/login'),
@@ -192,8 +168,8 @@ describe('Integracion autenticacion - flujo de login', () => {
     );
   });
 
-  // Verifica que no se puede enviar el formulario con campos vacios.
-  test('muestra validacion de formulario incompleto antes de enviar', async () => {
+  // NUEVO: Se verifica que el intento de enviar en blanco revela los errores debajo de cada input.
+  test('muestra errores de campo obligatorio si se intenta enviar el formulario vacío', async () => {
     const user = userEvent.setup();
     mockApi({ refreshOk: false });
 
@@ -201,11 +177,11 @@ describe('Integracion autenticacion - flujo de login', () => {
 
     await screen.findByRole('heading', { name: 'Iniciar sesión' });
 
+    // Hacemos click directamente sin rellenar nada
     await user.click(screen.getByRole('button', { name: 'Entrar' }));
 
-    expect(await screen.findByText('Revisa los campos del formulario.')).toBeInTheDocument();
-    expect(screen.getByText('El usuario es obligatorio.')).toBeInTheDocument();
-    expect(screen.getByText('La contraseña es obligatoria.')).toBeInTheDocument();
+    expect(await screen.findByText('El usuario es obligatorio.')).toBeInTheDocument();
+    expect(await screen.findByText('La contraseña es obligatoria.')).toBeInTheDocument();
     expect(global.fetch).not.toHaveBeenCalledWith(
       expect.stringContaining('/api/auth/login'),
       expect.anything()
@@ -257,18 +233,4 @@ describe('Integracion autenticacion - flujo de login', () => {
     expect(await screen.findByRole('heading', { name: 'Iniciar sesión' })).toBeInTheDocument();
   });
 
-  // Verifica que el formulario respeta el estado de carga deshabilitando el submit.
-  test('muestra el estado de carga del formulario cuando el componente recibe cargando', () => {
-    mockApi({ refreshOk: false });
-
-    render(
-      <AuthProvider>
-        <MemoryRouter initialEntries={['/login']}>
-          <App />
-        </MemoryRouter>
-      </AuthProvider>
-    );
-
-    expect(screen.getByRole('button', { name: 'Entrar' })).toBeDisabled();
-  });
 });
