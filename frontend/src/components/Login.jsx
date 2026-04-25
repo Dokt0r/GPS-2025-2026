@@ -21,9 +21,8 @@ function Login({ cargando = false }) {
     password: ''
   });
 
-  const [error, setError] = useState('');
+  const [errorServidor, setErrorServidor] = useState('');
   const [exito, setExito] = useState('');
-  
   const [mostrarPassword, setMostrarPassword] = useState(false);
 
   const credencialValida = (valor) => {
@@ -37,13 +36,11 @@ function Login({ cargando = false }) {
     const valorLimpio = (value || '').trim();
 
     if (!valorLimpio) {
-      return name === 'username'
-        ? 'El usuario es obligatorio.'
-        : 'La contraseña es obligatoria.';
+      return name === 'username' ? 'El usuario es obligatorio.' : 'La contraseña es obligatoria.';
     }
 
     if (!credencialValida(value)) {
-      return 'Debe tener entre 3 y 15 caracteres y no contener espacios.';
+      return 'Debe tener entre 3 y 15 caracteres sin espacios.';
     }
 
     return '';
@@ -53,21 +50,6 @@ function Login({ cargando = false }) {
     username: validarCampo('username', formulario.username),
     password: validarCampo('password', formulario.password)
   });
-
-  const validarFormulario = ({ username, password }) => {
-    const usernameLimpio = username.trim();
-    const passwordLimpia = password.trim();
-
-    if (!usernameLimpio || !passwordLimpia) {
-      return 'Completa todos los campos.';
-    }
-
-    if (!credencialValida(usernameLimpio) || !credencialValida(password)) {
-      return 'Las credenciales deben tener entre 3 y 15 caracteres y no contener espacios.';
-    }
-
-    return '';
-  };
 
   const manejarCambio = (e) => {
     const { name, value } = e.target;
@@ -82,13 +64,12 @@ function Login({ cargando = false }) {
       return siguiente;
     });
 
-    if (error) setError('');
+    if (errorServidor) setErrorServidor('');
     if (exito) setExito('');
   };
 
   const manejarBlur = (e) => {
     const { name, value } = e.target;
-
     setTouched((prev) => ({ ...prev, [name]: true }));
     setErroresCampo((prev) => ({
       ...prev,
@@ -98,30 +79,23 @@ function Login({ cargando = false }) {
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setErrorServidor('');
     setExito('');
 
+    // Al intentar enviar, marcamos todos como tocados para que salten los errores visuales
     setTouched({ username: true, password: true });
 
     const errores = obtenerErroresFormulario(form);
     setErroresCampo(errores);
 
     if (errores.username || errores.password) {
-      setError('Revisa los campos del formulario.');
-      return;
+      // Detenemos el envío si hay errores locales. El mensaje se muestra bajo cada input.
+      return; 
     }
-
-    const errorValidacion = validarFormulario(form);
-    if (errorValidacion) {
-      setError(errorValidacion);
-      return;
-    }
-
-    const usernameLimpio = form.username.trim();
 
     try {
       const resultado = await login({
-        username: usernameLimpio,
+        username: form.username.trim(),
         password: form.password
       });
 
@@ -130,12 +104,11 @@ function Login({ cargando = false }) {
       setTouched({ username: false, password: false });
       setErroresCampo({ username: '', password: '' });
     } catch (err) {
-      setError(err?.message || 'Credenciales inválidas o error en el servidor.');
+      setErrorServidor(err?.message || 'Credenciales inválidas o error en el servidor.');
     }
   };
 
   const hayErroresEnTiempoReal = Boolean(erroresCampo.username || erroresCampo.password);
-  const formularioIncompleto = !form.username.trim() || !form.password.trim();
 
   return (
     <div className="registro-wrapper">
@@ -147,6 +120,7 @@ function Login({ cargando = false }) {
         <form onSubmit={manejarSubmit} className="registro-form">
           <div className="input-group">
             <label htmlFor="username">Usuario</label>
+            {/* Se pone rojo si ha sido tocado y tiene un mensaje de error */}
             <div className={`input-group-embedded ${touched.username && erroresCampo.username ? 'is-invalid' : ''}`}>
               <input
                 id="username"
@@ -159,11 +133,9 @@ function Login({ cargando = false }) {
                 placeholder="Tu usuario"
                 minLength={3}
                 maxLength={15}
-                /* NUEVO: Se resalta si se ha tocado y está vacío/inválido */
-                className={touched.username && erroresCampo.username ? 'is-invalid' : ''}
-                aria-invalid={Boolean(touched.username && erroresCampo.username)}
               />
             </div>
+            {/* Mensaje debajo del campo */}
             {touched.username && erroresCampo.username && (
               <p role="alert" className="registro-error">{erroresCampo.username}</p>
             )}
@@ -171,7 +143,8 @@ function Login({ cargando = false }) {
 
           <div className="input-group">
             <label htmlFor="password">Contraseña</label>
-            <div className={`input-group-embedded ${touched.password && !form.password.trim() ? 'is-invalid' : ''}`}>
+            {/* Se pone rojo si ha sido tocado y tiene un mensaje de error */}
+            <div className={`input-group-embedded ${touched.password && erroresCampo.password ? 'is-invalid' : ''}`}>
               <input
                 id="password"
                 name="password"
@@ -191,30 +164,25 @@ function Login({ cargando = false }) {
                 aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 {mostrarPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                  </svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 )}
               </button>
             </div>
+            {/* Mensaje debajo del campo */}
             {touched.password && erroresCampo.password && (
               <p role="alert" className="registro-error">{erroresCampo.password}</p>
             )}
           </div>
 
-          {error && <p role="alert" className="registro-error">{error}</p>}
+          {errorServidor && <p role="alert" className="registro-error">{errorServidor}</p>}
           {exito && <p role="status" className="registro-exito">{exito}</p>}
 
           <button
             type="submit"
             className="btn-registro"
-            disabled={cargando || formularioIncompleto || hayErroresEnTiempoReal}
+            disabled={cargando || hayErroresEnTiempoReal}
           >
             {cargando ? 'Iniciando...' : 'Entrar'}
           </button>

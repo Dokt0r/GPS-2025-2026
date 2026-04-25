@@ -13,13 +13,18 @@ function Registro({ cargando = false }) {
     confirmPassword: ''
   });
 
-  const [error, setError] = useState('');
+  // NUEVO: Estado para manejar los errores de cada campo por separado
+  const [erroresCampo, setErroresCampo] = useState({
+    username: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const [errorServidor, setErrorServidor] = useState('');
   const [exito, setExito] = useState('');
 
   const [mostrarPassword, setMostrarPassword] = useState(false);
   const [mostrarConfirmPassword, setMostrarConfirmPassword] = useState(false);
-  
-  // NUEVO: Estado para saber si el usuario ha intentado enviar el formulario
   const [intentadoEnviar, setIntentadoEnviar] = useState(false);
 
   const credencialValida = (valor) => {
@@ -29,47 +34,72 @@ function Registro({ cargando = false }) {
     return true;
   };
 
+  // NUEVA: Función que evalúa todos los campos y devuelve los errores específicos
+  const validarCampos = () => {
+    const errores = { username: '', password: '', confirmPassword: '' };
+    let hayErrores = false;
+    const usernameLimpio = form.username.trim();
+
+    if (!usernameLimpio) {
+      errores.username = 'El usuario es obligatorio.';
+      hayErrores = true;
+    } else if (!credencialValida(usernameLimpio)) {
+      errores.username = 'Debe tener entre 3 y 15 caracteres sin espacios.';
+      hayErrores = true;
+    }
+
+    if (!form.password) {
+      errores.password = 'La contraseña es obligatoria.';
+      hayErrores = true;
+    } else if (!credencialValida(form.password)) {
+      errores.password = 'Debe tener entre 3 y 15 caracteres sin espacios.';
+      hayErrores = true;
+    }
+
+    if (!form.confirmPassword) {
+      errores.confirmPassword = 'Debes confirmar tu contraseña.';
+      hayErrores = true;
+    } else if (form.password !== form.confirmPassword) {
+      errores.confirmPassword = 'Las contraseñas no coinciden.';
+      hayErrores = true;
+    }
+
+    setErroresCampo(errores);
+    return hayErrores;
+  };
+
   const manejarCambio = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    // Ocultar mensaje de error general al empezar a escribir de nuevo
-    if (error) setError('');
+    
+    // Si el usuario empieza a escribir de nuevo, limpiamos el error de ese campo
+    if (erroresCampo[name]) {
+      setErroresCampo(prev => ({ ...prev, [name]: '' }));
+    }
+    if (errorServidor) setErrorServidor('');
   };
 
   const manejarSubmit = async (e) => {
     e.preventDefault();
-    setIntentadoEnviar(true); // Se activa la validación visual de vacíos
-    setError('');
+    setIntentadoEnviar(true);
+    setErrorServidor('');
     setExito('');
 
-    const usernameLimpio = form.username.trim();
-
-    if (!usernameLimpio || !form.password.trim() || !form.confirmPassword.trim()) {
-      setError('Completa todos los campos.');
-      return;
-    }
-
-    if (!credencialValida(usernameLimpio) || !credencialValida(form.password)) {
-      setError('Usuario y contraseña deben tener entre 3 y 15 caracteres sin espacios.');
-      return;
-    }
-
-    if (form.password !== form.confirmPassword) {
-      setError('Las contraseñas no coinciden.');
-      return;
-    }
+    // Evaluamos los errores. Si la función devuelve true, detenemos el envío.
+    const hayErrores = validarCampos();
+    if (hayErrores) return;
 
     try {
       const resultado = await register({
-        username: usernameLimpio,
+        username: form.username.trim(),
         password: form.password
       });
 
       setExito(resultado?.mensaje || 'Registro realizado correctamente.');
       setForm({ username: '', password: '', confirmPassword: '' });
-      setIntentadoEnviar(false); // Reseteamos al tener éxito
+      setIntentadoEnviar(false);
     } catch (err) {
-      setError(err?.message || 'No se pudo completar el registro.');
+      setErrorServidor(err?.message || 'No se pudo completar el registro.');
     }
   };
 
@@ -83,7 +113,7 @@ function Registro({ cargando = false }) {
         <form onSubmit={manejarSubmit} className="registro-form">
           <div className="input-group">
             <label htmlFor="username">Usuario</label>
-            <div className={`input-group-embedded ${intentadoEnviar && !form.username.trim() ? 'is-invalid' : ''}`}>
+            <div className={`input-group-embedded ${intentadoEnviar && erroresCampo.username ? 'is-invalid' : ''}`}>
               <input
                 id="username"
                 name="username"
@@ -96,11 +126,15 @@ function Registro({ cargando = false }) {
                 maxLength={15}
               />
             </div>
+            {/* Mensaje de error específico debajo del campo */}
+            {intentadoEnviar && erroresCampo.username && (
+              <p role="alert" className="registro-error">{erroresCampo.username}</p>
+            )}
           </div>
 
           <div className="input-group">
             <label htmlFor="password">Contraseña</label>
-            <div className={`input-group-embedded ${intentadoEnviar && !form.password.trim() ? 'is-invalid' : ''}`}>
+            <div className={`input-group-embedded ${intentadoEnviar && erroresCampo.password ? 'is-invalid' : ''}`}>
               <input
                 id="password"
                 name="password"
@@ -119,23 +153,21 @@ function Registro({ cargando = false }) {
                 aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 {mostrarPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                  </svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 )}
               </button>
             </div>
+            {/* Mensaje de error específico debajo del campo */}
+            {intentadoEnviar && erroresCampo.password && (
+              <p role="alert" className="registro-error">{erroresCampo.password}</p>
+            )}
           </div>
 
           <div className="input-group">
             <label htmlFor="confirmPassword">Confirmar contraseña</label>
-            <div className={`input-group-embedded ${intentadoEnviar && !form.confirmPassword.trim() ? 'is-invalid' : ''}`}>
+            <div className={`input-group-embedded ${intentadoEnviar && erroresCampo.confirmPassword ? 'is-invalid' : ''}`}>
               <input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -143,7 +175,7 @@ function Registro({ cargando = false }) {
                 value={form.confirmPassword}
                 onChange={manejarCambio}
                 autoComplete="new-password"
-                placeholder=""
+                placeholder="Confirma tu contraseña"
                 minLength={3}
                 maxLength={15}
               />
@@ -154,21 +186,19 @@ function Registro({ cargando = false }) {
                 aria-label={mostrarConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               >
                 {mostrarConfirmPassword ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                    <line x1="1" y1="1" x2="23" y2="23"></line>
-                  </svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
                 ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                  </svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                 )}
               </button>
             </div>
+            {/* Mensaje de error específico debajo del campo */}
+            {intentadoEnviar && erroresCampo.confirmPassword && (
+              <p role="alert" className="registro-error">{erroresCampo.confirmPassword}</p>
+            )}
           </div>
 
-          {error && <p role="alert" className="registro-error">{error}</p>}
+          {errorServidor && <p role="alert" className="registro-error">{errorServidor}</p>}
           {exito && <p role="status" className="registro-exito">{exito}</p>}
 
           <button type="submit" className="btn-registro" disabled={cargando}>
