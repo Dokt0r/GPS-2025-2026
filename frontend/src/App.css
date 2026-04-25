@@ -1318,6 +1318,68 @@ background: rgba(255, 255, 255, 0.05);
   color: white;
 }
 
+.input-group-embedded {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  
+  /* Copia aquí exactamente los estilos que tenías en '.input-group input' original */
+  background: rgba(255, 255, 255, 0.1); /* Fondo translúcido original */
+  border-radius: 8px;
+  border: 1px solid transparent; /* Borde base transparente */
+  
+  /* Asegura que el padding visual se maneje aquí o en los hijos convenientemente */
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 2. Estilo cuando el campo integrado tiene foco (simulando foco del input) */
+.input-group-embedded:focus-within {
+  border-color: #4CAF50; /* Color de foco original (ej. verde) */
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  background: rgba(255, 255, 255, 0.15); /* Ligeramente más claro al foco */
+}
+
+/* 3. Estilo cuando el campo integrado es inválido */
+.input-group-embedded.is-invalid {
+  border-color: #ff6b6b; /* Color de error original */
+  background: rgba(255, 107, 107, 0.05);
+}
+
+/* 4. El input real dentro del contenedor pierde su identidad visual */
+.input-group-embedded input {
+  flex: 1; /* Ocupa todo el espacio disponible */
+  background: transparent !important; /* Transparente obligado */
+  border: none !important; /* Sin bordes obligado */
+  outline: none !important; /* Sin outline obligado */
+  color: white;
+  padding: 10px; /* Padding interno original */
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* 5. El botón integrado al final */
+.btn-toggle-password-embedded {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6); /* Color sutil */
+  font-size: 0.75rem; /* Un poco más pequeño que el texto principal */
+  font-weight: bold;
+  text-transform: uppercase; /* Estilo típico de app */
+  letter-spacing: 1px;
+  padding: 0 15px; /* Espaciado a los lados del botón */
+  height: 100%; /* Ocupa todo el alto del contenedor */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.btn-toggle-password-embedded:hover {
+  color: white; /* Resalta al pasar el mouse */
+}
+
 /* BOTÓN */
 .btn-registro {
   width: 100%;
