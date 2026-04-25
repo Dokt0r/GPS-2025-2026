@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNevera } from './NeveraContext';
 import { useAuth } from './AuthContext';
+import { guardarRecetaFavorita } from './services/favoritos';
 
 // ─────────────────────────────────────────────
 // HELPERS DE UNIDADES (espejo del backend)
@@ -70,9 +71,11 @@ const VistaDetalles = () => {
 
   const [recetaCompletada, setRecetaCompletada] = useState(false);
   const [errorCompletar, setErrorCompletar] = useState(null);
-  const [guardandoFavorito, setGuardandoFavorito] = useState(false);
-  const [favoritoGuardado, setFavoritoGuardado] = useState(false);
-  const [mensajeFavorito, setMensajeFavorito] = useState('');
+  const [favoritoEstado, setFavoritoEstado] = useState({
+    guardando: false,
+    guardado: false,
+    mensaje: ''
+  });
 
   useEffect(() => {
     const fetchDetalleReceta = async () => {
@@ -138,31 +141,37 @@ const VistaDetalles = () => {
 
   const handleGuardarFavorito = async () => {
     const recetaId = receta?._id || receta?.id;
-    if (!recetaId || guardandoFavorito) return;
+    if (!recetaId || favoritoEstado.guardando) return;
 
-    setGuardandoFavorito(true);
-    setMensajeFavorito('');
+    setFavoritoEstado((prev) => ({ ...prev, guardando: true, mensaje: '' }));
 
     try {
-      const response = await fetchConAuth(`${API_URL}/api/recetas/favoritos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recetaId })
+      const resultado = await guardarRecetaFavorita({
+        fetchConAuth,
+        apiUrl: API_URL,
+        recetaId
       });
 
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setMensajeFavorito(data.error || 'No se pudo guardar en favoritos.');
+      if (!resultado.ok) {
+        setFavoritoEstado((prev) => ({
+          ...prev,
+          mensaje: resultado.mensaje
+        }));
         return;
       }
 
-      setFavoritoGuardado(true);
-      setMensajeFavorito(data.mensaje || 'Receta añadida a favoritos.');
+      setFavoritoEstado({
+        guardando: false,
+        guardado: true,
+        mensaje: resultado.mensaje
+      });
     } catch {
-      setMensajeFavorito('No se pudo conectar con el servidor.');
+      setFavoritoEstado((prev) => ({
+        ...prev,
+        mensaje: 'No se pudo conectar con el servidor.'
+      }));
     } finally {
-      setGuardandoFavorito(false);
+      setFavoritoEstado((prev) => ({ ...prev, guardando: false }));
     }
   };
 
@@ -213,9 +222,9 @@ const VistaDetalles = () => {
             <button
               className="btn-favorito"
               aria-label="Favorito"
-              aria-pressed={favoritoGuardado}
+              aria-pressed={favoritoEstado.guardado}
               onClick={handleGuardarFavorito}
-              disabled={guardandoFavorito}
+              disabled={favoritoEstado.guardando}
             >
               <svg 
                 viewBox="0 0 24 24" 
@@ -223,7 +232,7 @@ const VistaDetalles = () => {
                 height="26" 
                 stroke="currentColor" 
                 strokeWidth="2" 
-                fill={favoritoGuardado ? 'currentColor' : 'none'}
+                fill={favoritoEstado.guardado ? 'currentColor' : 'none'}
                 strokeLinecap="round" 
                 strokeLinejoin="round"
               >
@@ -231,8 +240,8 @@ const VistaDetalles = () => {
               </svg>
             </button>
           </div>
-          {mensajeFavorito && (
-            <p role="status" className="receta-texto-vacio">{mensajeFavorito}</p>
+          {favoritoEstado.mensaje && (
+            <p role="status" className="receta-texto-vacio">{favoritoEstado.mensaje}</p>
           )}
         </header>
 

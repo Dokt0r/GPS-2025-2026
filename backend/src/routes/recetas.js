@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const Receta = require('../models/recetas');
 const Usuario = require('../models/usuario');
 const requireAuth = require('../middleware/auth');
+const { guardarRecetaComoFavorita, FavoritosError } = require('../services/favoritos');
 // Función para estandarizar lo que viene del frontend a g, ml o ud de forma SEGURA
 const estandarizarNevera = (queryStr) => {
     if (!queryStr) return [];
@@ -210,54 +211,21 @@ router.delete('/ingrediente', async (req, res) => {
 
 router.post('/favoritos', requireAuth, async (req, res) => {
     try {
-        // Asumimos que el frontend nos envía el ID de la receta en el body
         const { recetaId } = req.body;
-
-        if (!recetaId) {
-            return res.status(400).json({ error: "Falta el ID de la receta." });
-        }
-
-      
-        const receta = await Receta.findById(recetaId);
-        if (!receta) {
-            return res.status(404).json({ error: "La receta no existe." });
-        }
-
-       
-        const usuario = await Usuario.findById(req.usuario.id);
-        if (!usuario) {
-            return res.status(401).json({ error: "Usuario no autorizado." });
-        }
-
-       
-        let listaFavoritos = usuario.listas.find(lista => lista.nombreLista.toLowerCase() === 'favoritos');
-
-        
-        if (!listaFavoritos) {
-            usuario.listas.push({ nombreLista: 'Favoritos', recetas: [] });
-            listaFavoritos = usuario.listas[usuario.listas.length - 1]; // Apuntamos a la recién creada
-        }
-
-        
-       
-        const recetaYaGuardada = listaFavoritos.recetas.some(idGuardado => idGuardado.toString() === recetaId.toString());
-        
-        if (recetaYaGuardada) {
-            return res.status(400).json({ error: "La receta ya está en tu lista de favoritos." });
-        }
-
-       
-        listaFavoritos.recetas.push(recetaId);
-        await usuario.save(); 
-
-        res.status(200).json({ 
-            success: true, 
-            mensaje: "Receta añadida a tu lista de favoritos correctamente." 
+        const resultado = await guardarRecetaComoFavorita({
+            usuarioId: req.usuario.id,
+            recetaId
         });
 
+        return res.status(200).json(resultado);
+
     } catch (error) {
+        if (error instanceof FavoritosError) {
+            return res.status(error.status).json({ error: error.message });
+        }
+
         console.error("Error al guardar receta como favorita:", error);
-        res.status(500).json({ error: "Error interno del servidor." });
+        return res.status(500).json({ error: "Error interno del servidor." });
     }
 });
 module.exports = router;
