@@ -70,6 +70,9 @@ const VistaDetalles = () => {
 
   const [recetaCompletada, setRecetaCompletada] = useState(false);
   const [errorCompletar, setErrorCompletar] = useState(null);
+  const [guardandoFavorito, setGuardandoFavorito] = useState(false);
+  const [favoritoGuardado, setFavoritoGuardado] = useState(false);
+  const [mensajeFavorito, setMensajeFavorito] = useState('');
 
   useEffect(() => {
     const fetchDetalleReceta = async () => {
@@ -133,6 +136,36 @@ const VistaDetalles = () => {
     }
   };
 
+  const handleGuardarFavorito = async () => {
+    const recetaId = receta?._id || receta?.id;
+    if (!recetaId || guardandoFavorito) return;
+
+    setGuardandoFavorito(true);
+    setMensajeFavorito('');
+
+    try {
+      const response = await fetchConAuth(`${API_URL}/api/recetas/favoritos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recetaId })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setMensajeFavorito(data.error || 'No se pudo guardar en favoritos.');
+        return;
+      }
+
+      setFavoritoGuardado(true);
+      setMensajeFavorito(data.mensaje || 'Receta añadida a favoritos.');
+    } catch {
+      setMensajeFavorito('No se pudo conectar con el servidor.');
+    } finally {
+      setGuardandoFavorito(false);
+    }
+  };
+
   // ── RENDERS DE ESTADO ───────────────────────
 
   if (cargando) {
@@ -177,14 +210,20 @@ const VistaDetalles = () => {
           <div className="titulo-con-favorito">
             <h1 className="receta-titulo-principal">{receta.title}</h1>
             
-            <button className="btn-favorito" aria-label="Favorito">
+            <button
+              className="btn-favorito"
+              aria-label="Favorito"
+              aria-pressed={favoritoGuardado}
+              onClick={handleGuardarFavorito}
+              disabled={guardandoFavorito}
+            >
               <svg 
                 viewBox="0 0 24 24" 
                 width="26" 
                 height="26" 
                 stroke="currentColor" 
                 strokeWidth="2" 
-                fill="none" 
+                fill={favoritoGuardado ? 'currentColor' : 'none'}
                 strokeLinecap="round" 
                 strokeLinejoin="round"
               >
@@ -192,6 +231,9 @@ const VistaDetalles = () => {
               </svg>
             </button>
           </div>
+          {mensajeFavorito && (
+            <p role="status" className="receta-texto-vacio">{mensajeFavorito}</p>
+          )}
         </header>
 
         <div className="receta-grid-layout">
