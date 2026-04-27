@@ -97,6 +97,39 @@ router.get('/', async (req, res) => {
     }
 });
 
+// =========================================================================
+// ENDPOINT: Obtener recetas favoritas del usuario
+// =========================================================================
+
+router.get('/favoritos', requireAuth, async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.usuario.id)
+            .populate({
+                path: 'listas.recetas',
+                model: 'Receta',
+                select: '_id title image_url'
+            });
+ 
+        if (!usuario) {
+            return res.status(401).json({ error: 'Usuario no autorizado.' });
+        }
+ 
+        const listaFavoritos = usuario.listas.find(
+            (l) => l.nombreLista.trim().toLowerCase() === 'favoritos'
+        );
+ 
+        const recetas = listaFavoritos ? listaFavoritos.recetas : [];
+ 
+        return res.status(200).json({ favoritos: recetas });
+ 
+    } catch (error) {
+        console.error('Error al obtener favoritos:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+module.exports = router;
+
 router.get('/:titulo', async (req, res) => {
     try {
         const tituloReceta = decodeURIComponent(req.params.titulo).trim();
@@ -228,4 +261,36 @@ router.post('/favoritos', requireAuth, async (req, res) => {
         return res.status(500).json({ error: "Error interno del servidor." });
     }
 });
+
+// =========================================================================
+// ENDPOINT: Obtener recetas favoritas del usuario
+// =========================================================================
+
+router.get('/favoritos', requireAuth, async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.usuario.id)
+            .populate({
+                path: 'listas.recetas',
+                model: 'Receta',
+                select: '_id title image_url'
+            });
+ 
+        if (!usuario) {
+            return res.status(401).json({ error: 'Usuario no autorizado.' });
+        }
+ 
+        const listaFavoritos = usuario.listas.find(
+            (l) => l.nombreLista.trim().toLowerCase() === 'favoritos'
+        );
+ 
+        const recetas = listaFavoritos ? listaFavoritos.recetas : [];
+ 
+        return res.status(200).json({ favoritos: recetas });
+ 
+    } catch (error) {
+        console.error('Error al obtener favoritos:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
 module.exports = router;
