@@ -1509,9 +1509,12 @@ input.is-invalid {
 }
 
 .btn-favorito {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--glass-border);
-    color: var(--text-muted);
+    /* Fondo rojo muy transparente */
+    background: rgba(239, 68, 68, 0.05);
+    /* Borde rojo suave */
+    border: 2px solid rgba(239, 68, 68, 0.3);
+    /* Color del icono (corazón hueco) */
+    color: rgba(239, 68, 68, 0.7);
     width: 45px;
     height: 45px;
     border-radius: 50%;
@@ -1519,12 +1522,42 @@ input.is-invalid {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: all 0.3s ease;
+    /* Transición más moderna y fluida */
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 2. Estado Hover (Al pasar el ratón) */
 .btn-favorito:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #f87171;
-    transform: scale(1.1);
-    border-color: rgba(248, 113, 113, 0.4);
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.6);
+    color: #ef4444; /* Rojo más vivo */
+    transform: scale(1.05); /* 1.05 es más elegante que 1.1 */
+}
+
+/* 3. Estado Marcado (Añade esta clase con JS cuando sea favorito) */
+.btn-favorito.activo {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* --- RELLENO DEL CORAZÓN Y ANIMACIÓN --- */
+
+/* Si usas un SVG inline para el corazón */
+.btn-favorito.activo svg {
+    fill: #ef4444; /* Rellena el interior de rojo */
+    animation: latido 0.35s ease-in-out;
+}
+
+/* Si usas una fuente de iconos (ej. FontAwesome), la animación va en el propio botón o icono */
+.btn-favorito.activo i {
+    font-weight: 900; /* En FontAwesome esto cambia de corazón hueco a sólido */
+    animation: latido 0.35s ease-in-out;
+}
+
+/* Animación de latido (Modern UI) */
+@keyframes latido {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
 }
