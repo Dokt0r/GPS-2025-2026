@@ -323,9 +323,8 @@ router.get('/:titulo', async (req, res) => {
         if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
 
         const tituloSeguro = escaparRegex(tituloReceta);
-        // 2. Buscamos usando una Expresión Regular (Regex)
-        // La 'i' final hace que la búsqueda sea case-insensitive (ignora mayúsculas/minúsculas)
-        // El ^ y el $ aseguran que sea exactamente ese título y no solo una parte.
+        
+        // Buscamos la receta
         const recetaCompleta = await Receta.findOne({
             title: new RegExp('^' + tituloSeguro + '$', 'i')
         });
@@ -334,10 +333,45 @@ router.get('/:titulo', async (req, res) => {
             return res.status(404).json({ error: "Receta no encontrada" });
         }
 
-        res.json(recetaCompleta);
+        // --- NUEVO: COMPROBAMOS SI ES FAVORITA ---
+        
+        // 1. Convertimos el documento de Mongoose a un objeto normal de JavaScript
+        let recetaData = recetaCompleta.toObject();
+        
+        // 2. Por defecto decimos que NO es favorita
+        recetaData.esFavorito = false;
+
+        // 3. Obtenemos el ID del usuario usando tu función ya creada (si tiene token)
+        const usuarioId = obtenerUsuarioIdDesdeBearer(req);
+
+        if (usuarioId) {
+            const usuario = await Usuario.findById(usuarioId);
+            if (usuario) {
+                // Buscamos la lista "Favoritos" del usuario
+                const listaFavoritos = usuario.listas.find(
+                    (l) => l.nombreLista.trim().toLowerCase() === 'favoritos'
+                );
+
+                // Si existe la lista, comprobamos si el ID de esta receta está dentro
+                if (listaFavoritos && listaFavoritos.recetas) {
+                    const estaGuardada = listaFavoritos.recetas.some(
+                        (id) => id.toString() === recetaCompleta._id.toString()
+                    );
+                    
+                    if (estaGuardada) {
+                        recetaData.esFavorito = true; // ¡La marcamos como verdadera!
+                    }
+                }
+            }
+        }
+
+        // 4. Enviamos la receta al frontend, ahora con la propiedad "esFavorito"
+        res.json(recetaData);
+        
     } catch (error) {
         console.error("❌ Error interno al buscar detalles:", error);
         res.status(500).json({ error: "Error interno del servidor" });
     }
 });
+
 module.exports = router;

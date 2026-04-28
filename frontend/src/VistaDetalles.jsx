@@ -45,12 +45,20 @@ const VistaDetalles = () => {
         setCargando(true);
         setError(null);
         const response = await fetchConAuth(`${API_URL}/api/recetas/${codificarTitulo(titulo)}`);
+        
         if (!response.ok) {
           if (response.status === 404) throw new Error('Receta no encontrada.');
           throw new Error('Error al conectar con el servidor.');
         }
+        
         const data = await response.json();
         setReceta(data);
+
+        // --- LÓGICA DE PERSISTENCIA ---
+        // Si el backend devuelve que esta receta está en favoritos, se marca automáticamente
+        if (data.esFavorito) {
+          setFavoritoEstado(prev => ({ ...prev, guardado: true }));
+        }
       } catch (err) {
         console.error("Error cargando detalle:", err);
         setError(err.message);
@@ -60,7 +68,7 @@ const VistaDetalles = () => {
     };
 
     if (titulo) fetchDetalleReceta();
-  }, [titulo, API_URL]);
+  }, [titulo, API_URL, fetchConAuth]);
 
   const handleCompletarReceta = async () => {
     if (!receta?.ingredients) return;
@@ -113,9 +121,10 @@ const VistaDetalles = () => {
         return;
       }
 
+      // Invertimos el estado visualmente si el backend confirmó el cambio
       setFavoritoEstado({
         guardando: false,
-        guardado: true,
+        guardado: !favoritoEstado.guardado,
         mensaje: resultado.mensaje
       });
     } catch {
@@ -177,7 +186,7 @@ const VistaDetalles = () => {
             <h1 className="receta-titulo-principal">{receta.title}</h1>
             
             <button
-              className="btn-favorito"
+              className={`btn-favorito ${favoritoEstado.guardado ? 'activo' : ''}`}
               aria-label="Favorito"
               aria-pressed={favoritoEstado.guardado}
               onClick={handleGuardarFavorito}
