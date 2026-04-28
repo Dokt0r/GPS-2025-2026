@@ -109,51 +109,25 @@ router.get('/favoritos', requireAuth, async (req, res) => {
                 model: 'Receta',
                 select: '_id title image_url'
             });
- 
+
         if (!usuario) {
             return res.status(401).json({ error: 'Usuario no autorizado.' });
         }
- 
+
         const listaFavoritos = usuario.listas.find(
             (l) => l.nombreLista.trim().toLowerCase() === 'favoritos'
         );
- 
+
         const recetas = listaFavoritos ? listaFavoritos.recetas : [];
- 
+
         return res.status(200).json({ favoritos: recetas });
- 
+
     } catch (error) {
         console.error('Error al obtener favoritos:', error);
         return res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
 
-module.exports = router;
-
-router.get('/:titulo', async (req, res) => {
-    try {
-        const tituloReceta = decodeURIComponent(req.params.titulo).trim();
-
-        if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
-
-        const tituloSeguro = escaparRegex(tituloReceta);
-        // 2. Buscamos usando una Expresión Regular (Regex)
-        // La 'i' final hace que la búsqueda sea case-insensitive (ignora mayúsculas/minúsculas)
-        // El ^ y el $ aseguran que sea exactamente ese título y no solo una parte.
-        const recetaCompleta = await Receta.findOne({
-            title: new RegExp('^' + tituloSeguro + '$', 'i')
-        });
-
-        if (!recetaCompleta) {
-            return res.status(404).json({ error: "Receta no encontrada" });
-        }
-
-        res.json(recetaCompleta);
-    } catch (error) {
-        console.error("❌ Error interno al buscar detalles:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
-    }
-});
 
 // ENDPOINT 3: Completar una receta y RESTAR ingredientes de la nevera del USUARIO
 
@@ -164,23 +138,23 @@ router.put('/completar', requireAuth, async (req, res) => {
 
         // 1. Buscamos al usuario logueado y populamos su nevera
         const usuario = await Usuario.findById(req.usuario.id).populate('nevera.ingrediente');
-        
+
         if (!usuario) {
             return res.status(401).json({ error: "Usuario no autenticado correctamente." });
         }
 
         // 2. Buscamos la receta
-        const receta = await Receta.findOne({ 
-            title: new RegExp('^' + tituloSeguro + '$', 'i') 
+        const receta = await Receta.findOne({
+            title: new RegExp('^' + tituloSeguro + '$', 'i')
         });
 
         if (!receta) return res.status(404).json({ error: "Receta no encontrada." });
 
         // 3. Procesamos los ingredientes usados
         for (const ingUsado of ingredients) {
-            
+
             // Buscamos si el ingrediente existe en la nevera
-            const itemEnNevera = usuario.nevera.find(item => 
+            const itemEnNevera = usuario.nevera.find(item =>
                 item.ingrediente.nombre.toLowerCase() === ingUsado.nombre.toLowerCase() &&
                 item.unidad.toLowerCase() === ingUsado.unidad.toLowerCase()
             );
@@ -208,10 +182,10 @@ router.put('/completar', requireAuth, async (req, res) => {
 
         await receta.save();
 
-        res.status(200).json({ 
-            success: true, 
-            mensaje: "Receta completada e ingredientes actualizados en tu nevera." 
-        }); 
+        res.status(200).json({
+            success: true,
+            mensaje: "Receta completada e ingredientes actualizados en tu nevera."
+        });
 
     } catch (error) {
         console.error("Error al completar receta y restar ingredientes:", error);
@@ -227,7 +201,7 @@ router.delete('/ingrediente', async (req, res) => {
 
         const receta = await Receta.findOneAndUpdate(
             { title: new RegExp('^' + tituloSeguro + '$', 'i') },
-            { $pull: { ingredients: { nombre: nombreIngrediente } } }, 
+            { $pull: { ingredients: { nombre: nombreIngrediente } } },
             { returnDocument: 'after' } // Fix del Warning de Mongoose
         );
 
@@ -274,19 +248,19 @@ router.get('/favoritos', requireAuth, async (req, res) => {
                 model: 'Receta',
                 select: '_id title image_url'
             });
- 
+
         if (!usuario) {
             return res.status(401).json({ error: 'Usuario no autorizado.' });
         }
- 
+
         const listaFavoritos = usuario.listas.find(
             (l) => l.nombreLista.trim().toLowerCase() === 'favoritos'
         );
- 
+
         const recetas = listaFavoritos ? listaFavoritos.recetas : [];
- 
+
         return res.status(200).json({ favoritos: recetas });
- 
+
     } catch (error) {
         console.error('Error al obtener favoritos:', error);
         return res.status(500).json({ error: 'Error interno del servidor.' });
@@ -335,14 +309,40 @@ router.delete('/favoritos', requireAuth, async (req, res) => {
         // Guardamos los cambios en el usuario
         await usuario.save();
 
-        res.status(200).json({ 
-            success: true, 
-            mensaje: "Receta eliminada de favoritos correctamente." 
+        res.status(200).json({
+            success: true,
+            mensaje: "Receta eliminada de favoritos correctamente."
         });
 
     } catch (error) {
         console.error("Error al eliminar receta de favoritos:", error);
         res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
+
+
+router.get('/:titulo', async (req, res) => {
+    try {
+        const tituloReceta = decodeURIComponent(req.params.titulo).trim();
+
+        if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
+
+        const tituloSeguro = escaparRegex(tituloReceta);
+        // 2. Buscamos usando una Expresión Regular (Regex)
+        // La 'i' final hace que la búsqueda sea case-insensitive (ignora mayúsculas/minúsculas)
+        // El ^ y el $ aseguran que sea exactamente ese título y no solo una parte.
+        const recetaCompleta = await Receta.findOne({
+            title: new RegExp('^' + tituloSeguro + '$', 'i')
+        });
+
+        if (!recetaCompleta) {
+            return res.status(404).json({ error: "Receta no encontrada" });
+        }
+
+        res.json(recetaCompleta);
+    } catch (error) {
+        console.error("❌ Error interno al buscar detalles:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 module.exports = router;
