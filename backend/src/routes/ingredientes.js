@@ -148,4 +148,39 @@ router.get('/', async (req, res) => {
     }
 });
 
+// DELETE /api/ingredientes/nevera/:nombre
+router.delete('/nevera/:nombre', requireAuth, async (req, res) => {
+    try {
+        // Decodificamos el nombre por si lleva espacios o caracteres especiales
+        const nombreParam = decodeURIComponent(req.params.nombre);
+        
+        const usuario = await Usuario.findById(req.usuario.id).populate('nevera.ingrediente');
+        if (!usuario) {
+            return res.status(404).json({ error: 'Usuario no encontrado.' });
+        }
+
+        // Filtramos la nevera para excluir el ingrediente que queremos borrar
+        const longitudOriginal = usuario.nevera.length;
+        usuario.nevera = usuario.nevera.filter(item => 
+            item.ingrediente.nombre.toLowerCase() !== nombreParam.toLowerCase()
+        );
+
+        // Si la longitud no ha cambiado, el ingrediente no estaba en la nevera
+        if (usuario.nevera.length === longitudOriginal) {
+            return res.status(404).json({ error: 'El ingrediente no estaba en tu nevera.' });
+        }
+
+        // Guardamos los cambios
+        await usuario.save();
+
+        return res.json({
+            mensaje: 'Ingrediente eliminado correctamente.',
+            nevera: mapNeveraParaRespuesta(usuario.nevera)
+        });
+    } catch (error) {
+        console.error("Error al eliminar el ingrediente de la BBDD:", error);
+        return res.status(500).json({ error: 'Error interno al eliminar el ingrediente.' });
+    }
+});
+
 module.exports = router;

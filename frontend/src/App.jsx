@@ -109,8 +109,34 @@ function App() {
     setIngredientesNevera(mapNeveraServidor(data.nevera));
   };
 
-  const eliminarDeInventario = (nombre) => {
+  const eliminarDeInventario = async (nombre) => {
+    // 1. Guardamos el estado anterior por si la petición falla (Rollback)
+    const estadoAnterior = [...ingredientesNevera];
+    
+    // 2. Actualización optimista: lo quitamos de la vista inmediatamente
     setIngredientesNevera(ingredientesNevera.filter(i => i.nombre !== nombre));
+
+    try {
+      // 3. Enviamos la petición DELETE al backend
+      const respuesta = await fetchConAuth(`${API_URL}/api/ingredientes/nevera/${encodeURIComponent(nombre)}`, {
+        method: 'DELETE'
+      });
+
+      if (!respuesta.ok) {
+        const data = await respuesta.json().catch(() => ({}));
+        throw new Error(data.error || 'No se pudo eliminar de la base de datos.');
+      }
+      
+      // Opcional: Mostrar mensaje de éxito
+      // mostrarMensaje('🗑️ Ingrediente eliminado', 'success');
+
+    } catch (error) {
+      console.error('Error al eliminar ingrediente:', error);
+      mostrarMensaje('❌ Error al eliminar el ingrediente.', 'error');
+      
+      // 4. Si falló, restauramos la lista como estaba
+      setIngredientesNevera(estadoAnterior);
+    }
   };
 
   const restarIngredientesReceta = async (ingredientesReceta, neveraDelBackend) => {
