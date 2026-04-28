@@ -8,6 +8,7 @@ import Login from './components/Login'; // Añadimos la importación de Login
 import Navbar from './components/Navbar';
 import VistaRecetas from './VistaRecetas';
 import VistaDetalles from './VistaDetalles';
+import VistaFavoritos from './VistaFavoritos';
 import { NeveraContext } from './NeveraContext';
 import { useAuth } from './AuthContext';
 import './App.css';
@@ -224,6 +225,10 @@ function App() {
 
           <Route path="/receta/:titulo" element={
             <ProtectedRoute><VistaDetalles /></ProtectedRoute>
+          } />
+
+          <Route path="/favoritos" element={
+            <ProtectedRoute><VistaFavoritos /></ProtectedRoute>
           } />
 
           {/* RUTAS PÚBLICAS DE AUTENTICACIÓN */}

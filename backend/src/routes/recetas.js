@@ -95,30 +95,40 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET /:titulo - Obtener detalle de una receta
-router.get('/:titulo', async (req, res) => {
+// =========================================================================
+// ENDPOINT: Obtener recetas favoritas del usuario
+// =========================================================================
+
+router.get('/favoritos', requireAuth, async (req, res) => {
     try {
-        const tituloReceta = decodeURIComponent(req.params.titulo).trim();
+        const usuario = await Usuario.findById(req.usuario.id)
+            .populate({
+                path: 'listas.recetas',
+                model: 'Receta',
+                select: '_id title image_url'
+            });
 
-        if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
-
-        const tituloSeguro = escaparRegex(tituloReceta);
-        const recetaCompleta = await Receta.findOne({
-            title: new RegExp('^' + tituloSeguro + '$', 'i')
-        });
-
-        if (!recetaCompleta) {
-            return res.status(404).json({ error: "Receta no encontrada" });
+        if (!usuario) {
+            return res.status(401).json({ error: 'Usuario no autorizado.' });
         }
 
-        res.json(recetaCompleta);
+        const listaFavoritos = usuario.listas.find(
+            (l) => l.nombreLista.trim().toLowerCase() === 'favoritos'
+        );
+
+        const recetas = listaFavoritos ? listaFavoritos.recetas : [];
+
+        return res.status(200).json({ favoritos: recetas });
+
     } catch (error) {
-        console.error("❌ Error interno al buscar detalles:", error);
-        res.status(500).json({ error: "Error interno del servidor" });
+        console.error('Error al obtener favoritos:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
     }
 });
 
-// PUT /completar - Completar receta y restar ingredientes de la nevera
+
+// ENDPOINT 3: Completar una receta y RESTAR ingredientes de la nevera del USUARIO
+
 router.put('/completar', requireAuth, async (req, res) => {
     try {
         const { titulo, steps, ingredients } = req.body;
@@ -130,6 +140,7 @@ router.put('/completar', requireAuth, async (req, res) => {
             return res.status(401).json({ error: "Usuario no autenticado correctamente." });
         }
 
+        // 2. Buscamos la receta
         const receta = await Receta.findOne({
             title: new RegExp('^' + tituloSeguro + '$', 'i')
         });
@@ -139,15 +150,12 @@ router.put('/completar', requireAuth, async (req, res) => {
         // ── RESTA DE INGREDIENTES ──────────────────────────────────────────
         // Usamos .includes() igual que el frontend para mayor tolerancia en nombres
         for (const ingUsado of ingredients) {
-            const nombreReceta = ingUsado.nombre.toLowerCase().trim();
 
-            const itemEnNevera = usuario.nevera.find(item => {
-                const nombreNevera = (item.ingrediente?.nombre || '').toLowerCase().trim();
-                // Coincidencia flexible: el nombre de la receta contiene el de la nevera
-                return nombreReceta.includes(nombreNevera) || nombreNevera.includes(nombreReceta);
-            });
-
-            console.log(`[COMPLETAR] "${ingUsado.nombre}" → ${itemEnNevera ? `encontrado (${itemEnNevera.ingrediente.nombre}: ${itemEnNevera.cantidad})` : 'NO encontrado'}`);
+            // Buscamos si el ingrediente existe en la nevera
+            const itemEnNevera = usuario.nevera.find(item =>
+                item.ingrediente.nombre.toLowerCase() === ingUsado.nombre.toLowerCase() &&
+                item.unidad.toLowerCase() === ingUsado.unidad.toLowerCase()
+            );
 
             if (itemEnNevera) {
                 itemEnNevera.cantidad -= ingUsado.cantidad;
@@ -189,7 +197,7 @@ router.delete('/ingrediente', async (req, res) => {
         const receta = await Receta.findOneAndUpdate(
             { title: new RegExp('^' + tituloSeguro + '$', 'i') },
             { $pull: { ingredients: { nombre: nombreIngrediente } } },
-            { returnDocument: 'after' }
+            { returnDocument: 'after' } // Fix del Warning de Mongoose
         );
 
         if (!receta) return res.status(404).json({ error: "Receta no encontrada" });
@@ -220,6 +228,116 @@ router.post('/favoritos', requireAuth, async (req, res) => {
 
         console.error("Error al guardar receta como favorita:", error);
         return res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
+
+// =========================================================================
+// ENDPOINT: Obtener recetas favoritas del usuario
+// =========================================================================
+
+router.get('/favoritos', requireAuth, async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.usuario.id)
+            .populate({
+                path: 'listas.recetas',
+                model: 'Receta',
+                select: '_id title image_url'
+            });
+
+        if (!usuario) {
+            return res.status(401).json({ error: 'Usuario no autorizado.' });
+        }
+
+        const listaFavoritos = usuario.listas.find(
+            (l) => l.nombreLista.trim().toLowerCase() === 'favoritos'
+        );
+
+        const recetas = listaFavoritos ? listaFavoritos.recetas : [];
+
+        return res.status(200).json({ favoritos: recetas });
+
+    } catch (error) {
+        console.error('Error al obtener favoritos:', error);
+        return res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// =========================================================================
+// ENDPOINT: DELETE /api/recetas/favoritos (Quitar receta de favoritos)
+// =========================================================================
+
+router.delete('/favoritos', requireAuth, async (req, res) => {
+    try {
+        // En el frontend le hemos dicho que mande el ID en el body
+        const { recetaId } = req.body;
+
+        if (!recetaId) {
+            return res.status(400).json({ error: "Falta el ID de la receta a eliminar." });
+        }
+
+        // Buscamos al usuario logueado
+        const usuario = await Usuario.findById(req.usuario.id);
+        if (!usuario) {
+            return res.status(401).json({ error: "Usuario no autorizado." });
+        }
+
+        // Buscamos la lista "Favoritos"
+        const listaFavoritos = usuario.listas.find(lista => lista.nombreLista.toLowerCase() === 'favoritos');
+
+        if (!listaFavoritos) {
+            return res.status(404).json({ error: "No tienes una lista de favoritos creada." });
+        }
+
+        // Comprobamos cuántas recetas había antes de borrar
+        const longitudOriginal = listaFavoritos.recetas.length;
+
+        // Filtramos el array: nos quedamos con todas las recetas MENOS la que queremos borrar
+        listaFavoritos.recetas = listaFavoritos.recetas.filter(
+            idGuardado => idGuardado.toString() !== recetaId.toString()
+        );
+
+        // Si la longitud es la misma, significa que no la ha encontrado
+        if (listaFavoritos.recetas.length === longitudOriginal) {
+            return res.status(404).json({ error: "La receta no estaba en tu lista de favoritos." });
+        }
+
+        // Guardamos los cambios en el usuario
+        await usuario.save();
+
+        res.status(200).json({
+            success: true,
+            mensaje: "Receta eliminada de favoritos correctamente."
+        });
+
+    } catch (error) {
+        console.error("Error al eliminar receta de favoritos:", error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
+
+
+router.get('/:titulo', async (req, res) => {
+    try {
+        const tituloReceta = decodeURIComponent(req.params.titulo).trim();
+
+        if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
+
+        const tituloSeguro = escaparRegex(tituloReceta);
+        // 2. Buscamos usando una Expresión Regular (Regex)
+        // La 'i' final hace que la búsqueda sea case-insensitive (ignora mayúsculas/minúsculas)
+        // El ^ y el $ aseguran que sea exactamente ese título y no solo una parte.
+        const recetaCompleta = await Receta.findOne({
+            title: new RegExp('^' + tituloSeguro + '$', 'i')
+        });
+
+        if (!recetaCompleta) {
+            return res.status(404).json({ error: "Receta no encontrada" });
+        }
+
+        res.json(recetaCompleta);
+    } catch (error) {
+        console.error("❌ Error interno al buscar detalles:", error);
+        res.status(500).json({ error: "Error interno del servidor" });
     }
 });
 module.exports = router;

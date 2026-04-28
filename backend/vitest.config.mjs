@@ -10,6 +10,7 @@ export default defineConfig({
       'default',
       ['html', { outputFile: './test-report/index.html' }],
     ],
-    pool: 'threads',
+    pool: 'forks',
+    fileParallelism: false,
   }
 })
