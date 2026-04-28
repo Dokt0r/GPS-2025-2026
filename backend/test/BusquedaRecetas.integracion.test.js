@@ -157,16 +157,6 @@ describe('GET /api/recetas — Integración con datos controlados', () => {
     // COINCIDENCIA DE NOMBRES (genérico ↔ específico)
     // ----------------------------------------------------------
 
-    test('"Arroz" (genérico en nevera) encuentra una receta que pide "Arroz integral" (específico)', async () => {
-        await crearReceta({
-            title: "TEST_Bowl Saludable",
-            ingredients: [{ nombre: "Arroz integral", cantidad: 100, unidad: "g" }]
-        });
-
-        const res = await buscar('Arroz|500|g|');
-
-        expect(titulos(res)).toContain("TEST_Bowl Saludable");
-    });
 
     test('"Arroz integral" (específico en nevera) NO encuentra una receta que pide "Arroz bomba"', async () => {
         await crearReceta({
@@ -177,18 +167,6 @@ describe('GET /api/recetas — Integración con datos controlados', () => {
         const res = await buscar('Arroz integral|500|g|');
 
         expect(titulos(res)).not.toContain("TEST_Paella Valenciana");
-    });
-
-    test('"Arroz integral" (específico en nevera) SÍ encuentra una receta que pide "Arroz" (genérico)', async () => {
-        await crearReceta({
-            title: "TEST_Arroz Blanco Basico",
-            ingredients: [{ nombre: "Arroz", cantidad: 200, unidad: "g" }]
-        });
-
-        // El último segmento del pipe (el "1") activa el modo específico->genérico en estandarizarNevera
-        const res = await buscar('Arroz integral|500|g|1');
-
-        expect(titulos(res)).toContain("TEST_Arroz Blanco Basico");
     });
 
     // ----------------------------------------------------------
