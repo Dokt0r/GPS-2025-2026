@@ -2,40 +2,35 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
 import mongoose from 'mongoose';
 
-// 1. Desactivar buffering de Mongoose para evitar timeouts
+// 1. Importamos los modelos REALES y el servicio directamente
+import Receta from '../src/models/recetas';
+import Usuario from '../src/models/usuario';
+import { guardarRecetaComoFavorita, FavoritosError } from '../src/services/favoritos';
+
+// 2. Desactivar buffering de Mongoose para evitar timeouts
 mongoose.set('bufferCommands', false);
-
-// 2. Mockear los modelos usando la sintaxis correcta para CommonJS
-vi.mock('../src/models/recetas', () => ({
-  findById: vi.fn()
-}));
-
-vi.mock('../src/models/usuario', () => ({
-  findById: vi.fn()
-}));
-
-// 3. Importar el servicio (que usa require) - Vitest resolverá los mocks
-// Si falla, usar import dinámico
-let guardarRecetaComoFavorita, FavoritosError;
-
-beforeAll(async () => {
-  const module = await import('../src/services/favoritos');
-  guardarRecetaComoFavorita = module.guardarRecetaComoFavorita;
-  FavoritosError = module.FavoritosError;
-});
 
 describe('favoritosService - guardarRecetaComoFavorita', () => {
   const mockUsuarioId = 'usuario-123';
   const mockRecetaIdValido = '507f1f77bcf86cd799439011';
   const mockRecetaIdInvalido = 'id-invalido';
 
+  let mockSelect;
+
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Reiniciar los mocks directamente desde los módulos mockeados
-    const { findById: recetaFindById } = require('../src/models/recetas');
-    const { findById: usuarioFindById } = require('../src/models/usuario');
-    recetaFindById.mockReset();
-    usuarioFindById.mockReset();
+    // Restaurar los espías (spies) antes de cada test para que no haya interferencias
+    vi.restoreAllMocks();
+
+    mockSelect = vi.fn();
+
+    // 3. SPYON: Espiamos el objeto real Receta para interceptar findById.
+    // Le decimos que en lugar de ir a la BBDD, devuelva un objeto con nuestro mockSelect
+    vi.spyOn(Receta, 'findById').mockReturnValue({
+      select: mockSelect
+    });
+
+    // Hacemos lo mismo con el Usuario
+    vi.spyOn(Usuario, 'findById').mockResolvedValue(null);
   });
 
   test('debe lanzar error 400 si falta el ID de la receta', async () => {
@@ -47,72 +42,79 @@ describe('favoritosService - guardarRecetaComoFavorita', () => {
   });
 
   test('debe lanzar error 400 si el recetaId no es un ObjectId válido', async () => {
-    // Mockear isValid para este test
-    vi.spyOn(mongoose.Types.ObjectId, 'isValid').mockReturnValue(false);
+    const isValidSpy = vi.spyOn(mongoose.Types.ObjectId, 'isValid').mockReturnValue(false);
+    
     await expect(guardarRecetaComoFavorita({ usuarioId: mockUsuarioId, recetaId: mockRecetaIdInvalido }))
       .rejects.toMatchObject({
         status: 400,
         message: 'El ID de la receta no es valido.'
       });
-    vi.restoreAllMocks();
+      
+    isValidSpy.mockRestore();
   });
 
   test('debe lanzar error 404 si la receta no existe', async () => {
-    const { findById } = require('../src/models/recetas');
-    findById.mockResolvedValue(null);
+    // Configuramos nuestro mockSelect para simular que no se encontró la receta
+    mockSelect.mockResolvedValue(null);
+    
     await expect(guardarRecetaComoFavorita({ usuarioId: mockUsuarioId, recetaId: mockRecetaIdValido }))
       .rejects.toMatchObject({
         status: 404,
         message: 'La receta no existe.'
       });
-    expect(findById).toHaveBeenCalledWith(mockRecetaIdValido);
+      
+    expect(Receta.findById).toHaveBeenCalledWith(mockRecetaIdValido);
+    expect(mockSelect).toHaveBeenCalledWith('_id');
   });
 
   test('debe lanzar error 401 si el usuario no existe', async () => {
-    const recetaModel = require('../src/models/recetas');
-    const usuarioModel = require('../src/models/usuario');
-    recetaModel.findById.mockResolvedValue({ _id: mockRecetaIdValido });
-    usuarioModel.findById.mockResolvedValue(null);
+    mockSelect.mockResolvedValue({ _id: mockRecetaIdValido });
+    // Por defecto Usuario.findById está mockeado a null en el beforeEach
+    
     await expect(guardarRecetaComoFavorita({ usuarioId: mockUsuarioId, recetaId: mockRecetaIdValido }))
       .rejects.toMatchObject({
         status: 401,
         message: 'Usuario no autorizado.'
       });
-    expect(usuarioModel.findById).toHaveBeenCalledWith(mockUsuarioId);
+      
+    expect(Usuario.findById).toHaveBeenCalledWith(mockUsuarioId);
   });
 
   test('debe lanzar error 400 si la receta ya está en favoritos', async () => {
-    const recetaModel = require('../src/models/recetas');
-    const usuarioModel = require('../src/models/usuario');
-    recetaModel.findById.mockResolvedValue({ _id: mockRecetaIdValido });
+    mockSelect.mockResolvedValue({ _id: mockRecetaIdValido });
+    
     const usuarioMock = {
       _id: mockUsuarioId,
       listas: [{ nombreLista: 'Favoritos', recetas: [mockRecetaIdValido] }],
       save: vi.fn().mockResolvedValue(true)
     };
-    usuarioModel.findById.mockResolvedValue(usuarioMock);
+    // Interceptamos la búsqueda de usuario para devolver nuestro mock
+    Usuario.findById.mockResolvedValue(usuarioMock);
+    
     await expect(guardarRecetaComoFavorita({ usuarioId: mockUsuarioId, recetaId: mockRecetaIdValido }))
       .rejects.toMatchObject({
         status: 400,
         message: 'La receta ya está en tu lista de favoritos.'
       });
+      
     expect(usuarioMock.save).not.toHaveBeenCalled();
   });
 
   test('debe crear la lista "Favoritos" si no existe y guardar la receta', async () => {
-    const recetaModel = require('../src/models/recetas');
-    const usuarioModel = require('../src/models/usuario');
-    recetaModel.findById.mockResolvedValue({ _id: mockRecetaIdValido });
+    mockSelect.mockResolvedValue({ _id: mockRecetaIdValido });
+    
     const usuarioMock = {
       _id: mockUsuarioId,
       listas: [],
       save: vi.fn().mockResolvedValue(true)
     };
-    usuarioModel.findById.mockResolvedValue(usuarioMock);
+    Usuario.findById.mockResolvedValue(usuarioMock);
+    
     const resultado = await guardarRecetaComoFavorita({
       usuarioId: mockUsuarioId,
       recetaId: mockRecetaIdValido
     });
+    
     expect(resultado).toEqual({
       success: true,
       mensaje: 'Receta añadida a tu lista de favoritos correctamente.'
@@ -126,19 +128,20 @@ describe('favoritosService - guardarRecetaComoFavorita', () => {
   });
 
   test('debe usar una lista existente ignorando mayúsculas/minúsculas', async () => {
-    const recetaModel = require('../src/models/recetas');
-    const usuarioModel = require('../src/models/usuario');
-    recetaModel.findById.mockResolvedValue({ _id: mockRecetaIdValido });
+    mockSelect.mockResolvedValue({ _id: mockRecetaIdValido });
+    
     const usuarioMock = {
       _id: mockUsuarioId,
       listas: [{ nombreLista: 'favoritos', recetas: [] }],
       save: vi.fn().mockResolvedValue(true)
     };
-    usuarioModel.findById.mockResolvedValue(usuarioMock);
+    Usuario.findById.mockResolvedValue(usuarioMock);
+    
     const resultado = await guardarRecetaComoFavorita({
       usuarioId: mockUsuarioId,
       recetaId: mockRecetaIdValido
     });
+    
     expect(resultado.success).toBe(true);
     expect(usuarioMock.listas).toHaveLength(1);
     expect(usuarioMock.listas[0].recetas).toContainEqual(mockRecetaIdValido);

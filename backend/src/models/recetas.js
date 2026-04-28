@@ -278,4 +278,4 @@ recetaSchema.pre('save', function () {
     }
 });
 
-module.exports = mongoose.model('Receta', recetaSchema);
+module.exports = mongoose.models.Receta || mongoose.model('Receta', recetaSchema);
