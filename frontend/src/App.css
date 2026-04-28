@@ -2,6 +2,7 @@
 
 :root {
     --accent: #2ecc71;
+    --accent-glow: rgba(46, 204, 113, 0.4);
     --bg-dark: #0f172a;
     --card-bg: rgba(30, 41, 59, 0.7);
     --text-main: #f8fafc;
@@ -15,18 +16,41 @@ body {
     margin: 0;
     min-height: 100vh;
     background-color: var(--bg-dark);
+    /* Degradado moderno con toques de tu color acento */
+    background-image: 
+        radial-gradient(circle at top left, rgba(45, 216, 116, 0.212) 0%, transparent 40%),
+        radial-gradient(circle at bottom right, rgb(23, 18, 70) 0%, #020617 100%);
+    background-attachment: fixed;
     color: var(--text-main);
     display: flex;
     justify-content: center;
 }
 
+/* =========================================
+   LAYOUT PRINCIPAL
+   ========================================= */
 .app-container {
     width: 100%;
-    max-width: 900px; /* Ancho que pediste */
+    max-width: 900px;
     padding: 40px 20px;
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+header h1 {
+    color: var(--text-main);
+    margin-bottom: 0.2em;
+}
+
+header p {
+    color: var(--text-muted);
+    margin-top: 0;
 }
 
 .split-layout {
@@ -43,18 +67,19 @@ body {
     gap: 12px;
 }
 
-/* Evita que el contenedor cambie de tamaño al añadir contenido */
 .card {
     background: var(--card-bg);
     backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--glass-border);
     padding: 32px;
     border-radius: var(--radius);
     width: 100%;
     box-sizing: border-box;
-    min-height: 200px; /* Mantiene un tamaño base constante */
+    min-height: 200px;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
 .section-header h2 {
@@ -63,16 +88,12 @@ body {
     color: var(--accent);
 }
 
-/* Buscador */
-.buscador-wrapper {
-    position: relative;
-    width: 100%;
-}
-
-/* --- FILA DE INPUTS (Flexbox) --- */
+/* =========================================
+   BUSCADOR E INPUTS
+   ========================================= */
 .inputs-row {
     display: flex;
-    flex-wrap: wrap; /* Permite que los elementos bajen a la siguiente línea */
+    flex-wrap: wrap;
     gap: 12px;
     align-items: flex-start;
     width: 100%;
@@ -80,11 +101,10 @@ body {
 
 .buscador-wrapper {
     position: relative;
-    width: 100%; /*Obliga al buscador a ocupar el 100% del ancho de la tarjeta */
-    flex: none; /* Evita que el buscador se estire o encoja */
+    width: 100%;
+    flex: none;
 }
 
-/* Estilo unificado (Texto, Cantidad, Selector) */
 .input-neon {
     width: 100%; 
     background: rgba(15, 23, 42, 0.6);
@@ -98,23 +118,27 @@ body {
     outline: none; 
 }
 
-/* Ocultar las molestas flechas nativas del input numérico */
+.input-neon:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 20px var(--accent-glow);
+    background: rgba(15, 23, 42, 0.8);
+}
+
 .input-cantidad::-webkit-inner-spin-button,
 .input-cantidad::-webkit-outer-spin-button {
     -webkit-appearance: none;
     margin: 0;
 }
+
 .input-cantidad {
-    -moz-appearance: textfield; /* Para Firefox */
+    -moz-appearance: textfield;
     width: 90px;
     text-align: center;
 }
 
-/* Estilos específicos para el desplegable (Select) */
 .input-unidad {
     width: 130px;
-    appearance: none; /* Quita la flecha por defecto del sistema */
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    appearance: none;
     background-repeat: no-repeat;
     background-position: right 15px center;
     background-size: 1em;
@@ -126,19 +150,61 @@ body {
     color: white;
 }
 
-/* El efecto Neón al hacer clic (Focus) */
-.input-neon:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 20px var(--accent-glow);
-    background: rgba(15, 23, 42, 0.8);
+/* =========================================
+   SUGERENCIAS (Autocomplete)
+   ========================================= */
+.sugerencias-box {
+    position: absolute;
+    width: 100%;
+    background: #1e293b;
+    border-radius: 12px;
+    z-index: 10;
+    margin-top: 5px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    max-height: 200px;
+    overflow-y: auto;
+    scrollbar-width: none; 
+    -ms-overflow-style: none;
 }
 
+.sugerencias-box::-webkit-scrollbar {
+    display: none;
+}
 
-/* Botón Neon */
+.sugerencia-item {
+    padding: 12px 18px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.sugerencia-item:last-child {
+    border-bottom: none;
+}
+
+.sugerencia-item:hover {
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+}
+
+.cat-tag {
+    font-size: 0.75rem;
+    background: rgba(46, 204, 113, 0.15);
+    color: var(--accent);
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-weight: 800;
+}
+
+/* =========================================
+   BOTONES
+   ========================================= */
 .btn-primary {
     width: 100%;
     background: var(--accent);
-    color: #064e3b; /* Texto oscuro para contraste sobre el neón */
+    color: #064e3b;
     border: none;
     padding: 18px;
     border-radius: 16px;
@@ -155,55 +221,49 @@ body {
     transform: scale(1.02);
 }
 
-.sugerencias-box {
-    position: absolute;
-    width: 100%;
-    background: #1e293b;
-    border-radius: 12px;
-    z-index: 10;
-    margin-top: 5px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    max-height: 200px;
-    overflow-y: auto;
-    
-    /*Ocultar scrollbar en Firefox y Edge */
-    scrollbar-width: none; 
-    -ms-overflow-style: none;
-}
-
-/*Ocultar scrollbar en Chrome, Safari y Edge moderno */
-.sugerencias-box::-webkit-scrollbar {
-    display: none;
-}
-
-.sugerencia-item {
-    padding: 12px 18px;
-    cursor: pointer;
-}
-
-.sugerencia-item:hover {
-    background: rgba(46, 204, 113, 0.1);
+.btn-secundario {
+    background: transparent;
     color: var(--accent);
-}
-
-/* Botón */
-.btn-primary {
-    background: var(--accent);
-    color: #064e3b;
-    border: none;
-    padding: 18px;
+    border: 1px solid var(--accent);
+    padding: 12px 24px;
     border-radius: 16px;
-    font-weight: 800;
+    font-weight: 600;
     cursor: pointer;
-    margin-top: 20px;
-    transition: 0.3s;
+    transition: all 0.3s;
 }
 
-.btn-primary:hover {
-    box-shadow: 0 0 20px rgba(46, 204, 113, 0.4);
+.btn-secundario:hover {
+    background: rgba(46, 204, 113, 0.1);
+    box-shadow: 0 0 15px var(--accent-glow);
 }
 
-/* --- LISTA DE INVENTARIO --- */
+.btn-delete {
+    background: transparent;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: transform 0.2s, color 0.2s;
+    padding: 8px;
+}
+
+.btn-delete:hover {
+    color: #f87171;
+    transform: scale(1.2);
+}
+
+/* Estilo para ajustar el botón de volver de las recetas */
+.btn-back {
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+/* =========================================
+   LISTA DE INVENTARIO
+   ========================================= */
 ul#mi-nevera {
     list-style: none;
     padding: 0;
@@ -226,11 +286,10 @@ ul#mi-nevera li:hover {
     background: rgba(255, 255, 255, 0.06);
 }
 
-/* Agrupación del texto y el badge */
 .item-info {
     display: flex;
     align-items: center;
-    gap: 15px; /* Separación entre el nombre y el recuadro verde */
+    gap: 15px;
 }
 
 .item-nombre {
@@ -238,34 +297,22 @@ ul#mi-nevera li:hover {
     font-weight: 600;
 }
 
-/* El Recuadro Verde Moderno (Badge) */
 .badge-cantidad {
-    background: rgba(46, 204, 113, 0.1); /* Fondo verde translúcido */
-    color: var(--accent); /* Texto verde brillante */
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
     padding: 6px 12px;
-    border-radius: 8px; /* Recuadro ligeramente redondeado */
+    border-radius: 8px;
     font-size: 0.85rem;
     font-weight: 800;
-    border: 1px solid rgba(46, 204, 113, 0.4); /* Borde verde más marcado */
-    box-shadow: 0 0 10px rgba(46, 204, 113, 0.1); /* Brillo sutil */
+    border: 1px solid rgba(46, 204, 113, 0.4);
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.1);
     letter-spacing: 0.5px;
-    text-transform: lowercase; /* Queda más estético para las medidas (ej: 2 kg) */
+    text-transform: lowercase;
 }
 
-.btn-delete {
-    background: transparent;
-    border: none;
-    color: #ef4444;
-    cursor: pointer;
-    font-size: 1.2rem;
-    transition: transform 0.2s, color 0.2s;
-}
-
-.btn-delete:hover {
-    color: #f87171;
-    transform: scale(1.2);
-}
-
+/* =========================================
+   NOTIFICACIONES (Toasts)
+   ========================================= */
 .messages-under-add {
     min-height: 58px;
     display: flex;
@@ -280,6 +327,7 @@ ul#mi-nevera li:hover {
     border: 1px solid var(--glass-border);
     background: rgba(15, 23, 42, 0.7);
     box-sizing: border-box;
+    animation: slideUp 0.3s ease forwards;
 }
 
 .toast-notification.success {
@@ -292,9 +340,659 @@ ul#mi-nevera li:hover {
     color: #fca5a5;
 }
 
-@media (max-width: 900px) {
-    .split-layout {
-        grid-template-columns: 1fr;
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* =========================================
+   VISTA RECETAS (LAYOUT Y GRID)
+   ========================================= */
+
+.vista-recetas-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  color: #ffffff;
+}
+
+.header-recetas-clean {
+    margin-bottom: 8px;
+}
+
+.header-recetas-clean h2 {
+    margin: 0;
+    color: var(--accent);
+    font-size: 2.2rem;
+    letter-spacing: -0.5px;
+}
+
+.header-recetas-clean p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+}
+
+.header-recetas-clean p span {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+.loading-container {
+    text-align: center;
+    padding: 60px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-container p {
+    font-size: 1.3rem;
+    color: var(--accent);
+    font-weight: 800;
+    margin: 0;
+    animation: pulse 1.5s infinite ease-in-out; 
+}
+
+@keyframes pulse {
+    0% { opacity: 0.5; transform: scale(0.98); }
+    50% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0.5; transform: scale(0.98); }
+}
+
+/* GRID INFALIBLE (A PRUEBA DE FALLOS CON MEDIA QUERIES) */
+.recetas-grid {
+    display: grid;
+    /* Por defecto (móviles): 1 sola columna */
+    grid-template-columns: 1fr; 
+    gap: 24px;
+    width: 100%;
+    align-items: stretch; /* Iguala las alturas de las tarjetas */
+}
+
+/* Tablets (pantallas medianas): 2 columnas */
+@media (min-width: 600px) {
+    .recetas-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }
 
+/* Escritorio (pantallas grandes): 3 columnas */
+@media (min-width: 900px) {
+    .recetas-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.receta-card {
+    padding: 0; 
+    overflow: hidden; 
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
+    cursor: pointer;
+    border: 1px solid var(--glass-border);
+}
+
+.receta-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    border-color: rgba(46, 204, 113, 0.5); 
+}
+
+.receta-card:hover .receta-img {
+    transform: scale(1.08);
+}
+
+.receta-img-container {
+    position: relative;
+    width: 100%;
+    height: 180px;
+    background-color: rgba(30, 41, 59, 0.8); /* Fondo por si falla la imagen */
+    overflow: hidden; /* Vital para que el zoom no se salga de la tarjeta */
+}
+
+/* Capa de degradado sobre la foto para que el texto resalte mejor */
+.receta-img-container::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 50%;
+    background: linear-gradient(to top, rgba(15, 23, 42, 0.418), transparent);
+    pointer-events: none;
+}
+
+.receta-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    color: transparent; /* Oculta el feo texto 'alt' de navegador si falla la imagen */
+}
+
+.receta-coincidentes {
+  position: absolute;
+  bottom: 10px; /* Posicionada abajo */
+  right: 10px; /* Posicionada a la derecha */
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  backdrop-filter: blur(10px); /* Sutil desenfoque para legibilidad */
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid transparent; /* Borde base transparente */
+  transition: all 0.3s ease;
+  z-index: 2;
+  text-shadow: 0 0 4px rgba(0,0,0,0.8); /* Sombra para resaltar texto sobre imágenes */
+}
+
+/* Clases de estado dinámicas (solo color y borde) */
+.match-verde {
+  color: #2ecc71; /* Color verde para el texto */
+  border-color: #2ecc71; /* Color verde para el borde */
+  background-color: rgba(46, 204, 113, 0.2);
+}
+
+.match-amarillo {
+  color: #f1c40f; /* Color amarillo para el texto */
+  border-color: #f1c40f; /* Color amarillo para el borde */
+  background-color: rgba(241, 196, 15, 0.2);
+}
+
+.match-rojo {
+  color: #e74c3c; /* Color rojo para el texto */
+  border-color: #e74c3c; /* Color rojo para el borde */
+  background-color: rgba(231, 76, 60, 0.2);
+}
+
+.match-neutral {
+  color: rgba(255,255,255,0.6); /* Color neutral si falla */
+  border-color: rgba(255,255,255,0.6); /* Borde neutral si falla */
+}
+
+.receta-info {
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    flex-grow: 1;
+    background: var(--card-bg);
+}
+
+.receta-info h3 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--text-main);
+    line-height: 1.5;
+    font-weight: 700;
+}
+
+.btn-back-minimal {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+}
+
+.btn-back-minimal:hover {
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+    border-color: rgba(46, 204, 113, 0.4);
+    transform: translateX(-4px); /* Pequeño salto hacia la izquierda */
+}
+
+/* =========================================
+  PAGINACIÓN
+   ========================================= */
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 40px;
+  margin-bottom: 30px;
+  flex-wrap: wrap; /* Para que en móviles no se rompa la pantalla */
+}
+
+.pagination-numbers {
+  display: flex;
+  gap: 6px;
+}
+
+/* Botones de texto (Anterior / Siguiente) */
+.btn-pagination {
+   background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+    transition: all 0.3s;
+}
+
+/* Botones cuadrados con iconos (« / ») */
+.btn-pagination-icon {
+  background: rgba(255, 255, 255, 0.05);
+    color: var(--text-muted);
+    border: 1px solid var(--glass-border);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+    transition: all 0.3s;
+}
+
+/* Hover general para los botones interactivos */
+.btn-pagination:hover:not(:disabled),
+.btn-pagination-icon:hover:not(:disabled) {
+   background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+    border-color: rgba(46, 204, 113, 0.4);
+}
+
+/* Estilo para botones desactivados (Ej: Si estamos en la pag 1) */
+.btn-pagination:disabled,
+.btn-pagination-icon:disabled {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.3);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+/* Números de página individuales */
+.btn-page-number {
+  padding: 8px 14px;
+  border: 1px solid transparent;
+background: rgba(255, 255, 255, 0.05);   
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-page-number:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Estilo del número de la página en la que nos encontramos */
+.btn-page-number.active {
+  background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+    border-color: rgba(46, 204, 113, 0.4);
+}
+
+/* ==========================================================================
+   VISTA DETALLE DE RECETA
+   ========================================================================== */
+
+/* --- 1. LAYOUT PRINCIPAL Y NAVEGACIÓN --- */
+.receta-view-wrapper {
+  position: fixed;
+  inset: 0;
+  background-color: #0f172a;
+  z-index: 9999;
+  overflow-y: auto;
+  overflow-x: hidden;
+  color: #f8fafc;
+  scroll-behavior: smooth;
+}
+
+.btn-flotante-volver {
+  position: sticky;
+  top: 24px;
+  left: 24px;
+  float: left; /* Permite que se posicione sobre la imagen */
+  margin-bottom: -60px; /* Evita que empuje el contenido hacia abajo */
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 10px 18px;
+  border-radius: 100px;
+  cursor: pointer;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.btn-flotante-volver:hover {
+  background: rgba(74, 222, 128, 0.15);
+  border-color: #4ade80;
+  color: #4ade80;
+  transform: translateY(-2px);
+}
+
+/* --- 2. SECCIÓN PARALLAX (HERO) --- */
+.receta-hero-parallax {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 70vh;
+  min-height: 300px;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.receta-hero-parallax img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.receta-hero-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom, 
+    rgba(15, 23, 42, 0.2) 0%, 
+    rgba(15, 23, 42, 0.5) 60%, 
+    #0f172a 100%
+  );
+  pointer-events: none;
+}
+
+/* --- 3. TARJETA DE CONTENIDO (GLASSMORPHISM) --- */
+.receta-content-card {
+  position: relative;
+  z-index: 2;
+  background: rgba(25, 40, 75, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  margin-top: -400px; 
+  margin-inline: auto; 
+  border-radius: 40px 40px 0 0;
+  padding: 50px 40px 100px;
+  min-height: 100vh; 
+  max-width: 60%;
+  box-shadow: 0 -15px 40px rgba(0,0,0,0.5);
+}
+
+.receta-header {
+  max-width: 1100px;
+  margin: 0 auto 40px;
+  text-align: left;
+}
+
+.receta-titulo-principal {
+  margin: 0;
+  font-size: 3.5rem;
+  color: #4ade80;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -1px;
+}
+
+/* --- 4. GRID LAYOUT: INGREDIENTES Y PREPARACIÓN --- */
+.receta-grid-layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 35% 1fr;
+  gap: 60px;
+  align-items: start;
+}
+
+.receta-seccion-titulo {
+  font-size: 1.5rem;
+  color: #fff;
+  margin-top: 0;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.397);
+  padding-bottom: 12px;
+}
+
+/* Lista de Ingredientes */
+.receta-lista-ing {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.receta-ing-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 14px 18px;
+  border-radius: 16px;
+  box-shadow: #0206172f 0px 0px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.receta-ing-badge {
+  background: rgba(74, 222, 128, 0.2);
+  color: #4ade80;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 6px 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+  min-width: 50px;
+  text-align: center; 
+  flex-shrink: 0;
+}
+
+.receta-ing-nombre {
+  color: #ffffff;
+  font-size: 1.05rem;
+  text-shadow: #020617 0px 0px 2px;
+}
+
+/* Preparación (Timeline) */
+.receta-timeline {
+  position: relative;
+  padding-left: 10px;
+}
+
+.receta-timeline::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 40px;
+  left: 30px;
+  width: 2px;
+  background: rgba(74, 222, 128, 0.15);
+}
+
+.receta-step {
+  position: relative;
+  display: flex;
+  gap: 24px;
+  margin-bottom: 35px;
+}
+
+.receta-step-number {
+  width: 42px;
+  height: 42px;
+  background: #0f172a;
+  border: 2px solid #4ade80;
+  color: #4ade80;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  z-index: 2;
+}
+
+.receta-step-text {
+  padding-top: 8px;
+}
+
+.receta-step-text p {
+  margin: 0;
+  color: #ffffff;
+  text-shadow: 0 0 2px rgba(0,0,0,0.8);
+  font-size: 1.1rem;
+  line-height: 1.7;
+}
+
+.receta-texto-vacio {
+  color: #64748b;
+  font-style: italic;
+}
+
+/* --- 5. ESTADOS Y COMPONENTES INTERACTIVOS (CARGA, ÉXITO, ALERTAS) --- */
+.loading-container.centrado-vertical,
+.error-container.centrado-vertical {
+  margin-top: 40vh;
+  text-align: center;
+}
+
+/* Modificadores del paso final de receta */
+.receta-step-completar {
+  align-items: center; /* Centra el botón/mensaje con el círculo */
+}
+
+.receta-step-number-completado {
+  background: linear-gradient(135deg, #00e676, #00c853);
+  border-color: #00e676;
+  color: #0d1117;
+  font-size: 1.3rem; /* Un poco más grande para el tick */
+}
+
+.texto-exito {
+  color: #00e676;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.btn-completar-receta {
+  background: transparent;
+  border: 2px solid #00e676;
+  color: #00e676;
+  padding: 10px 24px;
+  border-radius: 50px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.05em;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  flex-shrink: 0;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.btn-completar-receta:hover {
+  background: #00e676;
+  color: #0d1117;
+}
+
+/* Alerta de ingredientes faltantes */
+.alerta-faltantes-container {
+  background: rgba(255, 82, 82, 0.1);
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin-top: 12px;
+  margin-left: 66px; /* Ajustado para alinearse con el texto del timeline (42px circulo + 24px gap) */
+  max-width: 420px;
+}
+
+.alerta-faltantes-titulo {
+  color: #ff5252;
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.alerta-faltantes-lista {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alerta-faltantes-item {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.alerta-bullet {
+  color: #ff5252;
+  font-weight: bold;
+}
+
+.alerta-ingrediente-nombre {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* =========================================
+   RESPONSIVO MÓVIL VISTA DETALLE
+   ========================================= */
+@media (max-width: 900px) {
+  .receta-hero-parallax {
+    height: 40vh; /* Imagen más pequeña en móvil */
+  }
+
+  .receta-content-card {
+    padding: 30px 20px 60px;
+    border-radius: 30px 30px 0 0;
+    margin-top: -40px; /* Menor solape en móvil */
+  }
+
+  .receta-titulo-principal {
+    font-size: 2.2rem;
+  }
+
+  .receta-grid-layout {
+    grid-template-columns: 1fr; /* Todo a una columna */
+    gap: 40px;
+  }
+
+  .btn-flotante-volver {
+    top: 16px;
+    left: 16px;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+  }
+}

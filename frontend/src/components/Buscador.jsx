@@ -1,15 +1,28 @@
 import React, { useState } from 'react';
 
+/**
+ * Componente interactivo para buscar y seleccionar ingredientes de la base de datos.
+ * Incluye un input con autocompletado en tiempo real y validación de cantidades 
+ * antes de enviar la información al estado global de la aplicación.
+ */
 const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
   const [busqueda, setBusqueda] = useState('');
-  const [cantidad, setCantidad] = useState(''); // Empieza vacío para que escribas lo que quieras
-  const [unidad, setUnidad] = useState('u.'); // Vuelve a ser desplegable por defecto
+  const [cantidad, setCantidad] = useState('');
+  const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null);
   const [sugerencias, setSugerencias] = useState([]);
 
+  /**
+   * Maneja los cambios de texto en el input de búsqueda.
+   * Filtra dinámicamente el catálogo de ingredientes (`ingredientesBase`) 
+   * mostrando solo aquellos que coincidan con el texto introducido.
+   */
   const manejarInput = (e) => {
     const valor = e.target.value;
     setBusqueda(valor);
-    if (valor.trim() !== '') {
+    setIngredienteSeleccionado(null); // Resetea la selección si el usuario vuelve a escribir
+    
+    // Evita la búsqueda si no hay datos cargados del servidor
+    if (valor.trim() !== '' && ingredientesBase.length > 0) {
       const filtrados = ingredientesBase.filter(ing =>
         ing.nombre.toLowerCase().includes(valor.toLowerCase())
       );
@@ -19,31 +32,51 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
     }
   };
 
+  /**
+   * Actualiza el estado cuando el usuario hace clic en una de las sugerencias
+   * del menú desplegable. Fija el texto en el input y guarda el objeto completo.
+   */
+  const seleccionarSugerencia = (ing) => {
+    setBusqueda(ing.nombre);
+    setIngredienteSeleccionado(ing);
+    setSugerencias([]); // Oculta el menú desplegable
+  };
+
+  /**
+   * Ejecuta las validaciones finales cuando el usuario presiona el botón "Confirmar".
+   * Comprueba la conexión, asegura que se haya seleccionado un ingrediente válido
+   * de la lista y verifica que la cantidad sea un número positivo.
+   */
   const handleConfirmar = () => {
-    const encontrado = ingredientesBase.find(
-      ing => ing.nombre.toLowerCase() === busqueda.toLowerCase()
-    );
-
-    if (encontrado) {
-      // Si dejas la cantidad vacía, asume 1 por defecto
-      const cantidadFinal = cantidad === '' ? 1 : cantidad;
-
-      if (cantidadFinal <= 0) {
-        onError?.('❌ La cantidad debe ser mayor que 0.');
-        
-      }else{
-
-        onAñadir(encontrado, cantidadFinal, unidad);
-        
-        // Reseteamos
-        setBusqueda('');
-        setCantidad('');
-        setUnidad('u.');
-        setSugerencias([]);
-      }
-    } else {
-      onError?.('❌ Por favor, selecciona un ingrediente válido de las sugerencias.');
+    // Protección contra fallos del servidor
+    if (ingredientesBase.length === 0) {
+        onError?.('❌ No se pueden buscar ingredientes porque no hay conexión con la base de datos.');
+        return;
     }
+
+    // Validación de selección correcta
+    if (!ingredienteSeleccionado) {
+      onError?.('❌ Por favor, selecciona un ingrediente válido de las sugerencias.');
+      return;
+    }
+
+    // Si el campo está vacío, asumimos 1 por defecto
+    const cantidadFinal = cantidad === '' ? 1 : parseFloat(cantidad);
+
+    // Validación matemática
+    if (cantidadFinal <= 0) {
+      onError?.('❌ La cantidad debe ser mayor que 0.');
+      return;
+    }
+
+    // Envía el objeto completo y la cantidad al componente App
+    onAñadir(ingredienteSeleccionado, cantidadFinal);
+
+    // Limpieza de inputs tras añadir exitosamente
+    setBusqueda('');
+    setCantidad('');
+    setIngredienteSeleccionado(null);
+    setSugerencias([]);
   };
 
   return (
@@ -51,56 +84,51 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
       <div className="section-header">
         <h2>Añadir a la Nevera</h2>
       </div>
-      
+
       <div className="inputs-row">
-        {/* Buscador de texto */}
         <div className="buscador-wrapper">
-          <input 
-            type="text" 
-            placeholder="Ingrediente (ej: Arroz)" 
+          <input
+            type="text"
+            placeholder={ingredientesBase.length === 0 ? "Sin conexión..." : "Ingrediente (ej: Arroz)"}
             value={busqueda}
             onChange={manejarInput}
             autoComplete="off"
             className="input-neon"
+            disabled={ingredientesBase.length === 0} // Bloquea si no hay conexión
           />
+          {/* Renderizado condicional de las sugerencias de búsqueda */}
           {sugerencias.length > 0 && (
             <div className="sugerencias-box">
               {sugerencias.map((ing, i) => (
-                <div key={i} className="sugerencia-item" onClick={() => {
-                  setBusqueda(ing.nombre);
-                  setSugerencias([]);
-                }}>
-                  {ing.nombre} <small className="cat-tag">{ing.categoria}</small>
+                <div key={i} className="sugerencia-item" onClick={() => seleccionarSugerencia(ing)}>
+                  {ing.nombre}
+                  <small className="cat-tag">{ing.unidad}</small>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Input de Cantidad*/}
-        <input 
-          type="number" 
+        <input
+          type="number"
           placeholder="Cant."
           value={cantidad}
           onChange={(e) => setCantidad(e.target.value)}
           className="input-neon input-cantidad"
+          disabled={ingredientesBase.length === 0}
         />
 
-        {/* Desplegable de Unidad */}
-        <select 
-          value={unidad} 
-          onChange={(e) => setUnidad(e.target.value)}
+        {/* Muestra la unidad correspondiente (g, ml, ud) de forma automática y estática */}
+        <input
+          type="text"
+          value={ingredienteSeleccionado ? ingredienteSeleccionado.unidad : '—'}
+          readOnly
           className="input-neon input-unidad"
-        >
-          <option value="u.">u. (Unids)</option>
-          <option value="kg">kg</option>
-          <option value="g">g</option>
-          <option value="L">Litros</option>
-          <option value="ml">ml</option>
-        </select>
+          disabled={ingredientesBase.length === 0}
+        />
       </div>
-      
-      <button className="btn-primary" onClick={handleConfirmar}>
+
+      <button className="btn-primary" onClick={handleConfirmar} disabled={ingredientesBase.length === 0}>
         <span>Confirmar Selección</span>
       </button>
     </section>
