@@ -22,7 +22,13 @@ const VistaFavoritos = () => {
         if (!res.ok) throw new Error('No se pudieron cargar tus favoritos.');
 
         const data = await res.json();
-        setFavoritos(data.favoritos || []);
+        
+        // LC-20-1: Ordenamos las recetas alfabéticamente por el título
+        const favoritosOrdenados = (data.favoritos || []).sort((a, b) => 
+          a.title.localeCompare(b.title)
+        );
+        
+        setFavoritos(favoritosOrdenados);
       } catch (err) {
         console.error('Error cargando favoritos:', err);
         setError(err.message);
@@ -33,6 +39,33 @@ const VistaFavoritos = () => {
 
     fetchFavoritos();
   }, [API_URL, fetchConAuth]);
+
+  //  Lógica para eliminar un elemento de la lista
+  const eliminarFavorito = async (e, recetaId) => {
+    e.stopPropagation();
+
+    try {
+      // Hacemos la llamada DELETE al backend
+      const res = await fetchConAuth(`${API_URL}/api/recetas/favoritos`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recetaId })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Error al eliminar la receta');
+      }
+
+      // Si el backend borró con éxito, actualizamos el estado de React 
+      // filtrando la receta eliminada para que desaparezca al instante (sin recargar la página)
+      setFavoritos(prevFavoritos => prevFavoritos.filter(r => r._id !== recetaId));
+
+    } catch (err) {
+      console.error('Error al eliminar:', err);
+      alert('No se pudo quitar la receta de favoritos. ' + err.message);
+    }
+  };
 
   return (
     <section className="vista-recetas-container">
@@ -70,21 +103,38 @@ const VistaFavoritos = () => {
               key={r._id}
               className="receta-card card"
               onClick={() => navigate(`/receta/${encodeURIComponent(r.title)}`)}
-              style={{ cursor: 'pointer' }}
+              style={{ cursor: 'pointer', position: 'relative' }}
             >
               <div className="receta-img-container">
                 <img src={r.image_url} alt={r.title} className="receta-img" />
-                <span
+                
+                {/* Botón de eliminación reemplazando al span del corazón estático */}
+                <button
+                  onClick={(e) => eliminarFavorito(e, r._id)}
+                  title="Quitar de favoritos"
                   style={{
                     position: 'absolute',
                     top: '10px',
                     right: '10px',
+                    background: 'rgba(255, 255, 255, 0.9)',
+                    border: 'none',
+                    borderRadius: '50%',
+                    width: '32px',
+                    height: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
                     color: '#e53935',
                     fontSize: '1.2rem',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                    transition: 'transform 0.2s'
                   }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                  ♥
-                </span>
+                  ✖
+                </button>
               </div>
               <div className="receta-info">
                 <h3>{r.title}</h3>

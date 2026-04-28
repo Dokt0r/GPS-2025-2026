@@ -293,4 +293,56 @@ router.get('/favoritos', requireAuth, async (req, res) => {
     }
 });
 
+// =========================================================================
+// ENDPOINT: DELETE /api/recetas/favoritos (Quitar receta de favoritos)
+// =========================================================================
+
+router.delete('/favoritos', requireAuth, async (req, res) => {
+    try {
+        // En el frontend le hemos dicho que mande el ID en el body
+        const { recetaId } = req.body;
+
+        if (!recetaId) {
+            return res.status(400).json({ error: "Falta el ID de la receta a eliminar." });
+        }
+
+        // Buscamos al usuario logueado
+        const usuario = await Usuario.findById(req.usuario.id);
+        if (!usuario) {
+            return res.status(401).json({ error: "Usuario no autorizado." });
+        }
+
+        // Buscamos la lista "Favoritos"
+        const listaFavoritos = usuario.listas.find(lista => lista.nombreLista.toLowerCase() === 'favoritos');
+
+        if (!listaFavoritos) {
+            return res.status(404).json({ error: "No tienes una lista de favoritos creada." });
+        }
+
+        // Comprobamos cuántas recetas había antes de borrar
+        const longitudOriginal = listaFavoritos.recetas.length;
+
+        // Filtramos el array: nos quedamos con todas las recetas MENOS la que queremos borrar
+        listaFavoritos.recetas = listaFavoritos.recetas.filter(
+            idGuardado => idGuardado.toString() !== recetaId.toString()
+        );
+
+        // Si la longitud es la misma, significa que no la ha encontrado
+        if (listaFavoritos.recetas.length === longitudOriginal) {
+            return res.status(404).json({ error: "La receta no estaba en tu lista de favoritos." });
+        }
+
+        // Guardamos los cambios en el usuario
+        await usuario.save();
+
+        res.status(200).json({ 
+            success: true, 
+            mensaje: "Receta eliminada de favoritos correctamente." 
+        });
+
+    } catch (error) {
+        console.error("Error al eliminar receta de favoritos:", error);
+        res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
 module.exports = router;
