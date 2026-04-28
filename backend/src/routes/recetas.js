@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Receta = require('../models/recetas');
-
+const InventarioItem = require('../models/InventarioItem'); // Asegúrate de que la ruta sea correcta
 // Función para estandarizar lo que viene del frontend a g, ml o ud de forma SEGURA
 const estandarizarNevera = (queryStr) => {
     if (!queryStr) return [];
@@ -77,7 +77,7 @@ router.get('/:titulo', async (req, res) => {
 });
 
 // ENDPOINT 3: Completar una receta (Actualizar pasos e ingredientes)
-router.put('/completar', async (req, res) => {
+/*router.put('/completar', async (req, res) => {
     try {
         const { titulo, steps, ingredients } = req.body;
         const tituloSeguro = escaparRegex(titulo);
@@ -100,6 +100,51 @@ router.put('/completar', async (req, res) => {
         res.json(recetaActualizada);
     } catch (error) {
         res.status(400).json({ error: error.message });
+    }
+});*/
+// ENDPOINT 3: Completar una receta y RESTAR ingredientes del inventario
+router.put('/completar', async (req, res) => {
+    try {
+        const { titulo, steps, ingredients } = req.body;
+        const tituloSeguro = escaparRegex(titulo);
+
+        // 1. Buscamos la receta
+        const receta = await Receta.findOne({ 
+            title: new RegExp('^' + tituloSeguro + '$', 'i') 
+        });
+
+        if (!receta) return res.status(404).json({ error: "Receta no encontrada" });
+
+        // 2. LÓGICA DE RESTA: Recorremos los ingredientes que nos envía el frontend
+        // Usamos for...of para poder usar 'await' dentro del bucle
+        for (const ing of ingredients) {
+            // Buscamos el ingrediente en la colección 'inventario'
+            const itemEnInventario = await InventarioItem.findOne({
+                nombre: { $regex: new RegExp(`^${escaparRegex(ing.nombre)}$`, 'i') }
+            });
+
+            // "Resta los que tenga, ignora los que no tenga"
+            if (itemEnInventario) {
+                // Restamos la cantidad asegurándonos de que no baje de 0
+                itemEnInventario.cantidad = Math.max(0, itemEnInventario.cantidad - ing.cantidad);
+                await itemEnInventario.save();
+            }
+            // Si itemEnInventario es null, el código simplemente sigue al siguiente (ignora)
+        }
+
+        // 3. Actualizamos los datos de la receta
+        receta.steps = steps;
+        receta.ingredients = ingredients;
+        receta.isCompleted = true;
+
+        await receta.save();
+
+        // 4. "Eliminar el mensaje": Respondemos con éxito pero sin textos de alerta
+        res.status(200).json({ success: true }); 
+
+    } catch (error) {
+        // En caso de error, enviamos un estado 400 pero minimalista
+        res.status(400).send();
     }
 });
 

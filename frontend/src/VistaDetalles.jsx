@@ -95,7 +95,7 @@ const VistaDetalles = () => {
   }, [titulo, API_URL]);
 
   // ── LÓGICA PRINCIPAL: COMPLETAR RECETA ──────
-  const handleCompletarReceta = () => {
+ /* const handleCompletarReceta = () => {
     if (!receta?.ingredients) return;
 
     const faltantes = calcularFaltantes(receta.ingredients, ingredientesNevera);
@@ -109,8 +109,39 @@ const VistaDetalles = () => {
     setErrorCompletar(null);
     setRecetaCompletada(true);
     setTimeout(() => navigate('/'), 3500);
-  };
+  };*/
+// ── LÓGICA PRINCIPAL: COMPLETAR RECETA (CORREGIDA) ──────
+  const handleCompletarReceta = async () => {
+    if (!receta?.ingredients) return;
 
+    try {
+      // 1. Sincronizamos con el backend para restar ingredientes
+      const response = await fetch(`${API_URL}/api/recetas/completar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          titulo: receta.title,
+          steps: receta.steps,
+          ingredients: receta.ingredients
+        }),
+      });
+
+      if (!response.ok) throw new Error('Error al sincronizar con el servidor');
+
+      // 2. Actualizamos el estado local de la nevera (UI)
+      restarIngredientesReceta(receta.ingredients);
+      
+      // 3. Mostramos éxito y navegamos
+      setRecetaCompletada(true);
+      setErrorCompletar(null); // Limpiamos errores previos
+      setTimeout(() => navigate('/'), 2500);
+
+    } catch (err) {
+      console.error("Error al completar receta:", err);
+    }
+  };
   // ── RENDERS DE ESTADO ───────────────────────
 
   if (cargando) {
@@ -284,7 +315,8 @@ const VistaDetalles = () => {
             </div>
 
             {/* Error de ingredientes faltantes integrado en el flujo visual */}
-            {!recetaCompletada && errorCompletar && errorCompletar.length > 0 && (
+            //Esto comentado elimina el mensaje. 
+            {/* {!recetaCompletada && errorCompletar && errorCompletar.length > 0 && (
               <div className="alerta-faltantes-container">
                 <p className="alerta-faltantes-titulo">
                   No tienes suficientes ingredientes:
@@ -301,7 +333,7 @@ const VistaDetalles = () => {
                   ))}
                 </ul>
               </div>
-            )}
+            )} */}
           </section>
 
         </div>

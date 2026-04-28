@@ -8,7 +8,6 @@ jest.mock('mongoose', () => {
         pre() { }
         post() { }
     }
-
     return {
         connect: jest.fn().mockResolvedValue(true),
         disconnect: jest.fn().mockResolvedValue(true),
@@ -23,8 +22,14 @@ jest.mock('../src/models/recetas', () => ({
     findOneAndUpdate: jest.fn()
 }));
 
+// AÑADIDO: Mock para el modelo InventarioItem que ha usado tu compañero
+jest.mock('../src/models/InventarioItem', () => ({
+    findOne: jest.fn()
+}));
+
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
+const InventarioItem = require('../src/models/InventarioItem');
 
 describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes', () => {
 
@@ -42,42 +47,69 @@ describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes'
     // ==========================================
     // ENDPOINT: PUT /api/recetas/completar
     // ==========================================
-    describe('PUT /api/recetas/completar', () => {
+    describe('PUT /api/recetas/completar (LC-170: Restar ingredientes)', () => {
 
         test('debería actualizar steps, ingredients y marcar la receta como completada', async () => {
             const saveMock = vi.fn().mockResolvedValue({
                 title: 'Tortilla',
-                steps: ['Batir', 'Cocinar'],
-                ingredients: [{ nombre: 'Huevo', cantidad: 3, unidad: 'ud' }],
-                isCompleted: true
+                steps: [],
+                ingredients: [],
+                isCompleted: false,
+                save: recetaSaveMock
             });
 
-            const recetaMock = {
-                title: 'Tortilla',
-                steps: ['Paso viejo'],
-                ingredients: [{ nombre: 'Huevo', cantidad: 2, unidad: 'ud' }],
-                isCompleted: false,
-                save: saveMock
-            };
-
-            Receta.findOne.mockResolvedValue(recetaMock);
-
-            const nuevosPasos = ['Batir', 'Cocinar'];
-            const nuevosIngredientes = [{ nombre: 'Huevo', cantidad: 3, unidad: 'ud' }];
+            // Simulamos que el usuario tiene 6 huevos en la nevera
+            InventarioItem.findOne.mockResolvedValue({
+                nombre: 'Huevo',
+                cantidad: 6,
+                save: inventarioSaveMock
+            });
 
             const res = await request(app)
                 .put('/api/recetas/completar')
                 .send({
                     titulo: 'Tortilla',
-                    steps: nuevosPasos,
-                    ingredients: nuevosIngredientes
+                    steps: ['Batir'],
+                    ingredients: [{ nombre: 'Huevo', cantidad: 2, unidad: 'ud' }]
                 });
 
             expect(res.status).toBe(200);
-            expect(recetaMock.steps).toEqual(nuevosPasos);
-            expect(recetaMock.ingredients).toEqual(nuevosIngredientes);
-            expect(recetaMock.isCompleted).toBe(true);
-            expect(saveMock).toHaveBeenCalledTimes(1);
+            expect(res.body).toEqual({ success: true }); // La nueva respuesta de RB
+            
+            // Verificamos que se restó la cantidad correctamente (6 - 2 = 4)
+            const itemLlamado = InventarioItem.findOne.mock.results[0].value;
+            const itemEsperado = await itemLlamado;
+            expect(itemEsperado.cantidad).toBe(4);
+            expect(inventarioSaveMock).toHaveBeenCalled();
+            expect(recetaSaveMock).toHaveBeenCalled();
+        });
+
+        test('LC-170 CLAVE: Ignora los ingredientes que la receta pide pero el usuario NO tiene', async () => {
+            const recetaSaveMock = jest.fn().mockResolvedValue(true);
+
+            Receta.findOne.mockResolvedValue({
+                title: 'Tortilla',
+                steps: [],
+                ingredients: [],
+                isCompleted: false,
+                save: recetaSaveMock
+            });
+
+            // Simulamos que el Inventario NO tiene el ingrediente (devuelve null)
+            InventarioItem.findOne.mockResolvedValue(null);
+
+            const res = await request(app)
+                .put('/api/recetas/completar')
+                .send({
+                    titulo: 'Tortilla',
+                    steps: ['Picar cebolla'],
+                    ingredients: [{ nombre: 'Cebolla', cantidad: 1, unidad: 'ud' }]
+                });
+
+            // Como pide "ignorar", el endpoint debe devolver 200 OK sin dar error
+            expect(res.status).toBe(200);
+            expect(res.body).toEqual({ success: true });
+            expect(recetaSaveMock).toHaveBeenCalled(); // La receta se guarda igualmente
         });
 
         test('debería devolver 404 si la receta no existe', async () => {
@@ -112,11 +144,12 @@ describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes'
                 .send({
                     titulo: 'Tortilla',
                     steps: ['Paso 1'],
-                    ingredients: [{ nombre: 'Huevo', cantidad: 0, unidad: 'ud' }]
+                    ingredients: [{ nombre: 'Huevo', cantidad: 2, unidad: 'ud' }]
                 });
 
             expect(res.status).toBe(400);
-            expect(res.body.error).toContain('Lógica de Negocio');
+            // Comprobamos que el body está vacío, tal y como programó RB: res.status(400).send()
+            expect(res.body).toEqual({}); 
         });
     });
 
@@ -176,4 +209,5 @@ describe('API de Recetas - Tests Unitarios de completar y eliminar ingredientes'
             expect(res.body.error).toBe('Error al eliminar ingrediente');
         });
     });
+
 });
