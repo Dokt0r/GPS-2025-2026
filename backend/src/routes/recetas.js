@@ -183,7 +183,7 @@ router.put('/completar', requireAuth, async (req, res) => {
         console.error("Error al completar receta y restar ingredientes:", error);
         res.status(500).json({ error: "Error interno del servidor al procesar la operación." });
     }
-});*/
+});
 // ENDPOINT 3: Completar una receta y RESTAR ingredientes del inventario
 router.put('/completar', async (req, res) => {
     try {
