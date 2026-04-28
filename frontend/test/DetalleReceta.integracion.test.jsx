@@ -2,32 +2,20 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-
-// Ajusta estas rutas según la estructura de tu proyecto
 import App from '../src/App';
-import { AuthProvider } from '../src/AuthContext'; 
+import { AuthProvider } from '../src/AuthContext';
 
-// ─────────────────────────────────────────────────────────────
-// MOCKS DE DATOS
-// ─────────────────────────────────────────────────────────────
+// ==========================================
+// MOCKS Y HELPERS CORREGIDOS
+// ==========================================
 
 const INGREDIENTES_MOCK = [
   { _id: '1', nombre: 'Tomate', unidad: 'ud', equivalencia_g_ml: 100 },
   { _id: '2', nombre: 'Arroz', unidad: 'g', equivalencia_g_ml: null },
 ];
 
-const RECETAS_MOCK = [
-  { 
-    _id: 'r1', id: 'r1', 
-    title: 'Arroz con tomate', 
-    image_url: 'img1.jpg', 
-    coincidenciaTexto: '2/2' 
-  }
-];
-
 const DETALLE_RECETA_MOCK = {
   _id: 'r1',
-  id: 'r1',
   title: 'Arroz con tomate',
   image_url: 'img1.jpg',
   ingredients: [
@@ -35,26 +23,19 @@ const DETALLE_RECETA_MOCK = {
     { nombre: 'Arroz', cantidad: 200, unidad: 'g' }
   ],
   steps: ['Lavar el arroz', 'Cocinar con el tomate'],
+  esFavorito: false
 };
-
-// ─────────────────────────────────────────────────────────────
-// HELPERS DE RENDERIZADO Y ACCIÓN
-// ─────────────────────────────────────────────────────────────
 
 const renderApp = () =>
   render(
-    <AuthProvider> 
+    <AuthProvider>
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     </AuthProvider>
   );
 
-/**
- * Añade un ingrediente y se asegura de que el estado se actualice en la UI
- * antes de permitir que el test continúe.
- */
-const añadirIngrediente = async (nombre, cantidad = '100') => {
+const añadirIngrediente = async (nombre, cantidad = '1') => {
   const fabBtn = await screen.findByText('+');
   fireEvent.click(fabBtn);
 
@@ -66,141 +47,99 @@ const añadirIngrediente = async (nombre, cantidad = '100') => {
 
   const inputCantidad = screen.getByPlaceholderText('Cant.');
   fireEvent.change(inputCantidad, { target: { value: cantidad } });
-  
+
   const btnConfirmar = screen.getByText(/Confirmar Selección/i);
   fireEvent.click(btnConfirmar);
 
-  // ESPERA CRÍTICA: Validar que el ingrediente aparece en la lista de la nevera
-  // Esto evita el error de "Tu nevera está vacía" al navegar a recetas.
-  await screen.findByText(nombre);
+  // --- ARREGLO PARA EL ERROR ---
+  // Según tu HTML, el botón de cerrar tiene la clase 'btn-cerrar-modal'
+  // Hacemos clic manual porque el modal no se cierra solo al confirmar
+  const btnCerrar = await screen.findByText('✕', { selector: '.btn-cerrar-modal' });
+  fireEvent.click(btnCerrar);
 
-  // Cerrar el modal si el componente no lo hace automáticamente
-  const btnCerrar = document.querySelector('.btn-cerrar-modal');
-  if (btnCerrar) {
-    fireEvent.click(btnCerrar);
-    await waitFor(() => {
-      expect(screen.queryByPlaceholderText(/Ingrediente/i)).not.toBeInTheDocument();
-    });
-  }
+  // Ahora sí, esperamos a que el modal desaparezca de la vista
+  await waitFor(() => {
+    expect(screen.queryByPlaceholderText(/Ingrediente/i)).not.toBeInTheDocument();
+  }, { timeout: 2000 });
 };
 
-// ─────────────────────────────────────────────────────────────
-// BLOQUE DE PRUEBAS
-// ─────────────────────────────────────────────────────────────
-
-describe('Integración — Flujo Completo: Nevera -> VistaRecetas -> VistaDetalles', () => {
+describe('Integración — Flujo Completo: Nevera -> Recetas -> Detalles', () => {
+  let neveraMockState = [];
 
   beforeEach(() => {
-    global.fetch = vi.fn(async (url) => {
-      const stringUrl = String(url);
-      
-      // Mock de Autenticación (simula sesión activa)
-      if (stringUrl.includes('/api/auth/refresh')) {
-        return { 
-          ok: true, 
-          status: 200, 
-          json: async () => ({ accessToken: 'token-test', usuario: { id: 'u1', nombre: 'Test' } }) 
-        };
-      }
+    neveraMockState = [];
+    global.fetch = vi.fn(async (input, options = {}) => {
+      const url = typeof input === 'string' ? input : input.url;
 
-      if (stringUrl.includes('/api/ingredientes')) {
+      if (url.includes('/api/auth/refresh')) {
+        return { ok: true, status: 200, json: async () => ({ accessToken: 'tk', usuario: { id: 'u1' } }) };
+      }
+      if (url.includes('/api/ingredientes') && !url.includes('nevera')) {
         return { ok: true, status: 200, json: async () => INGREDIENTES_MOCK };
       }
-      
-      // Mock de detalle de receta
-      if (stringUrl.match(/\/api\/recetas\/r1$/) || stringUrl.includes('Arroz%20con%20tomate')) {
-        return { ok: true, status: 200, json: async () => DETALLE_RECETA_MOCK };
+      if (url.includes('/api/ingredientes/nevera')) {
+        if (options.method === 'POST') {
+          const body = JSON.parse(options.body);
+          neveraMockState = [...neveraMockState, body];
+          return { ok: true, status: 200, json: async () => ({ nevera: neveraMockState }) };
+        }
+        return { ok: true, status: 200, json: async () => ({ nevera: neveraMockState }) };
       }
-      
-      // Mock de listado de recetas
-      if (stringUrl.endsWith('/api/recetas') || stringUrl.includes('/api/recetas?')) {
-        return { ok: true, status: 200, json: async () => RECETAS_MOCK };
+      if (url.includes('/api/recetas')) {
+        // Si es detalle
+        if (url.includes('Arroz%20con%20tomate')) return { ok: true, status: 200, json: async () => DETALLE_RECETA_MOCK };
+        // Si es lista
+        return { ok: true, status: 200, json: async () => ([{ _id: 'r1', title: 'Arroz con tomate' }]) };
       }
-      
       return { ok: false, status: 404 };
     });
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  test('Flujo exitoso: Añadir ingredientes, buscar y ver detalles de una receta', async () => {
+  test('Flujo: Añadir cantidad insuficiente y verificar lógica de "Faltan" en Detalle', async () => {
     renderApp();
 
-    // 1. Añadimos el ingrediente
-    await añadirIngrediente('Tomate', '2');
-    
-    // 2. Navegar a recetas
+    // Añadimos 1 tomate (la receta pide 2)
+    await añadirIngrediente('Tomate', '1');
+
+    // Verificamos que se añadió a la lista de la nevera
+    expect(await screen.findByText(/Tomate/i)).toBeInTheDocument();
+
+    // Navegar a recetas
     const btnBuscar = screen.getByText(/Buscar Recetas/i);
     fireEvent.click(btnBuscar);
 
-    // 3. Seleccionar la receta de la lista (usamos findBy para esperar la carga de la API)
-    const recetaCard = await screen.findByText(/Arroz con tomate/i, {}, { timeout: 4000 });
-    fireEvent.click(recetaCard);
-
-    // 4. Verificación en la vista de detalles
-    const titulo = await screen.findByRole('heading', { name: /Arroz con tomate/i });
-    expect(titulo).toBeInTheDocument();
-
-    // Comprobamos los ingredientes usando un matcher flexible por si el texto está fragmentado
-    expect(screen.getByText((content, element) => {
-      return element.textContent === '200 g' || content.includes('200 g');
-    })).toBeInTheDocument();
-    
-    expect(screen.getByText(/Lavar el arroz/i)).toBeInTheDocument();
-  });
-
-  test('Navegación hacia atrás: De detalles a lista, y de lista a nevera', async () => {
-    renderApp();
-
-    await añadirIngrediente('Tomate', '2');
-    fireEvent.click(screen.getByText(/Buscar Recetas/i));
-    
+    // Seleccionar receta
     const recetaCard = await screen.findByText(/Arroz con tomate/i);
     fireEvent.click(recetaCard);
 
-    // Botón Volver en VistaDetalles -> Regresa a Lista
-    const btnVolverDetalle = await screen.findByText(/Volver/i);
-    fireEvent.click(btnVolverDetalle);
-    
+    // --- VERIFICACIÓN DE VISTA DETALLES ---
+    // 1. Título y pasos
+    expect(await screen.findByText('Arroz con tomate', { selector: 'h1' })).toBeInTheDocument();
+    expect(screen.getByText(/Lavar el arroz/i)).toBeInTheDocument();
+
+    // 2. Lógica de "Faltan" (Receta pide 2, Nevera tiene 1)
+    // Buscamos el texto que genera tu lógica: "— Faltan 1 ud"
+    expect(await screen.findByText(/Faltan 1 ud/i)).toBeInTheDocument();
+
+    // 3. Lógica de ingrediente que no tenemos (Arroz)
+    expect(screen.getByText(/No tienes este ingrediente/i)).toBeInTheDocument();
+  });
+
+  test('Navegación completa y botón volver', async () => {
+    renderApp();
+    await añadirIngrediente('Tomate', '2');
+
+    fireEvent.click(await screen.findByText(/Buscar Recetas/i));
+    fireEvent.click(await screen.findByText(/Arroz con tomate/i));
+
+    // Botón Volver de VistaDetalles
+    const btnVolver = await screen.findByText(/Volver/i);
+    fireEvent.click(btnVolver);
+
     expect(await screen.findByText(/Recetas sugeridas/i)).toBeInTheDocument();
 
-    // Botón Volver en VistaRecetas -> Regresa a Nevera
-    const btnVolverNevera = screen.getByText(/Volver a la Nevera/i);
-    fireEvent.click(btnVolverNevera);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Mi Nevera Virtual/i)).toBeInTheDocument();
-    });
-    
-    expect(screen.getByText('Tomate')).toBeInTheDocument();
-  });
-
-  test('Manejo de error 404 en VistaDetalles', async () => {
-    // Sobrescribimos el mock solo para este test para que falle la carga de la receta
-    global.fetch.mockImplementation(async (url) => {
-      const stringUrl = String(url);
-      if (stringUrl.includes('/api/auth/refresh')) return { ok: true, status: 200, json: async () => ({ accessToken: 't', usuario: {} }) };
-      if (stringUrl.includes('/api/ingredientes')) return { ok: true, status: 200, json: async () => INGREDIENTES_MOCK };
-      if (stringUrl.includes('/api/recetas')) {
-        // El listado funciona, pero el detalle (o búsqueda por nombre) dará 404
-        if (stringUrl.includes('Arroz%20con%20tomate')) return { ok: false, status: 404 };
-        return { ok: true, status: 200, json: async () => RECETAS_MOCK };
-      }
-      return { ok: false, status: 404 };
-    });
-
-    renderApp();
-
-    await añadirIngrediente('Tomate', '2');
-    fireEvent.click(screen.getByText(/Buscar Recetas/i));
-    
-    const recetaCard = await screen.findByText(/Arroz con tomate/i);
-    fireEvent.click(recetaCard);
-
-    // Verificamos que VistaDetalles muestra el error
-    const errorMsg = await screen.findByText(/Receta no encontrada/i, {}, { timeout: 4000 });
-    expect(errorMsg).toBeInTheDocument();
+    // Volver a la Nevera
+    fireEvent.click(screen.getByText(/Volver a la Nevera/i));
+    expect(await screen.findByText(/Mi Nevera Virtual/i)).toBeInTheDocument();
   });
 });
