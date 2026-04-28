@@ -182,9 +182,12 @@ const VistaDetalles = () => {
 
       <article className="receta-content-card">
         <header className="receta-header">
-          <div className="titulo-con-favorito">
-            <h1 className="receta-titulo-principal">{receta.title}</h1>
-            
+          
+          {/* Título arriba */}
+          <h1 className="receta-titulo-principal">{receta.title}</h1>
+          
+          {/* Botón de favorito abajo del título */}
+          <div className="contenedor-favorito" style={{ marginTop: '12px', marginBottom: '16px' }}>
             <button
               className={`btn-favorito ${favoritoEstado.guardado ? 'activo' : ''}`}
               aria-label="Favorito"
@@ -206,6 +209,7 @@ const VistaDetalles = () => {
               </svg>
             </button>
           </div>
+          
           {favoritoEstado.mensaje && (
             <p role="status" className="receta-texto-vacio">{favoritoEstado.mensaje}</p>
           )}
