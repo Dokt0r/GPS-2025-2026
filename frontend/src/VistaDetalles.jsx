@@ -133,7 +133,34 @@ const VistaDetalles = () => {
     }
   };
 
+    try {
+      // 1. Sincronizamos con el backend para restar ingredientes
+      const response = await fetch(`${API_URL}/api/recetas/completar`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          titulo: receta.title,
+          steps: receta.steps,
+          ingredients: receta.ingredients
+        }),
+      });
 
+      if (!response.ok) throw new Error('Error al sincronizar con el servidor');
+
+      // 2. Actualizamos el estado local de la nevera (UI)
+      restarIngredientesReceta(receta.ingredients);
+      
+      // 3. Mostramos éxito y navegamos
+      setRecetaCompletada(true);
+      setErrorCompletar(null); // Limpiamos errores previos
+      setTimeout(() => navigate('/'), 2500);
+
+    } catch (err) {
+      console.error("Error al completar receta:", err);
+    }
+  };
   // ── RENDERS DE ESTADO ───────────────────────
 
   if (cargando) {
@@ -186,7 +213,7 @@ const VistaDetalles = () => {
             <ul className="receta-lista-ing">
               {receta.ingredients && receta.ingredients.length > 0 ? (
                 receta.ingredients.map((ing, i) => {
-
+                  
                   // 1. Buscamos el ingrediente en la nevera
                   const neveraIng = ingredientesNevera.find(n =>
                     ing.nombre.toLowerCase().includes(n.nombre.toLowerCase())
@@ -203,12 +230,12 @@ const VistaDetalles = () => {
                     const suficiente = tienesSuficiente(neveraIng, ing);
                     if (!suficiente) {
                       falta = true;
-
+                      
                       // Calculamos la cantidad que falta usando tu lógica de equivalencias
                       const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
                       const unidadR = (ing.unidad || '').toLowerCase().trim();
                       const factor = neveraIng.equivalencia_g_ml || 0;
-
+                      
                       let faltaCantidad = 0;
 
                       if (unidadN === unidadR) {
@@ -307,7 +334,7 @@ const VistaDetalles = () => {
             </div>
 
             {/* Error de ingredientes faltantes integrado en el flujo visual */}
-            //Esto comentado elimina el mensaje.
+            //Esto comentado elimina el mensaje. 
             {/* {!recetaCompletada && errorCompletar && errorCompletar.length > 0 && (
               <div className="alerta-faltantes-container">
                 <p className="alerta-faltantes-titulo">
