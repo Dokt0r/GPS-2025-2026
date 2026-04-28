@@ -2,9 +2,9 @@ name: Ejecutar Tests (Front y Back)
 
 on:
   push:
-    branches: [ "main" , "DEV" ]
+    branches: ["main", "DEV"]
   pull_request:
-    branches: [ "main", "DEV" ]
+    branches: ["main", "DEV"]
 
 jobs:
   # 1. JOB DE TESTS UNITARIOS BACKEND
@@ -16,16 +16,16 @@ jobs:
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
-      
+
       - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: "20"
+
       - name: Instalar dependencias del Backend
         working-directory: ./backend
         run: npm install
-        
+
       - name: Ejecutar Tests del Backend (Unitarios + Integración)
         working-directory: ./backend
         run: npm test
@@ -50,20 +50,20 @@ jobs:
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
-      
+
       - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          
+          node-version: "20"
+
       - name: Instalar dependencias del Frontend
         working-directory: ./frontend
         run: npm install
-        
+
       - name: Ejecutar Tests del Frontend (Vitest)
         working-directory: ./frontend
         run: npm test -- --run
-        
+
       - name: upload report
         if: always()
         uses: peaceiris/actions-gh-pages@v3
@@ -72,6 +72,7 @@ jobs:
           external_repository: Dokt0r/GPS-2025-2026_test_report
           publish_dir: frontend/test-report
           destination_dir: front/${{ github.ref_name }}
+
   # 4. DESPLIEGUE
   # IMPORTANTE si se incluye finalmente el job de e2e-tests, el job de despliegue debería depender de él para asegurarnos que solo se despliega si todo ha pasado correctamente
   # en ese caso el job de despliegue quedaría así:  needs: [backend-tests, frontend-tests, e2e-tests]
