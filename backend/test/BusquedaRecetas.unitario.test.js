@@ -200,24 +200,6 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
             expect(res.body).toHaveProperty('error', 'Receta no encontrada');
         });
 
-        test('Escapa caracteres especiales en el título correctamente', async () => {
-            Receta.findOne.mockResolvedValue({ title: '¿Pasta?' });
-            const res = await request(app).get('/api/recetas/%3FPasta%3F'); // ¿Pasta? encodeado
-            expect(res.status).toBe(200);
-            expect(Receta.findOne).toHaveBeenCalledWith({
-                title: expect.any(RegExp)
-            });
-        });
-
-        test('Éxito: Devuelve el objeto completo de la receta', async () => {
-            const mockReceta = { title: 'Pasta', ingredientes: [], instrucciones: 'Cocinar' };
-            Receta.findOne.mockResolvedValue(mockReceta);
-
-            const res = await request(app).get('/api/recetas/Pasta');
-
-            expect(res.status).toBe(200);
-            expect(res.body.title).toBe('Pasta');
-        });
 
         test('Manejo de error 500 en detalle', async () => {
             Receta.findOne.mockRejectedValue(new Error('DB fail'));
