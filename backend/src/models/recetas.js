@@ -98,26 +98,9 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                                     in: {
                                         $let: {
                                             vars: {
-                                                // SUSTITUYE TU VARIABLE nombreOk POR ESTA LÓGICA:
                                                 nombreOk: {
-                                                    $or: [
-                                                        // 1. Caso Genérico -> Específico: Nevera "Arroz" está en Receta "Arroz Integral"
-                                                        {
-                                                            $gte: [
-                                                                { $indexOfCP: [{ $toLower: "$$recetaIng.nombre" }, { $toLower: "$$neveraIng.nombre" }] },
-                                                                0
-                                                            ]
-                                                        },
-                                                        // 2. Caso Específico -> Genérico: Nevera "Arroz Integral" contiene la palabra "Arroz" de la receta
-                                                        {
-                                                            $gte: [
-                                                                { $indexOfCP: [{ $toLower: "$$neveraIng.nombre" }, { $toLower: "$$recetaIng.nombre" }] },
-                                                                0
-                                                            ]
-                                                        }
-                                                    ]
+                                                    $eq: [{ $toLower: "$$recetaIng.nombre" }, { $toLower: "$$neveraIng.nombre" }]
                                                 },
-                                                // 2. Variables de estandarización para cantidades y unidades
                                                 unidadNevera: { $toLower: "$$neveraIng.unidad" },
                                                 unidadReceta: { $toLower: "$$recetaIng.unidad" },
                                                 factor: "$$neveraIng.equivalencia_g_ml",
@@ -126,17 +109,14 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                                             },
                                             in: {
                                                 $and: [
-                                                    "$$nombreOk", // El nombre debe coincidir sí o sí
+                                                    "$$nombreOk",
                                                     {
                                                         $switch: {
                                                             branches: [
-                                                                // CASO 1: Misma unidad (ej: g a g, ml a ml, ud a ud) -> Comparación directa
                                                                 {
                                                                     case: { $eq: ["$$unidadNevera", "$$unidadReceta"] },
                                                                     then: { $gte: ["$$cantNevera", "$$cantReceta"] }
                                                                 },
-                                                                // CASO 2: Nevera en masa/volumen (g/ml) y Receta en unidades (ud)
-                                                                // Fórmula: (Cantidad Nevera / Peso por Unidad) >= Cantidad Receta
                                                                 {
                                                                     case: {
                                                                         $and: [
@@ -152,8 +132,6 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                                                                         ]
                                                                     }
                                                                 },
-                                                                // CASO 3: Nevera en unidades (ud) y Receta en masa/volumen (g/ml)
-                                                                // Fórmula: (Cantidad Nevera * Peso por Unidad) >= Cantidad Receta
                                                                 {
                                                                     case: {
                                                                         $and: [
@@ -170,8 +148,6 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                                                                     }
                                                                 }
                                                             ],
-                                                            // CASO POR DEFECTO: Unidades incompatibles y sin factor de conversión
-                                                            // Falla la validación de cantidad para este ingrediente.
                                                             default: false
                                                         }
                                                     }
@@ -184,7 +160,6 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                         }
                     }
                 },
-                // Guardamos el total de ingredientes que requiere la receta original
                 totalIngredientesReceta: { $size: "$ingredients" }
             }
         },
@@ -198,7 +173,6 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
                 cantidadCoincidencias: { $size: "$ingredientesCumplidos" },
                 porcentajeCoincidencia: {
                     $cond: {
-                        // Previene errores de división por cero si una receta no tiene ingredientes
                         if: { $gt: ["$totalIngredientesReceta", 0] },
                         then: {
                             $divide: [
@@ -253,10 +227,8 @@ recetaSchema.statics.buscarPorIngredientesYCantidades = async function (neveraAr
         }
     ];
 
-    // Ejecutamos y retornamos el pipeline
     return this.aggregate(pipeline);
 };
-
 
 // =========================================================================
 // LÓGICA DE NEGOCIO (Validaciones antes de guardar)
@@ -278,4 +250,4 @@ recetaSchema.pre('save', function () {
     }
 });
 
-module.exports = mongoose.model('Receta', recetaSchema);
+module.exports = mongoose.models.Receta || mongoose.model('Receta', recetaSchema);

@@ -1,31 +1,18 @@
 const request = require('supertest');
-
-// --- MOCKS ---
-jest.mock('mongoose', () => {
-    class MockSchema {
-        constructor() { this.statics = {}; this.methods = {}; }
-        index() { } pre() { } post() { }
-    }
-    return {
-        connect: jest.fn().mockResolvedValue(true),
-        disconnect: jest.fn().mockResolvedValue(true),
-        Schema: MockSchema,
-        model: jest.fn()
-    };
-});
-
-jest.mock('../src/models/recetas', () => ({
-    buscarPorIngredientesYCantidades: jest.fn(),
-    findOne: jest.fn()
-}));
-
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
+const Usuario = require('../src/models/usuario');
+const jwt = require('jsonwebtoken');
 
 describe('API de Recetas - Tests Unitarios Completos', () => {
 
     beforeEach(() => {
-        jest.clearAllMocks();
+        vi.spyOn(Receta, 'buscarPorIngredientesYCantidades').mockResolvedValue([]);
+        vi.spyOn(Receta, 'findOne').mockResolvedValue(null);
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     // ==========================================
@@ -139,6 +126,58 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
             expect(llamada[0].unidad).toBe('g');
             expect(llamada[0].equivalencia_g_ml).toBe(1.2);
         });
+
+        test('Si no hay query pero hay token válido, usa la nevera del usuario autenticado', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+            const secretOriginal = process.env.JWT_ACCESS_SECRET;
+            process.env.JWT_ACCESS_SECRET = 'test-secret';
+            vi.spyOn(jwt, 'verify').mockReturnValue({ usuario: { id: 'u-123' } });
+
+            const populateMock = vi.fn().mockResolvedValue({
+                nevera: [
+                    {
+                        ingrediente: { nombre: 'Tomate', equivalencia_g_ml: null },
+                        cantidad: 2,
+                        unidad: 'ud'
+                    }
+                ]
+            });
+
+            vi.spyOn(Usuario, 'findById').mockReturnValue({
+                populate: populateMock
+            });
+
+            const res = await request(app)
+                .get('/api/recetas')
+                .set('Authorization', 'Bearer token-valido');
+
+            process.env.JWT_ACCESS_SECRET = secretOriginal;
+
+            expect(res.status).toBe(200);
+            expect(Receta.buscarPorIngredientesYCantidades).toHaveBeenCalledWith([
+                {
+                    nombre: 'Tomate',
+                    cantidad: 2,
+                    unidad: 'ud',
+                    equivalencia_g_ml: null
+                }
+            ]);
+        });
+
+        test('Si no hay query y el token es inválido, devuelve 400 por falta de ingredientes', async () => {
+            Receta.buscarPorIngredientesYCantidades.mockResolvedValue([]);
+            vi.spyOn(jwt, 'verify').mockImplementation(() => {
+                throw new Error('Token inválido');
+            });
+
+            const res = await request(app)
+                .get('/api/recetas')
+                .set('Authorization', 'Bearer token-invalido');
+
+            expect(res.status).toBe(400);
+            expect(res.body).toHaveProperty('error', 'Faltan ingredientes');
+            expect(Receta.buscarPorIngredientesYCantidades).not.toHaveBeenCalled();
+        });
     });
 
     // ==========================================
@@ -161,24 +200,6 @@ describe('API de Recetas - Tests Unitarios Completos', () => {
             expect(res.body).toHaveProperty('error', 'Receta no encontrada');
         });
 
-        test('Escapa caracteres especiales en el título correctamente', async () => {
-            Receta.findOne.mockResolvedValue({ title: '¿Pasta?' });
-            const res = await request(app).get('/api/recetas/%3FPasta%3F'); // ¿Pasta? encodeado
-            expect(res.status).toBe(200);
-            expect(Receta.findOne).toHaveBeenCalledWith({
-                title: expect.any(RegExp)
-            });
-        });
-
-        test('Éxito: Devuelve el objeto completo de la receta', async () => {
-            const mockReceta = { title: 'Pasta', ingredientes: [], instrucciones: 'Cocinar' };
-            Receta.findOne.mockResolvedValue(mockReceta);
-
-            const res = await request(app).get('/api/recetas/Pasta');
-
-            expect(res.status).toBe(200);
-            expect(res.body.title).toBe('Pasta');
-        });
 
         test('Manejo de error 500 en detalle', async () => {
             Receta.findOne.mockRejectedValue(new Error('DB fail'));

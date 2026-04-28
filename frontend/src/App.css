@@ -9,11 +9,16 @@
     --text-muted: #94a3b8;
     --radius: 24px;
     --glass-border: rgba(255, 255, 255, 0.08);
+    margin: 0;
+    padding: 0;
 }
 
 body {
     font-family: 'Plus Jakarta Sans', sans-serif;
     margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
     min-height: 100vh;
     background-color: var(--bg-dark);
     /* Degradado moderno con toques de tu color acento */
@@ -31,8 +36,10 @@ body {
    ========================================= */
 .app-container {
     width: 100%;
-    max-width: 900px;
+    max-width: 100%;
+    min-height: 100vh; /* Asegura que cubra toda la altura */
     padding: 40px 20px;
+    box-sizing: border-box; /* Clave para que los 40px de padding no desborden la pantalla */
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -87,10 +94,217 @@ header p {
     font-size: 1.5rem;
     color: var(--accent);
 }
+/* =========================================
+   FAB (Floating Action Button) - Parte de Buscador y Añadir Ingrediente
+========================================= */
+.fab-añadir {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background-color: #4CAF50; /* Cambia esto por el color de tu tema */
+  color: white;
+  border-radius: 50%;
+  font-size: 36px;
+  border: none;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  z-index: 999;
+}
+
+.fab-añadir:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  background-color: #45a049;
+}
+
+.fab-añadir:active {
+  transform: scale(0.95);
+}
 
 /* =========================================
-   BUSCADOR E INPUTS
+   MODAL OVERLAY Y CONTENIDO
+========================================= */
+
+.modal-content {
+  background-color: none; /* Sin fondo para que el buscador maneje su propio fondo */
+  backdrop-filter: blur(5px);
+  
+  /* Hacemos que ocupe todo el contenedor/pantalla */
+  width: 100vw;
+  height: 100vh;
+  
+  /* CERO PADDING para que el buscador llene hasta los bordes */
+  padding: 0; 
+  margin: 0;
+  
+  box-shadow: none;
+  border: none;
+
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  
+  /* Flexbox para que el Buscador interno pueda ocupar el 100% del alto */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden; /* Evitamos scroll doble. El scroll debería manejarlo el propio Buscador si es necesario */
+  z-index: 1000;
+  
+  
+}
+
+/* Ajustamos el botón de cerrar para que tenga su propio espacio visual sin empujar al buscador */
+.btn-cerrar-modal {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: rgba(255, 255, 255, 0.8); /* Fondo semi-transparente por si se solapa con el buscador */
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s, transform 0.2s;
+  z-index: 10; /* Asegura que siempre esté por encima del buscador */
+}
+
+.btn-cerrar-modal:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
+}
+
+.buscador-normalizer {
+  position: relative; /* Clave para que el botón absolute se ancle aquí */
+  width: 90%; 
+  max-width: 600px; /* Controla el ancho máximo de tu buscador aquí */
+  animation: fabToFullScreen 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Animación: Vuela desde el botón y se expande a pantalla completa */
+@keyframes fabToFullScreen {
+  0% {
+    opacity: 0;
+    top: calc(100vh - 60px);
+    left: calc(100vw - 60px);
+    transform: translate(-50%, -50%) scale(0);
+    border-radius: 50%; /* Nace con forma circular como el FAB */
+  }
+  100% {
+    opacity: 1;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    border-radius: 0; /* Termina totalmente cuadrado para cubrir la pantalla */
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  /* El overlay ahora tiene su propia animación independiente */
+  animation: fadeInBlur 0.3s ease-out forwards;
+}
+
+/* Animación: De transparente a oscuro con blur progresivo */
+@keyframes smoothFadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* =========================================
+   ENVOLTORIO DEL BUSCADOR (Movimiento y Centrado)
    ========================================= */
+.buscador-normalizer {
+  position: fixed; /* Usamos fixed para poder animarlo por toda la pantalla */
+  width: 90%; 
+  max-width: 600px; /* Tamaño del componente en pantalla */
+  
+  /* Ya no necesita margin/padding de centrado extra, la animación se encarga */
+  
+  /* Animación del componente independiente del blur */
+  animation: flyToCenter 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* Animación: Vuela desde el botón inferior derecho hasta quedar fijo en el centro */
+@keyframes flyToCenter {
+  0% {
+    opacity: 0;
+    /* Empieza en las coordenadas del botón flotante */
+    top: calc(100vh - 60px);
+    left: calc(100vw - 60px);
+    transform: translate(-50%, -50%) scale(0.2); /* Empieza chiquito */
+  }
+  100% {
+    opacity: 1;
+    /* Termina exactamente en el centro de la pantalla */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1); /* Tamaño real y centrado perfecto */
+  }
+}
+
+/* =========================================
+   BUSCADOR (Sin cambios, adaptado al wrapper)
+   ========================================= */
+.buscador-container {
+  background: rgba(30, 41, 59, 1);
+  border: 1px solid var(--glass-border);
+  padding: 32px;
+  border-radius: var(--radius);
+  box-sizing: border-box;
+  min-height: 200px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =========================================
+   BOTÓN DE CERRAR (Esquina interior superior)
+   ========================================= */
+.btn-cerrar-modal {
+  position: absolute;
+  top: 15px; 
+  right: 15px; 
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  width: 35px;
+  height: 35px;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transition: background-color 0.2s, transform 0.2s;
+  z-index: 10; 
+}
+
+.btn-cerrar-modal:hover {
+  background: rgba(255, 255, 255, 1);
+  transform: scale(1.05);
+}
+
 .inputs-row {
     display: flex;
     flex-wrap: wrap;
@@ -148,6 +362,12 @@ header p {
 .input-unidad option {
     background: var(--bg-dark);
     color: white;
+}
+
+.info-cantidad {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 15px;
 }
 
 /* =========================================
@@ -222,12 +442,13 @@ header p {
 }
 
 .btn-secundario {
-    background: transparent;
+    background: none;
     color: var(--accent);
-    border: 1px solid var(--accent);
+    border: 2px solid var(--accent);
     padding: 12px 24px;
     border-radius: 16px;
-    font-weight: 600;
+    font-weight: 800;
+    font-size: large;
     cursor: pointer;
     transition: all 0.3s;
 }
@@ -252,13 +473,17 @@ header p {
     transform: scale(1.2);
 }
 
-/* Estilo para ajustar el botón de volver de las recetas */
 .btn-back {
     width: fit-content;
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
+}
+
+.actions-nevera {
+    margin-bottom: 20px;
+    text-align: center;
 }
 
 /* =========================================
@@ -311,15 +536,25 @@ ul#mi-nevera li:hover {
 }
 
 /* =========================================
-   NOTIFICACIONES (Toasts)
+   NOTIFICACIONES (Toasts y Mensajes)
    ========================================= */
+
+.info-cantidad {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+    margin-top: 5px;
+}
+
 .messages-under-add {
     min-height: 58px;
     display: flex;
     align-items: flex-end;
 }
 
-.toast-notification {
+/* Estilo unificado para notificaciones de fuera (toast) y de dentro (local) */
+.toast-notification,
+.mensajeLocal {
     width: 100%;
     border-radius: 12px;
     padding: 12px 14px;
@@ -330,14 +565,31 @@ ul#mi-nevera li:hover {
     animation: slideUp 0.3s ease forwards;
 }
 
-.toast-notification.success {
-    border-color: rgba(46, 204, 113, 0.5);
-    color: #9ef3bf;
+/* Ajuste específico para el local (margen inferior) */
+.mensaje-local {
+    width: 100%;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    box-sizing: border-box;
+    animation: slideUp 0.3s ease forwards;
+    backdrop-filter: blur(8px); /* Efecto cristal */
+    -webkit-backdrop-filter: blur(8px);
 }
 
-.toast-notification.error {
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #fca5a5;
+/* Verde semitransparente para éxito */
+.mensaje-local.success {
+    background: rgba(46, 204, 113, 0.15); /* Fondo verde semitransparente */
+    border: 1px solid rgba(46, 204, 113, 0.5); /* Borde verde */
+    color: #4ade80; /* Texto verde brillante */
+}
+
+/* Rojo semitransparente para error */
+.mensaje-local.error {
+    background: rgba(239, 68, 68, 0.15); /* Fondo rojo semitransparente */
+    border: 1px solid rgba(239, 68, 68, 0.5); /* Borde rojo */
+    color: #f87171; /* Texto rojo brillante */
 }
 
 @keyframes slideUp {
@@ -869,7 +1121,7 @@ background: rgba(255, 255, 255, 0.05);
 }
 
 .receta-texto-vacio {
-  color: #64748b;
+  color: #f84f4f;
   font-style: italic;
 }
 
@@ -995,4 +1247,317 @@ background: rgba(255, 255, 255, 0.05);
     padding: 8px 14px;
     font-size: 0.9rem;
   }
+  
+}
+
+/* CONTENEDOR GENERAL */
+.registro-wrapper {
+  min-height: 100vh;
+  width: 100vw; /* Usamos vw para forzar el ancho total de la ventana */
+  box-sizing: border-box; 
+  margin: 0;
+  padding: 20px;
+  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  background-image: url('assets/fondo.avif'); 
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  
+  /* Esto asegura que se ponga encima de fondos globales si es necesario */
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+/* TARJETA */
+.registro-card {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 30px;
+  border-radius: 15px;
+  width: 100%;
+  max-width: 400px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px); /* Soporte para Safari */
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* HEADER */
+.section-header h2 {
+  margin-bottom: 5px;
+}
+
+.section-header p {
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin-bottom: 20px;
+}
+
+/* INPUTS */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+}
+
+.input-group label {
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+}
+
+.input-group input {
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  background: rgba(255,255,255,0.1);
+  color: white;
+}
+
+.input-group-embedded {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  
+  /* Copia aquí exactamente los estilos que tenías en '.input-group input' original */
+  background: rgba(255, 255, 255, 0.1); /* Fondo translúcido original */
+  border-radius: 8px;
+  border: 1px solid transparent; /* Borde base transparente */
+  
+  /* Asegura que el padding visual se maneje aquí o en los hijos convenientemente */
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* 2. Estilo cuando el campo integrado tiene foco (simulando foco del input) */
+.input-group-embedded:focus-within {
+  border-color: #4CAF50; /* Color de foco original (ej. verde) */
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+  background: rgba(255, 255, 255, 0.15); /* Ligeramente más claro al foco */
+}
+
+/* 3. Estilo cuando el campo integrado es inválido */
+.input-group-embedded.is-invalid {
+  border-color: #ff6b6b; /* Color de error original */
+  background: rgba(255, 107, 107, 0.05);
+}
+
+/* 4. El input real dentro del contenedor pierde su identidad visual */
+.input-group-embedded input {
+  flex: 1; /* Ocupa todo el espacio disponible */
+  background: transparent !important; /* Transparente obligado */
+  border: none !important; /* Sin bordes obligado */
+  outline: none !important; /* Sin outline obligado */
+  color: white;
+  padding: 10px; /* Padding interno original */
+  margin: 0;
+  font-size: 1rem;
+}
+
+input.is-invalid {
+  border-color: #ff6b6b !important;
+  background-color: rgba(255, 107, 107, 0.05) !important;
+}
+
+/* 5. El botón integrado al final */
+.btn-toggle-password-embedded {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.6); /* Color sutil */
+  font-size: 0.75rem; /* Un poco más pequeño que el texto principal */
+  font-weight: bold;
+  text-transform: uppercase; /* Estilo típico de app */
+  letter-spacing: 1px;
+  padding: 0 15px; /* Espaciado a los lados del botón */
+  height: 100%; /* Ocupa todo el alto del contenedor */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+}
+
+.btn-toggle-password-embedded:hover {
+  color: white; /* Resalta al pasar el mouse */
+}
+
+/* BOTÓN */
+.btn-registro {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4CAF50, #2ecc71);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.btn-registro:hover {
+  transform: scale(1.03);
+}
+
+/* MENSAJES */
+.registro-error {
+  color: #ff6b6b;
+  margin-bottom: 10px;
+}
+
+.registro-exito {
+  color: #2ecc71;
+  margin-bottom: 10px;
+}
+
+.auth-toggle-inline {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.auth-toggle-inline p {
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+  color: #f1f1f1; /* Color claro para contrastar con tu tarjeta oscura */
+}
+
+.auth-toggle-btn {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #4CAF50, #2ecc71);
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.auth-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: white;
+  transform: translateY(-2px);
+}
+/*navbar*/
+.navbar-container {
+    position: fixed; 
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 50px; 
+    
+    background: rgba(15, 23, 42, 0.95); 
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15); 
+    
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5); 
+    
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+    z-index: 2000;
+    box-sizing: border-box;
+}
+
+.btn-menu {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.btn-menu svg {
+    width: 22px; 
+    height: 22px;
+}
+
+.btn-menu:hover {
+    background: rgba(46, 204, 113, 0.1);
+    color: var(--accent);
+}
+
+.navbar-brand {
+    margin-left: 10px;
+    font-weight: 800;
+    font-size: 1.1rem; 
+    color: var(--text-main);
+    letter-spacing: 0.5px;
+    opacity: 0.9;
+}
+/*boton favoritos*/
+.titulo-con-favorito {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Espacio entre el texto y el corazón */
+    flex-wrap: wrap;
+}
+
+.btn-favorito {
+    /* Fondo rojo muy transparente */
+    background: rgba(239, 68, 68, 0.05);
+    /* Borde rojo suave */
+    border: 2px solid rgba(239, 68, 68, 0.3);
+    /* Color del icono (corazón hueco) */
+    color: rgba(239, 68, 68, 0.7);
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    /* Transición más moderna y fluida */
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 2. Estado Hover (Al pasar el ratón) */
+.btn-favorito:hover {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.6);
+    color: #ef4444; /* Rojo más vivo */
+    transform: scale(1.05); /* 1.05 es más elegante que 1.1 */
+}
+
+/* 3. Estado Marcado (Añade esta clase con JS cuando sea favorito) */
+.btn-favorito.activo {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* --- RELLENO DEL CORAZÓN Y ANIMACIÓN --- */
+
+/* Si usas un SVG inline para el corazón */
+.btn-favorito.activo svg {
+    fill: #ef4444; /* Rellena el interior de rojo */
+    animation: latido 0.35s ease-in-out;
+}
+
+/* Si usas una fuente de iconos (ej. FontAwesome), la animación va en el propio botón o icono */
+.btn-favorito.activo i {
+    font-weight: 900; /* En FontAwesome esto cambia de corazón hueco a sólido */
+    animation: latido 0.35s ease-in-out;
+}
+
+/* Animación de latido (Modern UI) */
+@keyframes latido {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    100% { transform: scale(1); }
 }

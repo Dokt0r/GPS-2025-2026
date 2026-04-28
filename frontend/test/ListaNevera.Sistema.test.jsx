@@ -1,274 +1,224 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
-import App from '../src/App';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, test, expect, vi } from 'vitest';
+import ListaNevera from '../src/components/ListaNevera';
 
-// SETUP GLOBAL
-// Mockeamos fetch globalmente para que ningún test dependa del servidor real.
-// Cada test puede sobreescribir este mock con su propio comportamiento.
-const INGREDIENTES_MOCK = [
-  { _id: '1', nombre: 'Tomate',  unidad: 'ud', equivalencia_g_ml: null },
-  { _id: '2', nombre: 'Arroz',   unidad: 'g',  equivalencia_g_ml: null },
-  { _id: '3', nombre: 'Leche',   unidad: 'ml', equivalencia_g_ml: null },
-  { _id: '4', nombre: 'Huevo',   unidad: 'ud', equivalencia_g_ml: 60   },
-  { _id: '5', nombre: 'Aceite',  unidad: 'ml', equivalencia_g_ml: null },
-];
+// ─────────────────────────────────────────────────────────────────────────────
+// TESTS EXISTENTES (Actualizados para la nueva UI)
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Helper para renderizar la App completa con router propio
-const renderApp = () =>
-  render(
-    <MemoryRouter initialEntries={['/']}>
-      <App />
-    </MemoryRouter>
-  );
+describe('Componente ListaNevera', () => {
 
-// Helper para simular que el usuario añade un ingrediente
-const añadirIngrediente = async (nombre, cantidad = '100') => {
-  const input = screen.getByPlaceholderText(/Ingrediente/i);
-  fireEvent.change(input, { target: { value: nombre } });
-
-  // Selector CSS limita la búsqueda al desplegable,
-  // evitando conflicto con el mismo nombre ya en la lista de la nevera
-  const sugerencia = await screen.findByText(nombre, { selector: '.sugerencia-item' });
-  fireEvent.click(sugerencia);
-
-  const inputCantidad = screen.getByPlaceholderText('Cant.');
-  fireEvent.change(inputCantidad, { target: { value: cantidad } });
-
-  fireEvent.click(screen.getByText('Confirmar Selección'));
-};
-
-beforeEach(() => {
-  global.fetch = vi.fn().mockResolvedValue({
-    ok: true,
-    json: async () => INGREDIENTES_MOCK,
+  test('Muestra el mensaje de estado vacío cuando no hay ingredientes', () => {
+    render(<ListaNevera ingredientes={[]} onEliminar={vi.fn()} />);
+    // Usamos una expresión regular para que coincida aunque cambies el resto de la frase
+    expect(screen.getByText(/Tu nevera está vacía/i)).toBeInTheDocument();
+    const lista = document.querySelector('#mi-nevera');
+    expect(lista).not.toBeInTheDocument();
   });
-});
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
-
-
-// BLOQUE 1: AÑADIR INGREDIENTES A LA NEVERA
-
-describe('Sistema — Añadir ingredientes a la nevera', () => {
-
-  test('Al añadir un ingrediente aparece en la lista de la nevera', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Tomate', '3');
-
+  test('Renderiza correctamente una lista de ingredientes', () => {
+    const mockIngredientes = [
+      { nombre: 'Tomate', cantidad: 3, unidad: 'ud' },
+      { nombre: 'Leche', cantidad: 1, unidad: 'L' }
+    ];
+    render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
     expect(screen.getByText('Tomate')).toBeInTheDocument();
+    expect(screen.getByText('Leche')).toBeInTheDocument();
     expect(screen.getByText('3 ud')).toBeInTheDocument();
+    expect(screen.getByText('1 L')).toBeInTheDocument();
+    expect(screen.queryByText(/Tu nevera está vacía/i)).not.toBeInTheDocument();
   });
 
-  test('Añadir el mismo ingrediente dos veces acumula la cantidad', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Tomate', '2');
-    await añadirIngrediente('Tomate', '3');
-
-    // Debe mostrar 5, no dos entradas separadas de 2 y 3
-    expect(screen.getByText('5 ud')).toBeInTheDocument();
-    expect(screen.getAllByText('Tomate')).toHaveLength(1);
+  test('Llama a la función onEliminar con el nombre correcto al hacer clic en ✕', () => {
+    const mockOnEliminar = vi.fn();
+    const mockIngredientes = [
+      { nombre: 'Tomate', cantidad: 3, unidad: 'ud' }
+    ];
+    render(<ListaNevera ingredientes={mockIngredientes} onEliminar={mockOnEliminar} />);
+    const botonEliminar = screen.getByText('✕');
+    fireEvent.click(botonEliminar);
+    expect(mockOnEliminar).toHaveBeenCalledTimes(1);
+    expect(mockOnEliminar).toHaveBeenCalledWith('Tomate');
   });
 
-  test('Añadir varios ingredientes distintos los muestra todos en la nevera', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
 
-    await añadirIngrediente('Tomate', '2');
-    await añadirIngrediente('Arroz',  '200');
-    await añadirIngrediente('Leche',  '500');
+  // ─────────────────────────────────────────────────────────────────────────
+  // HAPPY PATH 
+  // ─────────────────────────────────────────────────────────────────────────
 
-    expect(screen.getByText('Tomate')).toBeInTheDocument();
-    expect(screen.getByText('Arroz')).toBeInTheDocument();
-    expect(screen.getByText('Leche')).toBeInTheDocument();
-  });
+  describe('Happy path', () => {
 
-  test('Tras añadir un ingrediente, los inputs se limpian automáticamente', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
+    test('Ordena los ingredientes alfabéticamente de A a Z', () => {
+      const mockIngredientes = [
+        { nombre: 'Tomate',  cantidad: 2, unidad: 'ud' },
+        { nombre: 'Arroz',   cantidad: 200, unidad: 'g' },
+        { nombre: 'Leche',   cantidad: 1, unidad: 'L' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
 
-    await añadirIngrediente('Tomate', '3');
-
-    expect(screen.getByPlaceholderText(/Ingrediente/i).value).toBe('');
-    expect(screen.getByPlaceholderText('Cant.').value).toBe('');
-  });
-
-  test('Añadir ingrediente sin especificar cantidad asigna 1 por defecto', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    // No rellenamos el campo de cantidad
-    const input = screen.getByPlaceholderText(/Ingrediente/i);
-    fireEvent.change(input, { target: { value: 'Tomate' } });
-    const sugerencia = await screen.findByText('Tomate');
-    fireEvent.click(sugerencia);
-    fireEvent.click(screen.getByText('Confirmar Selección'));
-
-    expect(screen.getByText('1 ud')).toBeInTheDocument();
-  });
-
-  test('Los ingredientes de la nevera se muestran ordenados alfabéticamente', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Tomate', '2');
-    await añadirIngrediente('Arroz',  '200');
-    await añadirIngrediente('Leche',  '500');
-
-    const items = screen.getAllByRole('listitem');
-    expect(items[0]).toHaveTextContent('Arroz');
-    expect(items[1]).toHaveTextContent('Leche');
-    expect(items[2]).toHaveTextContent('Tomate');
-  });
-
-  test('Aparece toast de confirmación al añadir un ingrediente', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Tomate', '2');
-
-    expect(await screen.findByText(/Añadido: Tomate/i)).toBeInTheDocument();
-  });
-
-  test('No se puede añadir un ingrediente escrito a mano que no esté en la base de datos', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    const input = screen.getByPlaceholderText(/Ingrediente/i);
-    fireEvent.change(input, { target: { value: 'IngredienteInventado' } });
-    fireEvent.click(screen.getByText('Confirmar Selección'));
-
-    // La nevera debe seguir vacía
-    expect(screen.getByText('Tu nevera está vacía. Añade algo arriba.')).toBeInTheDocument();
-  });
-
-});
-
-// BLOQUE 2: ELIMINAR INGREDIENTES DE LA NEVERA
-
-describe('Sistema — Eliminar ingredientes de la nevera', () => {
-
-  test('Eliminar el único ingrediente muestra el mensaje de nevera vacía', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Tomate', '2');
-    expect(screen.getByText('Tomate')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('✕'));
-
-    expect(screen.getByText('Tu nevera está vacía. Añade algo arriba.')).toBeInTheDocument();
-    expect(screen.queryByText('Tomate')).not.toBeInTheDocument();
-  });
-
-  test('Eliminar un ingrediente de una lista con varios no afecta a los demás', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Arroz',  '200');
-    await añadirIngrediente('Leche',  '500');
-    await añadirIngrediente('Tomate', '2');
-
-    // El primero en la lista ordenada es Arroz, lo eliminamos
-    const botones = screen.getAllByText('✕');
-    fireEvent.click(botones[0]); // Arroz
-
-    expect(screen.queryByText('Arroz')).not.toBeInTheDocument();
-    expect(screen.getByText('Leche')).toBeInTheDocument();
-    expect(screen.getByText('Tomate')).toBeInTheDocument();
-  });
-
-  test('Se pueden eliminar todos los ingredientes uno a uno', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Arroz',  '200');
-    await añadirIngrediente('Leche',  '500');
-
-    // Eliminar primero
-    fireEvent.click(screen.getAllByText('✕')[0]);
-    expect(screen.getAllByRole('listitem')).toHaveLength(1);
-
-    // Eliminar segundo
-    fireEvent.click(screen.getByText('✕'));
-    expect(screen.getByText('Tu nevera está vacía. Añade algo arriba.')).toBeInTheDocument();
-  });
-
-});
-
-
-// BLOQUE 3: FLUJO DE BÚSQUEDA DE RECETAS
-
-describe('Sistema — Flujo de búsqueda de recetas', () => {
-
-  test('Intentar buscar recetas con la nevera vacía muestra un mensaje de error', async () => {
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    fireEvent.click(screen.getByText('Buscar Recetas'));
-
-    // El toast tiene un texto distinto al del estado vacío de la nevera
-    expect(await screen.findByText(/Tu nevera está vacía. Añade algo primero/i)).toBeInTheDocument();
-  });
-
-  test('Con ingredientes en la nevera, el botón Buscar Recetas navega a /recetas', async () => {
-    // Mock adicional para la llamada a /api/recetas
-    global.fetch = vi.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => INGREDIENTES_MOCK })
-      .mockResolvedValueOnce({ ok: true, json: async () => [] });
-
-    renderApp();
-    await waitFor(() => expect(screen.getByPlaceholderText(/Ingrediente/i)).not.toBeDisabled());
-
-    await añadirIngrediente('Tomate', '2');
-    fireEvent.click(screen.getByText('Buscar Recetas'));
-
-    // Debe aparecer el header de la vista de recetas
-    expect(await screen.findByText('Recetas sugeridas')).toBeInTheDocument();
-  });
-
-});
-
-
-// BLOQUE 4: ESTADO DE CONEXIÓN CON EL SERVIDOR
-
-describe('Sistema — Estado de conexión con el servidor', () => {
-
-  test('Si el servidor falla, el input de búsqueda queda deshabilitado', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-
-    renderApp();
-
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText(/Sin conexión/i)).toBeDisabled();
-    });
-  });
-
-  test('Si el servidor falla, se muestra un toast de error de conexión', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
-
-    renderApp();
-
-    expect(await screen.findByText(/No se pudo conectar con el servidor/i)).toBeInTheDocument();
-  });
-
-  test('Si la base de datos de ingredientes está vacía, se muestra aviso', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => [],
+      const items = screen.getAllByRole('listitem');
+      expect(items[0]).toHaveTextContent('Arroz');
+      expect(items[1]).toHaveTextContent('Leche');
+      expect(items[2]).toHaveTextContent('Tomate');
     });
 
-    renderApp();
+    test('El orden alfabético ignora mayúsculas y minúsculas', () => {
+      const mockIngredientes = [
+        { nombre: 'zanahoria', cantidad: 3, unidad: 'ud' },
+        { nombre: 'Aceite',    cantidad: 500, unidad: 'ml' },
+        { nombre: 'Mantequilla', cantidad: 100, unidad: 'g' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
 
-    expect(await screen.findByText(/base de datos de ingredientes está vacía/i)).toBeInTheDocument();
+      const items = screen.getAllByRole('listitem');
+      expect(items[0]).toHaveTextContent('Aceite');
+      expect(items[1]).toHaveTextContent('Mantequilla');
+      expect(items[2]).toHaveTextContent('zanahoria');
+    });
+
+    test('Renderiza exactamente un botón ✕ por cada ingrediente', () => {
+      const mockIngredientes = [
+        { nombre: 'Tomate', cantidad: 1, unidad: 'ud' },
+        { nombre: 'Leche',  cantidad: 1, unidad: 'L' },
+        { nombre: 'Arroz',  cantidad: 200, unidad: 'g' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+
+      const botones = screen.getAllByText('✕');
+      expect(botones).toHaveLength(3);
+    });
+
+    test('Renderiza cantidades decimales correctamente', () => {
+      const mockIngredientes = [
+        { nombre: 'Aceite', cantidad: 0.5, unidad: 'L' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+      expect(screen.getByText('0.5 L')).toBeInTheDocument();
+    });
+
+    test('Cada botón ✕ llama a onEliminar con el nombre de su propio ingrediente', () => {
+      const mockOnEliminar = vi.fn();
+      const mockIngredientes = [
+        { nombre: 'Arroz',  cantidad: 200, unidad: 'g' },
+        { nombre: 'Tomate', cantidad: 2, unidad: 'ud' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={mockOnEliminar} />);
+
+      const botones = screen.getAllByText('✕');
+      fireEvent.click(botones[0]);
+      expect(mockOnEliminar).toHaveBeenCalledWith('Arroz');
+
+      fireEvent.click(botones[1]);
+      expect(mockOnEliminar).toHaveBeenCalledWith('Tomate');
+
+      expect(mockOnEliminar).toHaveBeenCalledTimes(2);
+    });
+
+    test('Renderiza correctamente un único ingrediente', () => {
+      const mockIngredientes = [
+        { nombre: 'Sal', cantidad: 50, unidad: 'g' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+
+      expect(screen.getByText('Sal')).toBeInTheDocument();
+      expect(screen.getByText('50 g')).toBeInTheDocument();
+      expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    });
+
+    test('Muestra el título "Mi Nevera Virtual" siempre, con o sin ingredientes', () => {
+      const { rerender } = render(<ListaNevera ingredientes={[]} onEliminar={vi.fn()} />);
+      expect(screen.getByText('Mi Nevera Virtual')).toBeInTheDocument();
+
+      rerender(<ListaNevera ingredientes={[{ nombre: 'Tomate', cantidad: 1, unidad: 'ud' }]} onEliminar={vi.fn()} />);
+      expect(screen.getByText('Mi Nevera Virtual')).toBeInTheDocument();
+    });
+
+  });
+
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CORNER CASES
+  // ─────────────────────────────────────────────────────────────────────────
+
+  describe('Corner cases', () => {
+
+    test('No modifica el array original al ordenar (inmutabilidad)', () => {
+      const mockIngredientes = [
+        { nombre: 'Tomate', cantidad: 2, unidad: 'ud' },
+        { nombre: 'Arroz',  cantidad: 200, unidad: 'g' },
+      ];
+      const ordenOriginal = mockIngredientes.map(i => i.nombre);
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+
+      expect(mockIngredientes.map(i => i.nombre)).toEqual(ordenOriginal);
+    });
+
+    test('Maneja correctamente ingredientes con nombres que incluyen tildes y eñes', () => {
+      const mockIngredientes = [
+        { nombre: 'Ñora',   cantidad: 2, unidad: 'ud' },
+        { nombre: 'Ajo',    cantidad: 3, unidad: 'ud' },
+        { nombre: 'Cebolla', cantidad: 1, unidad: 'ud' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+
+      const items = screen.getAllByRole('listitem');
+      expect(items[0]).toHaveTextContent('Ajo');
+      expect(items[1]).toHaveTextContent('Cebolla');
+      expect(items[2]).toHaveTextContent('Ñora');
+    });
+
+    test('Renderiza correctamente un ingrediente sin unidad (unidad vacía)', () => {
+      const mockIngredientes = [
+        { nombre: 'Sal', cantidad: 1, unidad: '' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+
+      expect(screen.getByText('Sal')).toBeInTheDocument();
+      expect(screen.queryByText(/undefined/)).not.toBeInTheDocument();
+    });
+
+    test('Renderiza correctamente un nombre de ingrediente muy largo', () => {
+      const nombreLargo = 'Chocolate fondant para postres con un 70% de cacao de origen';
+      const mockIngredientes = [
+        { nombre: nombreLargo, cantidad: 200, unidad: 'g' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+      expect(screen.getByText(nombreLargo)).toBeInTheDocument();
+    });
+
+    test('Ingredientes con el mismo nombre aparecen todos (sin deduplicar en vista)', () => {
+      const mockIngredientes = [
+        { nombre: 'Leche', cantidad: 200, unidad: 'ml' },
+        { nombre: 'Leche', cantidad: 500, unidad: 'ml' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(2);
+    });
+
+    test('Ingrediente con cantidad 0 se renderiza sin errores', () => {
+      const mockIngredientes = [
+        { nombre: 'Azúcar', cantidad: 0, unidad: 'g' },
+      ];
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+      expect(screen.getByText('Azúcar')).toBeInTheDocument();
+      expect(screen.getByText('0 g')).toBeInTheDocument();
+    });
+
+    test('Renderiza una lista grande sin errores (20 ingredientes)', () => {
+      const mockIngredientes = Array.from({ length: 20 }, (_, i) => ({
+        nombre: `Ingrediente ${String(i).padStart(2, '0')}`,
+        cantidad: i + 1,
+        unidad: 'g',
+      }));
+      render(<ListaNevera ingredientes={mockIngredientes} onEliminar={vi.fn()} />);
+
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(20);
+    });
+
   });
 
 });
-

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext';
 
 /**
  * COMPONENTE: VistaRecetas
@@ -7,6 +8,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
  * Incluye paginación que se guarda en la URL y códigos de color según la coincidencia.
  */
 const VistaRecetas = () => {
+  const { fetchConAuth } = useAuth();
   // Hooks de React Router para leer/escribir la URL y navegar
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -16,7 +18,7 @@ const VistaRecetas = () => {
   // ==========================================
   // Extraemos los ingredientes que el usuario buscó
   const query = searchParams.get('ingredientes');
-  
+
   // Extraemos la página en la que estábamos. Si no hay, por defecto es la 1.
   // Esto es vital para que al darle a "Volver" desde los detalles de receta, 
   // recordemos en qué página de la paginación nos habíamos quedado.
@@ -30,7 +32,7 @@ const VistaRecetas = () => {
   const [recetas, setRecetas] = useState([]);      // Array con todas las recetas que devuelve el backend
   const [cargando, setCargando] = useState(true);  // Controla si mostramos el texto de "Cargando..."
   const [error, setError] = useState(null);        // Guarda el mensaje si falla la petición al servidor
-  
+
   // El estado de la página actual se inicializa con lo que haya en la URL
   const [paginaActual, setPaginaActual] = useState(paginaUrl);
   const recetasPorPagina = 12; // Cuántas recetas mostramos a la vez
@@ -47,15 +49,15 @@ const VistaRecetas = () => {
       try {
         setCargando(true);
         setError(null);
-        
+
         // Llamada a la API codificando la URL por seguridad
-        const response = await fetch(`${API_URL}/api/recetas?ingredientes=${encodeURIComponent(query)}`);
+        const response = await fetchConAuth(`${API_URL}/api/recetas?ingredientes=${encodeURIComponent(query)}`);
 
         if (!response.ok) throw new Error('Error al conectar con el servidor');
 
         const data = await response.json();
         setRecetas(data); // Guardamos todas las recetas de golpe
-        
+
       } catch (err) {
         console.error("Error en fetchRecetasReales:", err);
         setError('Hubo un problema al buscar las recetas.');
@@ -86,12 +88,12 @@ const VistaRecetas = () => {
    */
   const obtenerColorMatch = (coincidenciaTexto) => {
     if (!coincidenciaTexto || !coincidenciaTexto.includes('/')) return 'match-neutral';
-    
+
     // Separamos el string "3/5" en dos números: 3 y 5
     const partes = coincidenciaTexto.split('/');
     const tienen = parseInt(partes[0]);
     const total = parseInt(partes[1]);
-    
+
     // Evitamos dividir por cero por si acaso
     if (total === 0) return 'match-neutral';
 
@@ -107,12 +109,12 @@ const VistaRecetas = () => {
   // ==========================================
   // 5. LÓGICA DE PAGINACIÓN (Frontend Slice)
   // ==========================================
-  
+
   // Averiguamos qué trozo del array general nos toca mostrar en esta página
   const indiceUltimaReceta = paginaActual * recetasPorPagina;
   const indicePrimeraReceta = indiceUltimaReceta - recetasPorPagina;
   const recetasActuales = recetas.slice(indicePrimeraReceta, indiceUltimaReceta);
-  
+
   const totalPaginas = Math.ceil(recetas.length / recetasPorPagina);
 
   // Funciones de navegación de páginas
@@ -153,7 +155,7 @@ const VistaRecetas = () => {
   // ==========================================
   return (
     <section className="vista-recetas-container">
-      
+
       {/* --- CABECERA --- */}
       <div className="header-recetas-clean">
         {/* Mandamos al usuario a la raíz (la nevera) para no liarnos con el historial */}
@@ -196,13 +198,13 @@ const VistaRecetas = () => {
               >
                 <div className="receta-img-container">
                   <img src={r.image_url} alt={r.title} className="receta-img" />
-                  
+
                   {/* Etiqueta dinámica: Calculamos su color con la función creada arriba */}
                   <span className={`receta-coincidentes ${obtenerColorMatch(r.coincidenciaTexto)}`}>
                     Match: {r.coincidenciaTexto}
                   </span>
                 </div>
-                
+
                 <div className="receta-info">
                   <h3>{r.title}</h3>
                 </div>
@@ -214,30 +216,30 @@ const VistaRecetas = () => {
           {/* Solo se muestran si hay más de una página de resultados */}
           {totalPaginas > 1 && (
             <div className="pagination-container">
-              
-              <button 
-                className="btn-pagination-icon" 
-                onClick={() => irAPagina(1)} 
-                disabled={paginaActual === 1} 
+
+              <button
+                className="btn-pagination-icon"
+                onClick={() => irAPagina(1)}
+                disabled={paginaActual === 1}
                 title="Ir a la primera página"
               >
                 «
               </button>
-              
-              <button 
-                className="btn-pagination" 
-                onClick={paginaAnterior} 
+
+              <button
+                className="btn-pagination"
+                onClick={paginaAnterior}
                 disabled={paginaActual === 1}
               >
                 ‹ Anterior
               </button>
-              
+
               {/* Botones numéricos generados por nuestra ventana deslizante */}
               <div className="pagination-numbers">
                 {paginasVisibles.map(num => (
-                  <button 
-                    key={num} 
-                    className={`btn-page-number ${paginaActual === num ? 'active' : ''}`} 
+                  <button
+                    key={num}
+                    className={`btn-page-number ${paginaActual === num ? 'active' : ''}`}
                     onClick={() => irAPagina(num)}
                   >
                     {num}
@@ -245,23 +247,23 @@ const VistaRecetas = () => {
                 ))}
               </div>
 
-              <button 
-                className="btn-pagination" 
-                onClick={paginaSiguiente} 
+              <button
+                className="btn-pagination"
+                onClick={paginaSiguiente}
                 disabled={paginaActual === totalPaginas}
               >
                 Siguiente ›
               </button>
-              
-              <button 
-                className="btn-pagination-icon" 
-                onClick={() => irAPagina(totalPaginas)} 
-                disabled={paginaActual === totalPaginas} 
+
+              <button
+                className="btn-pagination-icon"
+                onClick={() => irAPagina(totalPaginas)}
+                disabled={paginaActual === totalPaginas}
                 title={`Ir a la última página (${totalPaginas})`}
               >
                 »
               </button>
-              
+
             </div>
           )}
         </>

@@ -17,3 +17,6 @@ npm-debug.log*
 # Sistema operativo
 .DS_Store
 Thumbs.db
+
+# Reportes tests
+test-report

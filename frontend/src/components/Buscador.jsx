@@ -1,86 +1,92 @@
 import React, { useState } from 'react';
 
-/**
- * Componente interactivo para buscar y seleccionar ingredientes de la base de datos.
- * Incluye un input con autocompletado en tiempo real y validación de cantidades 
- * antes de enviar la información al estado global de la aplicación.
- */
-const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
+const Buscador = ({ ingredientesBase, onAñadir }) => {
   const [busqueda, setBusqueda] = useState('');
   const [cantidad, setCantidad] = useState('');
   const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null);
   const [sugerencias, setSugerencias] = useState([]);
 
-  /**
-   * Maneja los cambios de texto en el input de búsqueda.
-   * Filtra dinámicamente el catálogo de ingredientes (`ingredientesBase`) 
-   * mostrando solo aquellos que coincidan con el texto introducido.
-   */
-  const manejarInput = (e) => {
+  // Estado general para manejar mensajes de éxito y error dentro de este componente
+  const [mensajeLocal, setMensajeLocal] = useState({ texto: '', tipo: '' });
+
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  // Función para establecer el mensaje y borrarlo automáticamente si es de éxito
+  const mostrarMensaje = (texto, tipo) => {
+    setMensajeLocal({ texto, tipo });
+    if (tipo === 'success') {
+      setTimeout(() => {
+        setMensajeLocal({ texto: '', tipo: '' });
+      }, 3000);
+    }
+  };
+
+  const manejarInput = async (e) => {
     const valor = e.target.value;
     setBusqueda(valor);
-    setIngredienteSeleccionado(null); // Resetea la selección si el usuario vuelve a escribir
-    
-    // Evita la búsqueda si no hay datos cargados del servidor
-    if (valor.trim() !== '' && ingredientesBase.length > 0) {
-      const filtrados = ingredientesBase.filter(ing =>
-        ing.nombre.toLowerCase().includes(valor.toLowerCase())
-      );
-      setSugerencias(filtrados);
+    setIngredienteSeleccionado(null);
+
+    // Limpiamos los errores si el usuario empieza a escribir para corregir
+    if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
+
+    if (valor.trim().length >= 2) {
+      try {
+        const res = await fetch(`${API_URL}/api/ingredientes?nombre=${encodeURIComponent(valor)}`);
+        if (!res.ok) throw new Error('Error en búsqueda');
+        const data = await res.json();
+        setSugerencias(data);
+      } catch (error) {
+        console.error("Error buscando sugerencias:", error);
+        setSugerencias([]);
+      }
     } else {
       setSugerencias([]);
     }
   };
 
-  /**
-   * Actualiza el estado cuando el usuario hace clic en una de las sugerencias
-   * del menú desplegable. Fija el texto en el input y guarda el objeto completo.
-   */
   const seleccionarSugerencia = (ing) => {
     setBusqueda(ing.nombre);
     setIngredienteSeleccionado(ing);
-    setSugerencias([]); // Oculta el menú desplegable
+    setSugerencias([]);
+    if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
   };
 
-  /**
-   * Ejecuta las validaciones finales cuando el usuario presiona el botón "Confirmar".
-   * Comprueba la conexión, asegura que se haya seleccionado un ingrediente válido
-   * de la lista y verifica que la cantidad sea un número positivo.
-   */
-  const handleConfirmar = () => {
-    // Protección contra fallos del servidor
+  const handleConfirmar = async () => {
     if (ingredientesBase.length === 0) {
-        onError?.('❌ No se pueden buscar ingredientes porque no hay conexión con la base de datos.');
-        return;
-    }
-
-    // Validación de selección correcta
-    if (!ingredienteSeleccionado) {
-      onError?.('❌ Por favor, selecciona un ingrediente válido de las sugerencias.');
+      mostrarMensaje('No se pueden buscar ingredientes porque no hay conexión.', 'error');
       return;
     }
 
-    // Si el campo está vacío, asumimos 1 por defecto
+    if (!ingredienteSeleccionado) {
+      mostrarMensaje('Por favor, selecciona un ingrediente válido de las sugerencias.', 'error');
+      return;
+    }
+
     const cantidadFinal = cantidad === '' ? 1 : parseFloat(cantidad);
 
-    // Validación matemática
     if (cantidadFinal <= 0) {
-      onError?.('❌ La cantidad debe ser mayor que 0.');
+      mostrarMensaje('La cantidad debe ser mayor que 0.', 'error');
       return;
     }
 
-    // Envía el objeto completo y la cantidad al componente App
-    onAñadir(ingredienteSeleccionado, cantidadFinal);
+    try {
+      await onAñadir(ingredienteSeleccionado, cantidadFinal);
 
-    // Limpieza de inputs tras añadir exitosamente
-    setBusqueda('');
-    setCantidad('');
-    setIngredienteSeleccionado(null);
-    setSugerencias([]);
+      // Mostramos el éxito aquí mismo (Sin emojis)
+      mostrarMensaje(`Añadido: ${ingredienteSeleccionado.nombre} (${cantidadFinal} ${ingredienteSeleccionado.unidad})`, 'success');
+
+      // Limpiamos los campos
+      setBusqueda('');
+      setCantidad('');
+      setIngredienteSeleccionado(null);
+      setSugerencias([]);
+    } catch (error) {
+      mostrarMensaje(error.message || 'No se pudo guardar el ingrediente.', 'error');
+    }
   };
 
   return (
-    <section className="card add-section">
+    <section className="buscador-container">
       <div className="section-header">
         <h2>Añadir a la Nevera</h2>
       </div>
@@ -94,9 +100,8 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
             onChange={manejarInput}
             autoComplete="off"
             className="input-neon"
-            disabled={ingredientesBase.length === 0} // Bloquea si no hay conexión
+            disabled={ingredientesBase.length === 0}
           />
-          {/* Renderizado condicional de las sugerencias de búsqueda */}
           {sugerencias.length > 0 && (
             <div className="sugerencias-box">
               {sugerencias.map((ing, i) => (
@@ -118,7 +123,6 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
           disabled={ingredientesBase.length === 0}
         />
 
-        {/* Muestra la unidad correspondiente (g, ml, ud) de forma automática y estática */}
         <input
           type="text"
           value={ingredienteSeleccionado ? ingredienteSeleccionado.unidad : '—'}
@@ -127,6 +131,17 @@ const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
           disabled={ingredientesBase.length === 0}
         />
       </div>
+
+      <div className="info-cantidad">
+        * Si dejas la cantidad vacía, se añadirá <strong>1 {ingredienteSeleccionado ? ingredienteSeleccionado.unidad : ''}</strong> por defecto.
+      </div>
+
+      {/* Aquí es donde se aplica el estilo dinámico dependiendo del tipo */}
+      {mensajeLocal.texto && (
+        <div className={`mensaje-local ${mensajeLocal.tipo}`}>
+          {mensajeLocal.texto}
+        </div>
+      )}
 
       <button className="btn-primary" onClick={handleConfirmar} disabled={ingredientesBase.length === 0}>
         <span>Confirmar Selección</span>
