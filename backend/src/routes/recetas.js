@@ -140,29 +140,45 @@ router.put('/completar', requireAuth, async (req, res) => {
             return res.status(401).json({ error: "Usuario no autenticado correctamente." });
         }
 
-        // 2. Buscamos la receta
         const receta = await Receta.findOne({
             title: new RegExp('^' + tituloSeguro + '$', 'i')
         });
 
         if (!receta) return res.status(404).json({ error: "Receta no encontrada." });
 
-        // ── RESTA DE INGREDIENTES ──────────────────────────────────────────
-        // Usamos .includes() igual que el frontend para mayor tolerancia en nombres
+        // ── LÓGICA DE RESTA CON CONVERSIÓN ──────────────────────────────────
         for (const ingUsado of ingredients) {
-
-            // Buscamos si el ingrediente existe en la nevera
+            // Buscamos el item en la nevera que coincida en nombre
             const itemEnNevera = usuario.nevera.find(item =>
-                item.ingrediente.nombre.toLowerCase() === ingUsado.nombre.toLowerCase() &&
-                item.unidad.toLowerCase() === ingUsado.unidad.toLowerCase()
+                item.ingrediente.nombre.toLowerCase() === ingUsado.nombre.toLowerCase()
             );
 
             if (itemEnNevera) {
-                itemEnNevera.cantidad -= ingUsado.cantidad;
+                const unidadN = (itemEnNevera.unidad || '').toLowerCase().trim();
+                const unidadR = (ingUsado.unidad || '').toLowerCase().trim();
+                const factor = itemEnNevera.ingrediente.equivalencia_g_ml || 0;
+
+                let cantidadARestar = ingUsado.cantidad;
+
+                // Lógica de conversión
+                if (unidadN !== unidadR) {
+                    if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0) {
+                        cantidadARestar = ingUsado.cantidad * factor;
+                    }
+                    else if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
+                        cantidadARestar = ingUsado.cantidad / factor;
+                    }
+                }
+
+                // RESTA Y REDONDEO A UN DECIMAL
+                const nuevaCantidad = itemEnNevera.cantidad - cantidadARestar;
+
+                // Aplicamos redondeo: multiplicamos por 10, redondeamos y dividimos por 10
+                itemEnNevera.cantidad = Math.round(nuevaCantidad * 10) / 10;
             }
         }
 
-        // Eliminamos los que quedaron en 0 o negativo
+        // Eliminamos los que quedaron en 0 o negativo (el usuario ya gastó el producto)
         usuario.nevera = usuario.nevera.filter(item => item.cantidad > 0);
 
         await usuario.save();
@@ -179,12 +195,12 @@ router.put('/completar', requireAuth, async (req, res) => {
         res.status(200).json({
             success: true,
             nevera: neveraActualizada,
-            mensaje: "Receta completada e ingredientes actualizados en tu nevera."
+            mensaje: "Receta completada e ingredientes actualizados con conversiones."
         });
 
     } catch (error) {
         console.error("Error al completar receta:", error);
-        res.status(500).json({ error: "Error interno del servidor al procesar la operación." });
+        res.status(500).json({ error: "Error interno del servidor." });
     }
 });
 
@@ -323,7 +339,7 @@ router.get('/:titulo', async (req, res) => {
         if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
 
         const tituloSeguro = escaparRegex(tituloReceta);
-        
+
         // Buscamos la receta
         const recetaCompleta = await Receta.findOne({
             title: new RegExp('^' + tituloSeguro + '$', 'i')
@@ -334,10 +350,10 @@ router.get('/:titulo', async (req, res) => {
         }
 
         // --- NUEVO: COMPROBAMOS SI ES FAVORITA ---
-        
+
         // 1. Convertimos el documento de Mongoose a un objeto normal de JavaScript
         let recetaData = recetaCompleta.toObject();
-        
+
         // 2. Por defecto decimos que NO es favorita
         recetaData.esFavorito = false;
 
@@ -357,7 +373,7 @@ router.get('/:titulo', async (req, res) => {
                     const estaGuardada = listaFavoritos.recetas.some(
                         (id) => id.toString() === recetaCompleta._id.toString()
                     );
-                    
+
                     if (estaGuardada) {
                         recetaData.esFavorito = true; // ¡La marcamos como verdadera!
                     }
@@ -367,7 +383,7 @@ router.get('/:titulo', async (req, res) => {
 
         // 4. Enviamos la receta al frontend, ahora con la propiedad "esFavorito"
         res.json(recetaData);
-        
+
     } catch (error) {
         console.error("❌ Error interno al buscar detalles:", error);
         res.status(500).json({ error: "Error interno del servidor" });

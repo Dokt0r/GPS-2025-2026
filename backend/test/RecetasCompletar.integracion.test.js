@@ -133,7 +133,7 @@ describe('PUT /api/recetas/completar — Integración con Populate', () => {
         // Verificamos que no explote (200) y que devuelva el mensaje de éxito
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(res.body.mensaje).toBe("Receta completada e ingredientes actualizados en tu nevera.");
+        expect(res.body.mensaje).toBe("Receta completada e ingredientes actualizados con conversiones.");
 
         // Verificamos que la receta se haya actualizado igualmente en la BBDD
         const recetaDB = await Receta.findOne({ title: tituloRecetaUnica });
@@ -142,4 +142,6 @@ describe('PUT /api/recetas/completar — Integración con Populate', () => {
         expect(recetaDB.isCompleted).toBe(true);
         expect(tieneIngredienteFantasma).toBe(true);
     });
+
+
 });
