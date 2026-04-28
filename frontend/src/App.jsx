@@ -123,7 +123,7 @@ function App() {
       const respuesta = await fetchConAuth(`${API_URL}/api/ingredientes/nevera/${encodeURIComponent(nombre)}`, {
         method: 'DELETE'
       });
-
+ 
       if (!respuesta.ok) {
         const data = await respuesta.json().catch(() => ({}));
         throw new Error(data.error || 'No se pudo eliminar de la base de datos.');
