@@ -8,8 +8,14 @@ const ingredientesRoutes = require('./routes/ingredientes');
 const recetasRoutes = require('./routes/recetas.js');
 
 app.use(cors({
-    origin: process.env.FRONTEND_URL,
-    credentials: true
+  // Especifica quién puede hacer peticiones. Mete tu localhost para desarrollo y el vercel para producción.
+  origin: [
+    'http://localhost:5173', // O el puerto que uses en local para el front
+    'https://gps-2025-2026.vercel.app' // ¡TU DOMINIO DE VERCEL SIN BARRAS AL FINAL!
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true, // IMPORTANTÍSIMO si estás enviando tokens JWT en los headers o cookies
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
