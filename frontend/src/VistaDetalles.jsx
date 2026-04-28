@@ -160,7 +160,6 @@ const VistaDetalles = () => {
     } catch (err) {
       console.error("Error al completar receta:", err);
     }
-  };
   // ── RENDERS DE ESTADO ───────────────────────
 
   if (cargando) {
