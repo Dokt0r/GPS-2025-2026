@@ -32,6 +32,8 @@ jobs:
         run: npm test -- --run --no-file-parallelism
         env:
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }} # Conecta el secreto de GitHub con el entorno de Node
+          JWT_REFRESH_SECRET: ${{ secrets.JWT_REFRESH_SECRET }} # Conecta el secreto de GitHub con el entorno de Node
           
       - name: upload report
         if: always()
