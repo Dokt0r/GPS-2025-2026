@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useNevera } from './NeveraContext';
 import { useAuth } from './AuthContext';
+import { guardarRecetaFavorita } from './services/favoritos';
 
 const tienesSuficiente = (neveraIng, recetaIng) => {
   const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
@@ -32,6 +33,11 @@ const VistaDetalles = () => {
   const [error, setError] = useState(null);
   const [recetaCompletada, setRecetaCompletada] = useState(false);
   const [errorCompletar, setErrorCompletar] = useState(null);
+  const [favoritoEstado, setFavoritoEstado] = useState({
+    guardando: false,
+    guardado: false,
+    mensaje: ''
+  });
 
   useEffect(() => {
     const fetchDetalleReceta = async () => {
@@ -86,6 +92,44 @@ const VistaDetalles = () => {
     }
   };
 
+  const handleGuardarFavorito = async () => {
+    const recetaId = receta?._id || receta?.id;
+    if (!recetaId || favoritoEstado.guardando) return;
+
+    setFavoritoEstado((prev) => ({ ...prev, guardando: true, mensaje: '' }));
+
+    try {
+      const resultado = await guardarRecetaFavorita({
+        fetchConAuth,
+        apiUrl: API_URL,
+        recetaId
+      });
+
+      if (!resultado.ok) {
+        setFavoritoEstado((prev) => ({
+          ...prev,
+          mensaje: resultado.mensaje
+        }));
+        return;
+      }
+
+      setFavoritoEstado({
+        guardando: false,
+        guardado: true,
+        mensaje: resultado.mensaje
+      });
+    } catch {
+      setFavoritoEstado((prev) => ({
+        ...prev,
+        mensaje: 'No se pudo conectar con el servidor.'
+      }));
+    } finally {
+      setFavoritoEstado((prev) => ({ ...prev, guardando: false }));
+    }
+  };
+
+  // ── RENDERS DE ESTADO ───────────────────────
+
   if (cargando) {
     return (
       <main className="receta-view-wrapper">
@@ -129,7 +173,33 @@ const VistaDetalles = () => {
 
       <article className="receta-content-card">
         <header className="receta-header">
-          <h1 className="receta-titulo-principal">{receta.title}</h1>
+          <div className="titulo-con-favorito">
+            <h1 className="receta-titulo-principal">{receta.title}</h1>
+            
+            <button
+              className="btn-favorito"
+              aria-label="Favorito"
+              aria-pressed={favoritoEstado.guardado}
+              onClick={handleGuardarFavorito}
+              disabled={favoritoEstado.guardando}
+            >
+              <svg 
+                viewBox="0 0 24 24" 
+                width="26" 
+                height="26" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                fill={favoritoEstado.guardado ? 'currentColor' : 'none'}
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+              </svg>
+            </button>
+          </div>
+          {favoritoEstado.mensaje && (
+            <p role="status" className="receta-texto-vacio">{favoritoEstado.mensaje}</p>
+          )}
         </header>
 
         <div className="receta-grid-layout">

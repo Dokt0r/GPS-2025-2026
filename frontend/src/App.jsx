@@ -5,6 +5,7 @@ import ListaNevera from './components/ListaNevera';
 import BotonAccion from './components/BotonAccion';
 import Registro from './components/Registro';
 import Login from './components/Login'; // Añadimos la importación de Login
+import Navbar from './components/Navbar';
 import VistaRecetas from './VistaRecetas';
 import VistaDetalles from './VistaDetalles';
 import { NeveraContext } from './NeveraContext';
@@ -182,6 +183,7 @@ function App() {
           <Route path="/" element={
             <ProtectedRoute>
               <section className="vista-principal-unica">
+                <Navbar />
                 <header>
                   <div className="logo-placeholder"></div>
                   <h1>LazyChef</h1>

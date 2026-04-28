@@ -4,7 +4,10 @@ const jwt = require('jsonwebtoken');
 const Receta = require('../models/recetas');
 const Usuario = require('../models/usuario');
 const requireAuth = require('../middleware/auth');
+const { guardarRecetaComoFavorita, FavoritosError } = require('../services/favoritos');
 
+
+// Función para estandarizar lo que viene del frontend a g, ml o ud de forma SEGURA
 const estandarizarNevera = (queryStr) => {
     if (!queryStr) return [];
 
@@ -196,5 +199,27 @@ router.delete('/ingrediente', async (req, res) => {
         res.status(500).json({ error: "Error al eliminar ingrediente" });
     }
 });
+// =========================================================================
+// ENDPOINT: (Guardar receta como favorita)
+// =========================================================================
 
+router.post('/favoritos', requireAuth, async (req, res) => {
+    try {
+        const { recetaId } = req.body;
+        const resultado = await guardarRecetaComoFavorita({
+            usuarioId: req.usuario.id,
+            recetaId
+        });
+
+        return res.status(200).json(resultado);
+
+    } catch (error) {
+        if (error instanceof FavoritosError) {
+            return res.status(error.status).json({ error: error.message });
+        }
+
+        console.error("Error al guardar receta como favorita:", error);
+        return res.status(500).json({ error: "Error interno del servidor." });
+    }
+});
 module.exports = router;
