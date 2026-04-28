@@ -162,14 +162,79 @@ const VistaDetalles = () => {
             <h3 className="receta-seccion-titulo"> Ingredientes</h3>
             <ul className="receta-lista-ing">
               {receta.ingredients && receta.ingredients.length > 0 ? (
-                receta.ingredients.map((ing, i) => (
-                  <li key={i} className="receta-ing-item">
-                    <span className="receta-ing-badge">
-                      {ing.cantidad} {ing.unidad ? ing.unidad : ''}
-                    </span>
-                    <span className="receta-ing-nombre">{ing.nombre}</span>
-                  </li>
-                ))
+                receta.ingredients.map((ing, i) => {
+                  
+                  // 1. Buscamos el ingrediente en la nevera
+                  const neveraIng = ingredientesNevera.find(n =>
+                    ing.nombre.toLowerCase().includes(n.nombre.toLowerCase())
+                  );
+
+                  let falta = false;
+                  let mensajeError = "";
+
+                  // 2. Evaluamos si falta totalmente o parcialmente
+                  if (!neveraIng) {
+                    falta = true;
+                    mensajeError = "— No tienes este ingrediente";
+                  } else {
+                    const suficiente = tienesSuficiente(neveraIng, ing);
+                    if (!suficiente) {
+                      falta = true;
+                      
+                      // Calculamos la cantidad que falta usando tu lógica de equivalencias
+                      const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
+                      const unidadR = (ing.unidad || '').toLowerCase().trim();
+                      const factor = neveraIng.equivalencia_g_ml || 0;
+                      
+                      let faltaCantidad = 0;
+
+                      if (unidadN === unidadR) {
+                        faltaCantidad = ing.cantidad - neveraIng.cantidad;
+                      } else if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0) {
+                        faltaCantidad = ing.cantidad - (neveraIng.cantidad / factor);
+                      } else if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
+                        faltaCantidad = ing.cantidad - (neveraIng.cantidad * factor);
+                      } else {
+                        // Por si acaso hay un desajuste de unidades raro
+                        faltaCantidad = ing.cantidad;
+                      }
+
+                      // Redondeamos a 2 decimales para evitar números muy largos
+                      faltaCantidad = Math.ceil(faltaCantidad * 100) / 100;
+                      mensajeError = `— Faltan ${faltaCantidad} ${ing.unidad || ''}`.trim();
+                    }
+                  }
+
+                  return (
+                    <li key={i} className="receta-ing-item">
+                      <span
+                        className="receta-ing-badge"
+                        style={falta ? {
+                          background: 'rgba(255, 82, 82, 0.15)',
+                          border: '1px solid rgba(255, 82, 82, 0.5)',
+                          color: '#ff5252',
+                        } : {}}
+                      >
+                        {ing.cantidad} {ing.unidad ? ing.unidad : ''}
+                      </span>
+                      <span
+                        className="receta-ing-nombre"
+                        style={falta ? { color: '#ff5252' } : {}}
+                      >
+                        {ing.nombre}
+                        {falta && (
+                          <span style={{
+                            fontSize: '0.75rem',
+                            marginLeft: '6px',
+                            opacity: 0.8,
+                          }}>
+                            {mensajeError}
+                          </span>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })
               ) : (
                 <p className="receta-texto-vacio">No hay ingredientes especificados.</p>
               )}
