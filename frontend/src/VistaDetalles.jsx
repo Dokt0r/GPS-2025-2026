@@ -3,58 +3,21 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useNevera } from './NeveraContext';
 import { useAuth } from './AuthContext';
 
-// ─────────────────────────────────────────────
-// HELPERS DE UNIDADES (espejo del backend)
-// ─────────────────────────────────────────────
-
 const tienesSuficiente = (neveraIng, recetaIng) => {
   const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
   const unidadR = (recetaIng.unidad || '').toLowerCase().trim();
   const factor = neveraIng.equivalencia_g_ml || 0;
 
-  if (unidadN === unidadR) {
-    return neveraIng.cantidad >= recetaIng.cantidad;
-  }
-  if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0) {
+  if (unidadN === unidadR) return neveraIng.cantidad >= recetaIng.cantidad;
+  if (['g', 'ml'].includes(unidadN) && unidadR === 'ud' && factor > 0)
     return (neveraIng.cantidad / factor) >= recetaIng.cantidad;
-  }
-  if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
+  if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0)
     return (neveraIng.cantidad * factor) >= recetaIng.cantidad;
-  }
   return false;
 };
 
-const calcularFaltantes = (ingredientesReceta, ingredientesNevera) => {
-  const faltantes = [];
-
-  for (const recetaIng of ingredientesReceta) {
-    const neveraIng = ingredientesNevera.find(n =>
-      recetaIng.nombre.toLowerCase().includes(n.nombre.toLowerCase())
-    );
-
-    if (!neveraIng) {
-      faltantes.push({
-        nombre: recetaIng.nombre,
-        cantidadNecesaria: recetaIng.cantidad,
-        unidad: recetaIng.unidad || '',
-        motivo: 'no disponible en tu nevera',
-      });
-    } else if (!tienesSuficiente(neveraIng, recetaIng)) {
-      faltantes.push({
-        nombre: recetaIng.nombre,
-        cantidadNecesaria: recetaIng.cantidad,
-        unidad: recetaIng.unidad || '',
-        motivo: `solo tienes ${neveraIng.cantidad} ${neveraIng.unidad}`,
-      });
-    }
-  }
-
-  return faltantes;
-};
-
-// ─────────────────────────────────────────────
-// COMPONENTE
-// ─────────────────────────────────────────────
+const codificarTitulo = (texto) =>
+  encodeURIComponent(texto).replace(/[!'()*]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase());
 
 const VistaDetalles = () => {
   const { fetchConAuth } = useAuth();
@@ -67,7 +30,6 @@ const VistaDetalles = () => {
   const [receta, setReceta] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-
   const [recetaCompletada, setRecetaCompletada] = useState(false);
   const [errorCompletar, setErrorCompletar] = useState(null);
 
@@ -77,12 +39,10 @@ const VistaDetalles = () => {
         setCargando(true);
         setError(null);
         const response = await fetchConAuth(`${API_URL}/api/recetas/${codificarTitulo(titulo)}`);
-
         if (!response.ok) {
           if (response.status === 404) throw new Error('Receta no encontrada.');
           throw new Error('Error al conectar con el servidor.');
         }
-
         const data = await response.json();
         setReceta(data);
       } catch (err) {
@@ -96,16 +56,8 @@ const VistaDetalles = () => {
     if (titulo) fetchDetalleReceta();
   }, [titulo, API_URL]);
 
-  // ── LÓGICA PRINCIPAL: COMPLETAR RECETA ──────
   const handleCompletarReceta = async () => {
     if (!receta?.ingredients) return;
-
-    const faltantes = calcularFaltantes(receta.ingredients, ingredientesNevera);
-
-    /*if (faltantes.length > 0) {
-      setErrorCompletar(faltantes);
-      return;
-    } */
 
     try {
       const response = await fetchConAuth(`${API_URL}/api/recetas/completar`, {
@@ -124,7 +76,8 @@ const VistaDetalles = () => {
         return;
       }
 
-      restarIngredientesReceta(receta.ingredients);
+      const data = await response.json().catch(() => ({}));
+      await restarIngredientesReceta(receta.ingredients, data.nevera);
       setErrorCompletar(null);
       setRecetaCompletada(true);
       setTimeout(() => navigate('/'), 3500);
@@ -132,36 +85,6 @@ const VistaDetalles = () => {
       setErrorCompletar([{ nombre: 'No se pudo conectar con el servidor.', motivo: '' }]);
     }
   };
-
-    try {
-      // 1. Sincronizamos con el backend para restar ingredientes
-      const response = await fetch(`${API_URL}/api/recetas/completar`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          titulo: receta.title,
-          steps: receta.steps,
-          ingredients: receta.ingredients
-        }),
-      });
-
-      if (!response.ok) throw new Error('Error al sincronizar con el servidor');
-
-      // 2. Actualizamos el estado local de la nevera (UI)
-      restarIngredientesReceta(receta.ingredients);
-      
-      // 3. Mostramos éxito y navegamos
-      setRecetaCompletada(true);
-      setErrorCompletar(null); // Limpiamos errores previos
-      setTimeout(() => navigate('/'), 2500);
-
-    } catch (err) {
-      console.error("Error al completar receta:", err);
-    }
-  };
-  // ── RENDERS DE ESTADO ───────────────────────
 
   if (cargando) {
     return (
@@ -177,7 +100,9 @@ const VistaDetalles = () => {
     return (
       <main className="receta-view-wrapper">
         <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
           Volver
         </button>
         <div className="error-container centrado-vertical">
@@ -191,7 +116,9 @@ const VistaDetalles = () => {
     <main className="receta-view-wrapper">
 
       <button className="btn-flotante-volver" onClick={() => navigate(-1)}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M19 12H5M12 19l-7-7 7-7" />
+        </svg>
         <span>Volver</span>
       </button>
 
@@ -209,12 +136,10 @@ const VistaDetalles = () => {
 
           {/* Columna Ingredientes */}
           <section className="receta-seccion">
-            <h3 className="receta-seccion-titulo"> Ingredientes</h3>
+            <h3 className="receta-seccion-titulo">Ingredientes</h3>
             <ul className="receta-lista-ing">
               {receta.ingredients && receta.ingredients.length > 0 ? (
                 receta.ingredients.map((ing, i) => {
-                  
-                  // 1. Buscamos el ingrediente en la nevera
                   const neveraIng = ingredientesNevera.find(n =>
                     ing.nombre.toLowerCase().includes(n.nombre.toLowerCase())
                   );
@@ -222,7 +147,6 @@ const VistaDetalles = () => {
                   let falta = false;
                   let mensajeError = "";
 
-                  // 2. Evaluamos si falta totalmente o parcialmente
                   if (!neveraIng) {
                     falta = true;
                     mensajeError = "— No tienes este ingrediente";
@@ -230,12 +154,9 @@ const VistaDetalles = () => {
                     const suficiente = tienesSuficiente(neveraIng, ing);
                     if (!suficiente) {
                       falta = true;
-                      
-                      // Calculamos la cantidad que falta usando tu lógica de equivalencias
                       const unidadN = (neveraIng.unidad || '').toLowerCase().trim();
                       const unidadR = (ing.unidad || '').toLowerCase().trim();
                       const factor = neveraIng.equivalencia_g_ml || 0;
-                      
                       let faltaCantidad = 0;
 
                       if (unidadN === unidadR) {
@@ -245,11 +166,9 @@ const VistaDetalles = () => {
                       } else if (unidadN === 'ud' && ['g', 'ml'].includes(unidadR) && factor > 0) {
                         faltaCantidad = ing.cantidad - (neveraIng.cantidad * factor);
                       } else {
-                        // Por si acaso hay un desajuste de unidades raro
                         faltaCantidad = ing.cantidad;
                       }
 
-                      // Redondeamos a 2 decimales para evitar números muy largos
                       faltaCantidad = Math.ceil(faltaCantidad * 100) / 100;
                       mensajeError = `— Faltan ${faltaCantidad} ${ing.unidad || ''}`.trim();
                     }
@@ -265,7 +184,7 @@ const VistaDetalles = () => {
                           color: '#ff5252',
                         } : {}}
                       >
-                        {ing.cantidad} {ing.unidad ? ing.unidad : ''}
+                        {ing.cantidad} {ing.unidad || ''}
                       </span>
                       <span
                         className="receta-ing-nombre"
@@ -273,11 +192,7 @@ const VistaDetalles = () => {
                       >
                         {ing.nombre}
                         {falta && (
-                          <span style={{
-                            fontSize: '0.75rem',
-                            marginLeft: '6px',
-                            opacity: 0.8,
-                          }}>
+                          <span style={{ fontSize: '0.75rem', marginLeft: '6px', opacity: 0.8 }}>
                             {mensajeError}
                           </span>
                         )}
@@ -293,29 +208,22 @@ const VistaDetalles = () => {
 
           {/* Columna Preparación */}
           <section className="receta-seccion">
-            <h3 className="receta-seccion-titulo"> Preparación</h3>
+            <h3 className="receta-seccion-titulo">Preparación</h3>
             <div className="receta-timeline">
               {receta.steps && receta.steps.length > 0 ? (
                 <>
                   {receta.steps.map((paso, i) => (
                     <div className="receta-step" key={i}>
                       <div className="receta-step-number">{i + 1}</div>
-                      <div className="receta-step-text">
-                        <p>{paso}</p>
-                      </div>
+                      <div className="receta-step-text"><p>{paso}</p></div>
                     </div>
                   ))}
 
-                  {/* ── NODO FINAL: COMPLETAR RECETA ── */}
                   <div className="receta-step receta-step-completar">
                     {recetaCompletada ? (
                       <>
-                        <div className="receta-step-number receta-step-number-completado">
-                          ✓
-                        </div>
-                        <span className="texto-exito">
-                          ¡Receta completada! Buen provecho
-                        </span>
+                        <div className="receta-step-number receta-step-number-completado">✓</div>
+                        <span className="texto-exito">¡Receta completada! Buen provecho</span>
                       </>
                     ) : (
                       <button className="btn-completar-receta" onClick={handleCompletarReceta}>
@@ -326,46 +234,17 @@ const VistaDetalles = () => {
                       </button>
                     )}
                   </div>
-
                 </>
               ) : (
                 <p className="receta-texto-vacio">No hay instrucciones disponibles.</p>
               )}
             </div>
-
-            {/* Error de ingredientes faltantes integrado en el flujo visual */}
-            //Esto comentado elimina el mensaje. 
-            {/* {!recetaCompletada && errorCompletar && errorCompletar.length > 0 && (
-              <div className="alerta-faltantes-container">
-                <p className="alerta-faltantes-titulo">
-                  No tienes suficientes ingredientes:
-                </p>
-                <ul className="alerta-faltantes-lista">
-                  {errorCompletar.map((f, i) => (
-                    <li key={i} className="alerta-faltantes-item">
-                      <span className="alerta-bullet">•</span>
-                      <span>
-                        <strong className="alerta-ingrediente-nombre">{f.nombre}</strong>
-                        {' '}— necesitas {f.cantidadNecesaria} {f.unidad}, {f.motivo}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )} */}
           </section>
 
         </div>
       </article>
     </main>
   );
-};
-
-
-const codificarTitulo = (texto) => {
-  return encodeURIComponent(texto).replace(/[!'()*]/g, (c) => {
-    return '%' + c.charCodeAt(0).toString(16).toUpperCase();
-  });
 };
 
 export default VistaDetalles;

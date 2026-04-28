@@ -4,13 +4,12 @@ const jwt = require('jsonwebtoken');
 const Receta = require('../models/recetas');
 const Usuario = require('../models/usuario');
 const requireAuth = require('../middleware/auth');
-// Función para estandarizar lo que viene del frontend a g, ml o ud de forma SEGURA
+
 const estandarizarNevera = (queryStr) => {
     if (!queryStr) return [];
 
     const items = queryStr.split(',');
     return items.map(item => {
-        // separar por | en vez de :
         let [nombre = "", cantidad = "1", unidad = "", equivalencia = ""] = item.split('|');
 
         cantidad = parseFloat(cantidad) || 1;
@@ -69,6 +68,7 @@ const obtenerIngredientesDeNeveraUsuario = async (req) => {
     return mapNeveraUsuario(usuario.nevera);
 };
 
+// GET / - Buscar recetas por ingredientes
 router.get('/', async (req, res) => {
     try {
         const queryStr = typeof req.query.ingredientes === 'string'
@@ -80,14 +80,10 @@ router.get('/', async (req, res) => {
             : await obtenerIngredientesDeNeveraUsuario(req);
 
         if (!ingredientesNeveraEstandar.length) {
-            console.log("❌ Error: Faltan ingredientes en la petición.");
-            console.log("=======================================\n");
             return res.status(400).json({ error: "Faltan ingredientes" });
         }
 
-        // 2. Pasamos el array completo al Modelo
         const recetasSugeridas = await Receta.buscarPorIngredientesYCantidades(ingredientesNeveraEstandar);
-
         res.json(recetasSugeridas);
 
     } catch (error) {
@@ -96,6 +92,7 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /:titulo - Obtener detalle de una receta
 router.get('/:titulo', async (req, res) => {
     try {
         const tituloReceta = decodeURIComponent(req.params.titulo).trim();
@@ -103,9 +100,6 @@ router.get('/:titulo', async (req, res) => {
         if (!tituloReceta) return res.status(400).json({ error: "Falta el título en la URL" });
 
         const tituloSeguro = escaparRegex(tituloReceta);
-        // 2. Buscamos usando una Expresión Regular (Regex)
-        // La 'i' final hace que la búsqueda sea case-insensitive (ignora mayúsculas/minúsculas)
-        // El ^ y el $ aseguran que sea exactamente ese título y no solo una parte.
         const recetaCompleta = await Receta.findOne({
             title: new RegExp('^' + tituloSeguro + '$', 'i')
         });
@@ -121,116 +115,69 @@ router.get('/:titulo', async (req, res) => {
     }
 });
 
-// ENDPOINT 3: Completar una receta y RESTAR ingredientes de la nevera del USUARIO
-
+// PUT /completar - Completar receta y restar ingredientes de la nevera
 router.put('/completar', requireAuth, async (req, res) => {
     try {
         const { titulo, steps, ingredients } = req.body;
         const tituloSeguro = escaparRegex(titulo);
 
-        // 1. Buscamos al usuario logueado y populamos su nevera
         const usuario = await Usuario.findById(req.usuario.id).populate('nevera.ingrediente');
-        
+
         if (!usuario) {
             return res.status(401).json({ error: "Usuario no autenticado correctamente." });
         }
 
-        // 2. Buscamos la receta
-        const receta = await Receta.findOne({ 
-            title: new RegExp('^' + tituloSeguro + '$', 'i') 
+        const receta = await Receta.findOne({
+            title: new RegExp('^' + tituloSeguro + '$', 'i')
         });
 
         if (!receta) return res.status(404).json({ error: "Receta no encontrada." });
 
-        // 3. Procesamos los ingredientes usados
+        // ── RESTA DE INGREDIENTES ──────────────────────────────────────────
+        // Usamos .includes() igual que el frontend para mayor tolerancia en nombres
         for (const ingUsado of ingredients) {
-            
-            // Buscamos si el ingrediente existe en la nevera
-            const itemEnNevera = usuario.nevera.find(item => 
-                item.ingrediente.nombre.toLowerCase() === ingUsado.nombre.toLowerCase() &&
-                item.unidad.toLowerCase() === ingUsado.unidad.toLowerCase()
-            );
+            const nombreReceta = ingUsado.nombre.toLowerCase().trim();
 
-            // REQUISITO: "Resta los que tenga, ignora los que no tenga (sin dar error)"
-            // Al estar dentro de este if, si itemEnNevera es undefined (porque falta), 
-            // simplemente se salta la resta y continúa, permitiendo completar la receta.
+            const itemEnNevera = usuario.nevera.find(item => {
+                const nombreNevera = (item.ingrediente?.nombre || '').toLowerCase().trim();
+                // Coincidencia flexible: el nombre de la receta contiene el de la nevera
+                return nombreReceta.includes(nombreNevera) || nombreNevera.includes(nombreReceta);
+            });
+
+            console.log(`[COMPLETAR] "${ingUsado.nombre}" → ${itemEnNevera ? `encontrado (${itemEnNevera.ingrediente.nombre}: ${itemEnNevera.cantidad})` : 'NO encontrado'}`);
+
             if (itemEnNevera) {
-                // Restamos la cantidad directamente (puede quedar en negativo temporalmente)
                 itemEnNevera.cantidad -= ingUsado.cantidad;
             }
         }
 
-        // REQUISITO: "Los que darían por debajo de cero que se eliminen de la nevera"
-        // Filtramos la nevera para conservar ÚNICAMENTE los ingredientes con cantidad > 0.
-        // Esto elimina automáticamente los que quedaron a 0 o en números negativos.
+        // Eliminamos los que quedaron en 0 o negativo
         usuario.nevera = usuario.nevera.filter(item => item.cantidad > 0);
 
         await usuario.save();
 
-        // 4. Actualizamos los datos de la receta
+        // Actualizamos la receta
         receta.steps = steps;
         receta.ingredients = ingredients;
         receta.isCompleted = true;
-
         await receta.save();
 
-        res.status(200).json({ 
-            success: true, 
-            mensaje: "Receta completada e ingredientes actualizados en tu nevera." 
-        }); 
+        const usuarioActualizado = await Usuario.findById(req.usuario.id).populate('nevera.ingrediente');
+        const neveraActualizada = mapNeveraUsuario(usuarioActualizado.nevera);
+
+        res.status(200).json({
+            success: true,
+            nevera: neveraActualizada,
+            mensaje: "Receta completada e ingredientes actualizados en tu nevera."
+        });
 
     } catch (error) {
-        console.error("Error al completar receta y restar ingredientes:", error);
+        console.error("Error al completar receta:", error);
         res.status(500).json({ error: "Error interno del servidor al procesar la operación." });
     }
 });
-// ENDPOINT 3: Completar una receta y RESTAR ingredientes del inventario
-router.put('/completar', async (req, res) => {
-    try {
-        const { titulo, steps, ingredients } = req.body;
-        const tituloSeguro = escaparRegex(titulo);
 
-        // 1. Buscamos la receta
-        const receta = await Receta.findOne({ 
-            title: new RegExp('^' + tituloSeguro + '$', 'i') 
-        });
-
-        if (!receta) return res.status(404).json({ error: "Receta no encontrada" });
-
-        // 2. LÓGICA DE RESTA: Recorremos los ingredientes que nos envía el frontend
-        // Usamos for...of para poder usar 'await' dentro del bucle
-        for (const ing of ingredients) {
-            // Buscamos el ingrediente en la colección 'inventario'
-            const itemEnInventario = await InventarioItem.findOne({
-                nombre: { $regex: new RegExp(`^${escaparRegex(ing.nombre)}$`, 'i') }
-            });
-
-            // "Resta los que tenga, ignora los que no tenga"
-            if (itemEnInventario) {
-                // Restamos la cantidad asegurándonos de que no baje de 0
-                itemEnInventario.cantidad = Math.max(0, itemEnInventario.cantidad - ing.cantidad);
-                await itemEnInventario.save();
-            }
-            // Si itemEnInventario es null, el código simplemente sigue al siguiente (ignora)
-        }
-
-        // 3. Actualizamos los datos de la receta
-        receta.steps = steps;
-        receta.ingredients = ingredients;
-        receta.isCompleted = true;
-
-        await receta.save();
-
-        // 4. "Eliminar el mensaje": Respondemos con éxito pero sin textos de alerta
-        res.status(200).json({ success: true }); 
-
-    } catch (error) {
-        // En caso de error, enviamos un estado 400 pero minimalista
-        res.status(400).send();
-    }
-});
-
-// ENDPOINT 4: Eliminar un ingrediente de una receta
+// DELETE /ingrediente - Eliminar un ingrediente de una receta
 router.delete('/ingrediente', async (req, res) => {
     try {
         const { titulo, nombreIngrediente } = req.body;
@@ -238,8 +185,8 @@ router.delete('/ingrediente', async (req, res) => {
 
         const receta = await Receta.findOneAndUpdate(
             { title: new RegExp('^' + tituloSeguro + '$', 'i') },
-            { $pull: { ingredients: { nombre: nombreIngrediente } } }, 
-            { returnDocument: 'after' } // Fix del Warning de Mongoose
+            { $pull: { ingredients: { nombre: nombreIngrediente } } },
+            { returnDocument: 'after' }
         );
 
         if (!receta) return res.status(404).json({ error: "Receta no encontrada" });
