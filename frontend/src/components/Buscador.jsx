@@ -1,106 +1,146 @@
 import React, { useState } from 'react';
 
-const Buscador = ({ ingredientesBase, onAñadir, onError }) => {
+const Buscador = ({ ingredientesBase, onAñadir }) => {
   const [busqueda, setBusqueda] = useState('');
-  const [cantidad, setCantidad] = useState(''); // Empieza vacío para que escribas lo que quieras
-  const [unidad, setUnidad] = useState('u.'); // Vuelve a ser desplegable por defecto
+  const [cantidad, setCantidad] = useState('');
+  const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null);
   const [sugerencias, setSugerencias] = useState([]);
+  
+  // Estado general para manejar mensajes de éxito y error dentro de este componente
+  const [mensajeLocal, setMensajeLocal] = useState({ texto: '', tipo: '' });
 
-  const manejarInput = (e) => {
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+  // Función para establecer el mensaje y borrarlo automáticamente si es de éxito
+  const mostrarMensaje = (texto, tipo) => {
+    setMensajeLocal({ texto, tipo });
+    if (tipo === 'success') {
+      setTimeout(() => {
+        setMensajeLocal({ texto: '', tipo: '' });
+      }, 3000);
+    }
+  };
+
+  const manejarInput = async (e) => {
     const valor = e.target.value;
     setBusqueda(valor);
-    if (valor.trim() !== '') {
-      const filtrados = ingredientesBase.filter(ing =>
-        ing.nombre.toLowerCase().includes(valor.toLowerCase())
-      );
-      setSugerencias(filtrados);
+    setIngredienteSeleccionado(null);
+    
+    // Limpiamos los errores si el usuario empieza a escribir para corregir
+    if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
+
+    if (valor.trim().length >= 2) {
+      try {
+        const res = await fetch(`${API_URL}/api/ingredientes?nombre=${encodeURIComponent(valor)}`);
+        if (!res.ok) throw new Error('Error en búsqueda');
+        const data = await res.json();
+        setSugerencias(data);
+      } catch (error) {
+        console.error("Error buscando sugerencias:", error);
+        setSugerencias([]);
+      }
     } else {
       setSugerencias([]);
     }
   };
 
+  const seleccionarSugerencia = (ing) => {
+    setBusqueda(ing.nombre);
+    setIngredienteSeleccionado(ing);
+    setSugerencias([]); 
+    if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
+  };
+
   const handleConfirmar = () => {
-    const encontrado = ingredientesBase.find(
-      ing => ing.nombre.toLowerCase() === busqueda.toLowerCase()
-    );
-
-    if (encontrado) {
-      // Si dejas la cantidad vacía, asume 1 por defecto
-      const cantidadFinal = cantidad === '' ? 1 : cantidad;
-
-      if (cantidadFinal <= 0) {
-        onError?.('❌ La cantidad debe ser mayor que 0.');
-        
-      }else{
-
-        onAñadir(encontrado, cantidadFinal, unidad);
-        
-        // Reseteamos
-        setBusqueda('');
-        setCantidad('');
-        setUnidad('u.');
-        setSugerencias([]);
-      }
-    } else {
-      onError?.('❌ Por favor, selecciona un ingrediente válido de las sugerencias.');
+    if (ingredientesBase.length === 0) {
+      mostrarMensaje('No se pueden buscar ingredientes porque no hay conexión.', 'error');
+      return;
     }
+
+    if (!ingredienteSeleccionado) {
+      mostrarMensaje('Por favor, selecciona un ingrediente válido de las sugerencias.', 'error');
+      return;
+    }
+
+    const cantidadFinal = cantidad === '' ? 1 : parseFloat(cantidad);
+
+    if (cantidadFinal <= 0) {
+      mostrarMensaje('La cantidad debe ser mayor que 0.', 'error');
+      return;
+    }
+
+    // Si todo va bien:
+    onAñadir(ingredienteSeleccionado, cantidadFinal);
+    
+    // Mostramos el éxito aquí mismo (Sin emojis)
+    mostrarMensaje(`Añadido: ${ingredienteSeleccionado.nombre} (${cantidadFinal} ${ingredienteSeleccionado.unidad})`, 'success');
+
+    // Limpiamos los campos
+    setBusqueda('');
+    setCantidad('');
+    setIngredienteSeleccionado(null);
+    setSugerencias([]);
   };
 
   return (
-    <section className="card add-section">
+    <section className="buscador-container">
       <div className="section-header">
         <h2>Añadir a la Nevera</h2>
       </div>
-      
+
       <div className="inputs-row">
-        {/* Buscador de texto */}
         <div className="buscador-wrapper">
-          <input 
-            type="text" 
-            placeholder="Ingrediente (ej: Arroz)" 
+          <input
+            type="text"
+            placeholder={ingredientesBase.length === 0 ? "Sin conexión..." : "Ingrediente (ej: Arroz)"}
             value={busqueda}
             onChange={manejarInput}
             autoComplete="off"
             className="input-neon"
+            disabled={ingredientesBase.length === 0}
           />
           {sugerencias.length > 0 && (
             <div className="sugerencias-box">
               {sugerencias.map((ing, i) => (
-                <div key={i} className="sugerencia-item" onClick={() => {
-                  setBusqueda(ing.nombre);
-                  setSugerencias([]);
-                }}>
-                  {ing.nombre} <small className="cat-tag">{ing.categoria}</small>
+                <div key={i} className="sugerencia-item" onClick={() => seleccionarSugerencia(ing)}>
+                  {ing.nombre}
+                  <small className="cat-tag">{ing.unidad}</small>
                 </div>
               ))}
             </div>
           )}
         </div>
 
-        {/* Input de Cantidad*/}
-        <input 
-          type="number" 
+        <input
+          type="number"
           placeholder="Cant."
           value={cantidad}
           onChange={(e) => setCantidad(e.target.value)}
           className="input-neon input-cantidad"
+          disabled={ingredientesBase.length === 0}
         />
 
-        {/* Desplegable de Unidad */}
-        <select 
-          value={unidad} 
-          onChange={(e) => setUnidad(e.target.value)}
+        <input
+          type="text"
+          value={ingredienteSeleccionado ? ingredienteSeleccionado.unidad : '—'}
+          readOnly
           className="input-neon input-unidad"
-        >
-          <option value="u.">u. (Unids)</option>
-          <option value="kg">kg</option>
-          <option value="g">g</option>
-          <option value="L">Litros</option>
-          <option value="ml">ml</option>
-        </select>
+          disabled={ingredientesBase.length === 0}
+        />
       </div>
-      
-      <button className="btn-primary" onClick={handleConfirmar}>
+
+      <div className="info-cantidad">
+        * Si dejas la cantidad vacía, se añadirá <strong>1 {ingredienteSeleccionado ? ingredienteSeleccionado.unidad : ''}</strong> por defecto.
+      </div>
+
+      {/* Aquí es donde se aplica el estilo dinámico dependiendo del tipo */}
+      {mensajeLocal.texto && (
+        <div className={`mensaje-local ${mensajeLocal.tipo}`}>
+          {mensajeLocal.texto}
+        </div>
+      )}
+
+      <button className="btn-primary" onClick={handleConfirmar} disabled={ingredientesBase.length === 0}>
         <span>Confirmar Selección</span>
       </button>
     </section>
