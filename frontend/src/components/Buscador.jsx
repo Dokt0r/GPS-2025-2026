@@ -5,7 +5,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
   const [cantidad, setCantidad] = useState('');
   const [ingredienteSeleccionado, setIngredienteSeleccionado] = useState(null);
   const [sugerencias, setSugerencias] = useState([]);
-  
+
   // Estado general para manejar mensajes de éxito y error dentro de este componente
   const [mensajeLocal, setMensajeLocal] = useState({ texto: '', tipo: '' });
 
@@ -25,7 +25,7 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
     const valor = e.target.value;
     setBusqueda(valor);
     setIngredienteSeleccionado(null);
-    
+
     // Limpiamos los errores si el usuario empieza a escribir para corregir
     if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
 
@@ -47,11 +47,11 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
   const seleccionarSugerencia = (ing) => {
     setBusqueda(ing.nombre);
     setIngredienteSeleccionado(ing);
-    setSugerencias([]); 
+    setSugerencias([]);
     if (mensajeLocal.tipo === 'error') setMensajeLocal({ texto: '', tipo: '' });
   };
 
-  const handleConfirmar = () => {
+  const handleConfirmar = async () => {
     if (ingredientesBase.length === 0) {
       mostrarMensaje('No se pueden buscar ingredientes porque no hay conexión.', 'error');
       return;
@@ -69,17 +69,20 @@ const Buscador = ({ ingredientesBase, onAñadir }) => {
       return;
     }
 
-    // Si todo va bien:
-    onAñadir(ingredienteSeleccionado, cantidadFinal);
-    
-    // Mostramos el éxito aquí mismo (Sin emojis)
-    mostrarMensaje(`Añadido: ${ingredienteSeleccionado.nombre} (${cantidadFinal} ${ingredienteSeleccionado.unidad})`, 'success');
+    try {
+      await onAñadir(ingredienteSeleccionado, cantidadFinal);
 
-    // Limpiamos los campos
-    setBusqueda('');
-    setCantidad('');
-    setIngredienteSeleccionado(null);
-    setSugerencias([]);
+      // Mostramos el éxito aquí mismo (Sin emojis)
+      mostrarMensaje(`Añadido: ${ingredienteSeleccionado.nombre} (${cantidadFinal} ${ingredienteSeleccionado.unidad})`, 'success');
+
+      // Limpiamos los campos
+      setBusqueda('');
+      setCantidad('');
+      setIngredienteSeleccionado(null);
+      setSugerencias([]);
+    } catch (error) {
+      mostrarMensaje(error.message || 'No se pudo guardar el ingrediente.', 'error');
+    }
   };
 
   return (

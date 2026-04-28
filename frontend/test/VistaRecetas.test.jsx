@@ -5,6 +5,20 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import VistaRecetas from '../src/VistaRecetas';
 
 // ==========================================
+// MOCKS DE CONTEXTO (NUEVO Y NECESARIO)
+// ==========================================
+
+vi.mock('../src/AuthContext.jsx', () => ({
+    useAuth: () => ({
+        usuario: { id: 'u1' },
+        // Redirigimos fetchConAuth al fetch global para poder mockearlo con vi.fn()
+        fetchConAuth: (...args) => global.fetch(...args),
+        cargando: false
+    }),
+    AuthProvider: ({ children }) => <div>{children}</div>
+}));
+
+// ==========================================
 // DATOS MOCK
 // ==========================================
 
@@ -29,6 +43,7 @@ const renderVistaRecetas = (queryString = '?ingredientes=tomate|2|ud|') =>
     );
 
 beforeEach(() => {
+    vi.clearAllMocks(); // Limpia llamadas previas
     global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => generarRecetasMock(3),
@@ -48,7 +63,6 @@ describe('VistaRecetas unitario — Renderizado inicial', () => {
 
     test('Muestra siempre la cabecera "Recetas sugeridas"', async () => {
         renderVistaRecetas();
-
         expect(screen.getByText('Recetas sugeridas')).toBeInTheDocument();
     });
 
@@ -57,7 +71,6 @@ describe('VistaRecetas unitario — Renderizado inicial', () => {
         global.fetch = vi.fn(() => new Promise(() => { }));
 
         renderVistaRecetas();
-
         expect(screen.getByText('Buscando en tu base de datos...')).toBeInTheDocument();
     });
 
@@ -65,13 +78,11 @@ describe('VistaRecetas unitario — Renderizado inicial', () => {
         renderVistaRecetas();
 
         await screen.findByText('Receta 1');
-
         expect(screen.queryByText('Buscando en tu base de datos...')).not.toBeInTheDocument();
     });
 
     test('No llama a fetch si no hay ingredientes en la URL', () => {
         renderVistaRecetas('');
-
         expect(global.fetch).not.toHaveBeenCalled();
     });
 
@@ -98,7 +109,6 @@ describe('VistaRecetas unitario — Estados de error y vacío', () => {
         global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
         renderVistaRecetas();
-
         expect(await screen.findByText('Hubo un problema al buscar las recetas.')).toBeInTheDocument();
     });
 
@@ -106,7 +116,6 @@ describe('VistaRecetas unitario — Estados de error y vacío', () => {
         global.fetch = vi.fn().mockResolvedValue({ ok: false });
 
         renderVistaRecetas();
-
         expect(await screen.findByText('Hubo un problema al buscar las recetas.')).toBeInTheDocument();
     });
 
@@ -117,7 +126,6 @@ describe('VistaRecetas unitario — Estados de error y vacío', () => {
         });
 
         renderVistaRecetas();
-
         expect(await screen.findByText('No encontramos recetas con esos ingredientes 😔')).toBeInTheDocument();
     });
 
@@ -125,7 +133,6 @@ describe('VistaRecetas unitario — Estados de error y vacío', () => {
         global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
         renderVistaRecetas();
-
         await screen.findByText('Hubo un problema al buscar las recetas.');
 
         expect(screen.queryByText('Receta 1')).not.toBeInTheDocument();
@@ -185,7 +192,6 @@ describe('VistaRecetas unitario — Colores de coincidencia (match)', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta Verde');
 
         const badge = screen.getByText('Match: 4/4');
@@ -201,7 +207,6 @@ describe('VistaRecetas unitario — Colores de coincidencia (match)', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta Verde2');
 
         expect(screen.getByText('Match: 3/4')).toHaveClass('match-verde');
@@ -216,7 +221,6 @@ describe('VistaRecetas unitario — Colores de coincidencia (match)', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta Amarilla');
 
         expect(screen.getByText('Match: 2/5')).toHaveClass('match-amarillo');
@@ -231,7 +235,6 @@ describe('VistaRecetas unitario — Colores de coincidencia (match)', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta Roja');
 
         expect(screen.getByText('Match: 1/5')).toHaveClass('match-rojo');
@@ -246,10 +249,8 @@ describe('VistaRecetas unitario — Colores de coincidencia (match)', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta Neutral');
 
-        // El span se renderiza con el texto "Match: " y clase neutral
         const badge = screen.getByText(/Match:/);
         expect(badge).toHaveClass('match-neutral');
     });
@@ -270,7 +271,6 @@ describe('VistaRecetas unitario — Paginación', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta 1');
 
         expect(screen.queryByText('Siguiente ›')).not.toBeInTheDocument();
@@ -283,7 +283,6 @@ describe('VistaRecetas unitario — Paginación', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta 1');
 
         expect(screen.getByText('Siguiente ›')).toBeInTheDocument();
@@ -296,7 +295,6 @@ describe('VistaRecetas unitario — Paginación', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta 1');
 
         expect(screen.getByText('‹ Anterior')).toBeDisabled();
@@ -309,7 +307,6 @@ describe('VistaRecetas unitario — Paginación', () => {
         });
 
         renderVistaRecetas();
-
         await screen.findByText('Receta 1');
 
         fireEvent.click(screen.getByText('Siguiente ›'));
@@ -375,7 +372,6 @@ describe('VistaRecetas unitario — Navegación', () => {
         renderVistaRecetas();
 
         fireEvent.click(screen.getByText(/Volver a la Nevera/i));
-
         expect(await screen.findByTestId('vista-nevera')).toBeInTheDocument();
     });
 

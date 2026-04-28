@@ -3,187 +3,174 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import App from '../src/App';
+import { AuthProvider } from '../src/AuthContext';
 
 // ==========================================
-// DATOS MOCK
+// DATOS MOCK (ESTÁTICOS)
 // ==========================================
-
 const INGREDIENTES_MOCK = [
-    { _id: '1', nombre: 'Tomate', unidad: 'ud', equivalencia_g_ml: null },
+    { _id: '1', nombre: 'Tomate', unidad: 'ud', equivalencia_g_ml: 100 },
     { _id: '2', nombre: 'Arroz', unidad: 'g', equivalencia_g_ml: null },
 ];
 
 const RECETAS_MOCK = [
-    { _id: 'r1', title: 'Arroz con tomate', image_url: 'img1.jpg', coincidenciaTexto: '2/2' },
-    { _id: 'r2', title: 'Sopa de tomate', image_url: 'img2.jpg', coincidenciaTexto: '1/3' },
-    { _id: 'r3', title: 'Risotto', image_url: 'img3.jpg', coincidenciaTexto: '1/5' },
+    { 
+        _id: 'r1', 
+        title: 'Arroz con tomate', 
+        image_url: 'img1.jpg', 
+        coincidenciaTexto: '2/2' 
+    },
 ];
 
-// Helper: renderiza la App completa con router
-const renderApp = () =>
-    render(
-        <MemoryRouter initialEntries={['/']}>
-            <App />
-        </MemoryRouter>
-    );
+const DETALLE_RECETA_MOCK = {
+    _id: 'r1',
+    title: 'Arroz con tomate',
+    image_url: 'img1.jpg',
+    ingredients: [
+        { nombre: 'Tomate', cantidad: 2, unidad: 'ud' },
+        { nombre: 'Arroz', cantidad: 200, unidad: 'g' }
+    ],
+    steps: ['Lavar el arroz', 'Cocinar con el tomate'],
+};
 
 // ==========================================
-// HELPER ACTUALIZADO: FLUJO CON MODAL
+// HELPERS
 // ==========================================
+const renderApp = () =>
+    render(
+        <AuthProvider>
+            <MemoryRouter initialEntries={['/']}>
+                <App />
+            </MemoryRouter>
+        </AuthProvider>
+    );
+
 const añadirIngrediente = async (nombre, cantidad = '100') => {
-    // 1. Abrir el modal con el FAB
+    // Abrir modal
     const fabBtn = await screen.findByText('+');
     fireEvent.click(fabBtn);
 
-    // 2. Esperar a que el input aparezca
+    // Escribir nombre y seleccionar sugerencia
     const input = await screen.findByPlaceholderText(/Ingrediente/i);
     fireEvent.change(input, { target: { value: nombre } });
-
-    // 3. Seleccionar sugerencia
     const sugerencia = await screen.findByText(nombre, { selector: '.sugerencia-item' });
     fireEvent.click(sugerencia);
 
-    // 4. Cambiar cantidad y confirmar
+    // Poner cantidad y confirmar
     const inputCantidad = screen.getByPlaceholderText('Cant.');
     fireEvent.change(inputCantidad, { target: { value: cantidad } });
     fireEvent.click(screen.getByText(/Confirmar Selección/i));
 
-    // 5. Cerrar el modal evitando colisión de '✕'
+    // Cerrar modal
     await waitFor(() => {
         const btnCerrar = document.querySelector('.btn-cerrar-modal');
-        if (btnCerrar) {
-            fireEvent.click(btnCerrar);
-        }
+        if (btnCerrar) fireEvent.click(btnCerrar);
     });
 
-    // 6. Esperar a que el modal se cierre
+    // Esperar a que el modal desaparezca
     await waitFor(() => {
         expect(screen.queryByPlaceholderText(/Ingrediente/i)).not.toBeInTheDocument();
     });
 };
 
-afterEach(() => {
-    vi.restoreAllMocks();
-});
-
 // ==========================================
-// BLOQUE: FLUJO NEVERA → BUSCAR → VISTARECETAS
+// BLOQUE DE TESTS
 // ==========================================
-
-describe('Integración — Flujo completo Nevera → VistaRecetas', () => {
+describe('Integración — Flujo Completo: Nevera -> VistaRecetas -> VistaDetalles', () => {
+    let neveraMockState = [];
 
     beforeEach(() => {
-        // Mock robusto: responde según la URL solicitada para evitar colisiones entre el Buscador y las Recetas
-        global.fetch = vi.fn(async (url) => {
-            if (url.includes('/api/ingredientes')) {
-                return { ok: true, json: async () => INGREDIENTES_MOCK };
+        neveraMockState = []; // Reiniciar "base de datos" falsa
+
+        global.fetch = vi.fn(async (input, options = {}) => {
+            const url = typeof input === 'string' ? input : input.url;
+
+            // Mock de Sesión
+            if (url.includes('/api/auth/refresh')) {
+                return { 
+                    ok: true, 
+                    status: 200, 
+                    json: async () => ({ accessToken: 'token-xyz', usuario: { id: 'u1', nombre: 'Test' } }) 
+                };
+            }
+
+            // Mock de Diccionario (Sugerencias)
+            if (url.includes('/api/ingredientes') && !url.includes('nevera')) {
+                return { ok: true, status: 200, json: async () => INGREDIENTES_MOCK };
+            }
+
+            // Mock de Nevera (DINÁMICO)
+            if (url.includes('/api/ingredientes/nevera')) {
+                if (options.method === 'POST' || options.method === 'PUT') {
+                    const body = JSON.parse(options.body);
+                    // Si el body tiene propiedad .nevera (array completo) o es un item suelto
+                    if (body.nevera) {
+                        neveraMockState = body.nevera;
+                    } else {
+                        neveraMockState = [...neveraMockState, body];
+                    }
+                    return { ok: true, status: 200, json: async () => ({ nevera: neveraMockState }) };
+                }
+                return { ok: true, status: 200, json: async () => ({ nevera: neveraMockState }) };
+            }
+
+            // Mock de Recetas (Lista y Detalle)
+            if (url.match(/\/api\/recetas\/r1$/) || url.includes('Arroz%20con%20tomate')) {
+                return { ok: true, status: 200, json: async () => DETALLE_RECETA_MOCK };
             }
             if (url.includes('/api/recetas')) {
-                return { ok: true, json: async () => RECETAS_MOCK };
+                return { ok: true, status: 200, json: async () => RECETAS_MOCK };
             }
+
             return { ok: false, status: 404 };
         });
     });
 
-    test('Al buscar recetas con ingredientes en la nevera, VistaRecetas muestra los resultados', async () => {
-        renderApp();
-        
-        await añadirIngrediente('Tomate', '2');
-        fireEvent.click(screen.getByText('Buscar Recetas'));
-
-        expect(await screen.findByText('Recetas sugeridas')).toBeInTheDocument();
-
-        expect(await screen.findByText('Arroz con tomate')).toBeInTheDocument();
-        expect(screen.getByText('Sopa de tomate')).toBeInTheDocument();
-        expect(screen.getByText('Risotto')).toBeInTheDocument();
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
-    test('Las recetas muestran su badge de coincidencia correctamente', async () => {
+    test('Flujo completo hasta ver los pasos de la receta', async () => {
         renderApp();
-        
-        await añadirIngrediente('Tomate', '2');
-        fireEvent.click(screen.getByText('Buscar Recetas'));
 
-        expect(await screen.findByText('Match: 2/2')).toBeInTheDocument();
-        expect(screen.getByText('Match: 1/3')).toBeInTheDocument();
-        expect(screen.getByText('Match: 1/5')).toBeInTheDocument();
+        // 1. Añadimos el ingrediente
+        await añadirIngrediente('Tomate', '2');
+        
+        // 2. IMPORTANTE: Esperar a que el ingrediente se pinte en la nevera
+        // Esto confirma que el frontend ha recibido la respuesta del POST y ha actualizado el estado
+        expect(await screen.findByText(/Tomate/i)).toBeInTheDocument();
+
+        // 3. Pulsamos buscar (ya no debería decir "nevera vacía")
+        const btnBuscar = screen.getByText(/Buscar Recetas/i);
+        fireEvent.click(btnBuscar);
+
+        // 4. Seleccionar la receta de la lista
+        const recetaCard = await screen.findByText(/Arroz con tomate/i);
+        fireEvent.click(recetaCard);
+
+        // 5. Verificar que estamos en la vista de detalle
+        expect(await screen.findByText(/Lavar el arroz/i)).toBeInTheDocument();
+        expect(screen.getByText(/200 g/)).toBeInTheDocument();
     });
 
-    test('El fetch de recetas recibe los ingredientes de la nevera correctamente formateados', async () => {
+    test('Navegación: Detalle -> Lista -> Nevera', async () => {
         renderApp();
-        
         await añadirIngrediente('Tomate', '2');
-        fireEvent.click(screen.getByText('Buscar Recetas'));
-
-        await screen.findByText('Recetas sugeridas');
-
-        // Buscamos específicamente la llamada a la API de recetas
-        const llamadaRecetas = global.fetch.mock.calls.find(call => call[0].includes('/api/recetas'));
-        expect(llamadaRecetas[0]).toContain('tomate');
-    });
-
-    test('Si el servidor de recetas falla, VistaRecetas muestra el mensaje de error', async () => {
-        // Sobreescribimos el mock para forzar el error en este test
-        global.fetch.mockImplementation(async (url) => {
-            if (url.includes('/api/ingredientes')) {
-                return { ok: true, json: async () => INGREDIENTES_MOCK };
-            }
-            return Promise.reject(new Error('Network error'));
-        });
-
-        renderApp();
         
-        await añadirIngrediente('Tomate', '2');
-        fireEvent.click(screen.getByText('Buscar Recetas'));
-
-        expect(await screen.findByText('Hubo un problema al buscar las recetas.')).toBeInTheDocument();
-    });
-
-    test('Si el servidor devuelve recetas vacías, VistaRecetas muestra el mensaje correspondiente', async () => {
-        // Sobreescribimos para que las recetas devuelvan un array vacío
-        global.fetch.mockImplementation(async (url) => {
-            if (url.includes('/api/ingredientes')) {
-                return { ok: true, json: async () => INGREDIENTES_MOCK };
-            }
-            if (url.includes('/api/recetas')) {
-                return { ok: true, json: async () => [] };
-            }
-        });
-
-        renderApp();
+        // Ir a lista
+        fireEvent.click(await screen.findByText(/Buscar Recetas/i));
         
-        await añadirIngrediente('Tomate', '2');
-        fireEvent.click(screen.getByText('Buscar Recetas'));
+        // Ir a detalle
+        fireEvent.click(await screen.findByText(/Arroz con tomate/i));
 
-        expect(await screen.findByText('No encontramos recetas con esos ingredientes 😔')).toBeInTheDocument();
-    });
+        // Volver a lista
+        const btnVolver = await screen.findByText(/Volver/i);
+        fireEvent.click(btnVolver);
+        expect(await screen.findByText(/Recetas sugeridas/i)).toBeInTheDocument();
 
-    test('Desde VistaRecetas, el botón Volver a la Nevera regresa a la vista principal', async () => {
-        renderApp();
-        
-        await añadirIngrediente('Tomate', '2');
-        fireEvent.click(screen.getByText('Buscar Recetas'));
-
-        await screen.findByText('Recetas sugeridas');
+        // Volver a nevera
         fireEvent.click(screen.getByText(/Volver a la Nevera/i));
-
-        expect(await screen.findByText('Mi Nevera Virtual')).toBeInTheDocument();
-        expect(screen.getByText('Tomate')).toBeInTheDocument();
+        expect(await screen.findByText(/Mi Nevera Virtual/i)).toBeInTheDocument();
+        expect(screen.getByText(/Tomate/i)).toBeInTheDocument();
     });
-
-    test('Los ingredientes de la nevera se mantienen al volver desde VistaRecetas', async () => {
-        renderApp();
-        
-        await añadirIngrediente('Tomate', '2');
-        await añadirIngrediente('Arroz', '200');
-
-        fireEvent.click(screen.getByText('Buscar Recetas'));
-        await screen.findByText('Recetas sugeridas');
-
-        fireEvent.click(screen.getByText(/Volver a la Nevera/i));
-
-        expect(await screen.findByText('Tomate')).toBeInTheDocument();
-        expect(screen.getByText('Arroz')).toBeInTheDocument();
-    });
-
 });

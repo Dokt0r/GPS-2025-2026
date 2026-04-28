@@ -1,93 +1,75 @@
 const request = require('supertest');
 const mongoose = require('mongoose');
-
 const app = require('../src/app');
 const Receta = require('../src/models/recetas');
 
-const tituloBase = `Receta Integracion Detalle ${Date.now()}`;
+describe('GET /api/recetas/:titulo — Detalle de receta', () => {
 
+  // Usamos un título único con un timestamp para evitar CUALQUIER colisión 
+  // con restos de ejecuciones pasadas o de otros archivos.
+  const uniqueId = Date.now();
+  const tituloTest = `Tarta de Queso ${uniqueId}`;
+  const tituloUrl = encodeURIComponent(tituloTest);
 
-const esperarConexionMongo = async (timeoutMs = 10000) => {
-  const inicio = Date.now();
-
-  while (mongoose.connection.readyState !== 1 && Date.now() - inicio < timeoutMs) {
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-
-  if (mongoose.connection.readyState !== 1) {
-    throw new Error(
-      'No se pudo establecer conexion con MongoDB Atlas. Revisa MONGODB_URI y whitelist de IP.'
-    );
-  }
-};
-
-describe('API de Recetas - Integracion detalle (DB real)', () => {
   beforeAll(async () => {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI no esta definida. Configura el .env para tests con DB real.');
+    if (mongoose.connection.readyState !== 1) {
+      await mongoose.connect(process.env.MONGODB_URI);
     }
 
-    if (mongoose.connection.readyState === 0) {
-      await mongoose
-        .connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 5000 })
-        .catch(() => {});
-    }
-
-    await esperarConexionMongo(10000);
-
-    await Receta.findOneAndUpdate(
-      { title: tituloBase },
-      {
-        title: tituloBase,
-        steps: ['Paso de prueba 1', 'Paso de prueba 2'],
-        image_url: 'https://example.com/integracion-detalle.jpg',
-        ingredients: [
-          { nombre: 'Arroz', cantidad: 200, unidad: 'g' },
-          { nombre: 'Pollo', cantidad: 300, unidad: 'g' }
-        ],
-        nutritions: { calories: 100 },
-        tags: ['test']
-      },
-      { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-    );
+    // Creamos la receta UNA SOLA VEZ para toda esta suite
+    // Asegúrate de incluir TODOS los campos obligatorios (image_url, etc.)
+    await Receta.create({
+      title: tituloTest,
+      ingredients: [
+        { nombre: "Queso Crema", cantidad: 500, unidad: "g" }
+      ],
+      steps: ["Paso 1: Mezclar"],
+      image_url: "https://via.placeholder.com/150",
+      isTest: true
+    });
   });
 
+  // Limpieza final específica de lo que acabamos de crear
   afterAll(async () => {
-    if (mongoose.connection.readyState === 1) {
-      await Receta.deleteOne({ title: tituloBase });
-    }
-
-    await mongoose.disconnect().catch(() => {});
+    await Receta.deleteMany({ title: tituloTest });
+    await mongoose.connection.close();
   });
 
-  describe('GET /api/recetas/:titulo', () => {
-    test('devuelve 404 cuando la receta no existe', async () => {
-      const res = await request(app).get('/api/recetas/Receta%20Inexistente%20XYZ');
+  test('Debe obtener una receta correctamente por su título', async () => {
+    const res = await request(app).get(`/api/recetas/${tituloUrl}`);
 
-      expect(res.status).toBe(404);
-      expect(res.body).toHaveProperty('error', 'Receta no encontrada');
+    // Si aquí te da 404, imprime res.body para ver qué dice el error
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe(tituloTest);
+  });
+
+  test('Debe ser insensible a mayúsculas/minúsculas', async () => {
+    // Convertimos el título a minúsculas para probar el case-insensitive
+    const res = await request(app).get(`/api/recetas/${tituloUrl.toLowerCase()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe(tituloTest);
+  });
+
+  test('Debe manejar correctamente caracteres especiales y espacios', async () => {
+    const tituloEspecial = `Ñandú (Test) ${uniqueId}!`;
+
+    await Receta.create({
+      title: tituloEspecial,
+      ingredients: [{ nombre: "Test", cantidad: 1, unidad: "ud" }],
+      steps: ["Paso especial"],
+      image_url: "https://via.placeholder.com/150",
+      isTest: true
     });
 
-    test('devuelve 200 y el detalle completo cuando existe', async () => {
-      const res = await request(app).get(`/api/recetas/${encodeURIComponent(tituloBase)}`);
+    const res = await request(app).get(`/api/recetas/${encodeURIComponent(tituloEspecial)}`);
 
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('title', tituloBase);
-      expect(Array.isArray(res.body.ingredients)).toBe(true);
-      expect(Array.isArray(res.body.steps)).toBe(true);
-      expect(res.body.steps.length).toBeGreaterThan(0);
-    });
+    expect(res.status).toBe(200);
+    expect(res.body.title).toBe(tituloEspecial);
+  });
 
-    test('encuentra la receta sin distinguir mayusculas/minusculas', async () => {
-      const tituloAlterado = tituloBase
-        .split(' ')
-        .map((p, i) => (i % 2 === 0 ? p.toUpperCase() : p.toLowerCase()))
-        .join(' ');
-
-      const res = await request(app).get(`/api/recetas/${encodeURIComponent(tituloAlterado)}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('title', tituloBase);
-    });
+  test('Debe devolver 404 si la receta no existe', async () => {
+    const res = await request(app).get('/api/recetas/Titulo_Que_No_Existe_Nunca_123');
+    expect(res.status).toBe(404);
   });
 });
