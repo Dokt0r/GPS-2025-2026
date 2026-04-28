@@ -95,6 +95,6 @@ describe('Integración frontend - Completar receta', () => {
     fireEvent.click(botonCompletar);
 
     expect(await screen.findByText(/¡receta completada! buen provecho/i)).toBeInTheDocument();
-    expect(restarIngredientesReceta).toHaveBeenCalledWith(recetaTomate.ingredients);
+   expect(restarIngredientesReceta).toHaveBeenCalledWith(recetaTomate.ingredients, undefined);
   });
 });
