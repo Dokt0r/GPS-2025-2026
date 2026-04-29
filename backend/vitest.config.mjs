@@ -6,6 +6,12 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['dotenv/config'],
     testTimeout: 30000,
+    coverage: {
+      provider: 'istanbul',
+      reporter: 'html',
+      reportsDirectory: './test-report/coverage',
+      include: ['src/**']
+    },
     reporters: [
       'default',
       ['html', { outputFile: './test-report/index.html' }],
